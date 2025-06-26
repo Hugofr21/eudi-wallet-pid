@@ -68,7 +68,7 @@ data class State(
     val resetPin: Boolean = false,
     val pinState: PinValidationState,
     val isBottomSheetOpen: Boolean = false,
-    val quickPinSize: Int = 6
+    val quickPinSize: Int = 8
 ) : ViewState {
     val action: ScreenNavigateAction
         get() {
@@ -272,7 +272,9 @@ class PinViewModel(
                     is QuickPinInteractorSetPinPartialState.Failed -> {
                         setState {
                             copy(
-                                quickPinError = it.errorMessage
+                                quickPinError = it.errorMessage,
+                                resetPin = true,
+                                pin = "",
                             )
                         }
                     }

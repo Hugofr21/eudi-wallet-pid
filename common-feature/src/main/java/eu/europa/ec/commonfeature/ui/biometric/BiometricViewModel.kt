@@ -62,7 +62,7 @@ data class State(
     val userBiometricsAreEnabled: Boolean = false,
     val isBackable: Boolean = false,
     val notifyOnAuthenticationFailure: Boolean = true,
-    val quickPinSize: Int = 6
+    val quickPinSize: Int = 8
 ) : ViewState
 
 sealed class Effect : ViewSideEffect {
@@ -199,7 +199,8 @@ class BiometricViewModel(
                         is QuickPinInteractorPinValidPartialState.Failed -> {
                             setState {
                                 copy(
-                                    quickPinError = it.errorMessage
+                                    quickPinError = it.errorMessage,
+                                    quickPin = "",
                                 )
                             }
                         }
