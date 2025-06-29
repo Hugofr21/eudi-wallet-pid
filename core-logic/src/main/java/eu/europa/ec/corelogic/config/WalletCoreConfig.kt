@@ -144,6 +144,11 @@ interface WalletCoreConfig {
                         formatType = "urn:eu.europa.ec.eudi:por:1"
                     ),
                 ),
+                DocumentCategory.Proof_AGE to listOf(
+                    DocumentIdentifier.OTHER(
+                        formatType = "eu.europa.ec.eudi.age_verification_mdoc"
+                    )
+                )
             )
         )
 

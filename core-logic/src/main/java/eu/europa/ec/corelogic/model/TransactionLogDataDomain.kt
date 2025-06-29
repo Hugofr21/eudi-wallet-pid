@@ -71,6 +71,7 @@ sealed interface TransactionLogDataDomain {
             return when (this) {
                 is IssuanceLog -> {
                     //TODO change this once Core supports more transaction types
+
                     emptyList()
                 }
 

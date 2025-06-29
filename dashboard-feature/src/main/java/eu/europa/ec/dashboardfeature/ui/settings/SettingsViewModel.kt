@@ -116,6 +116,10 @@ class SettingsViewModel(
                     }
                 }
             }
+
+            SettingsMenuItemType.BACKUP -> {
+
+            }
         }
     }
 }

@@ -40,7 +40,8 @@ val koverModules: Map<LibraryModule, KoverExclusionRules> = mapOf(
     LibraryModule.DashboardFeature to KoverExclusionRules.DashboardFeature,
     LibraryModule.PresentationFeature to KoverExclusionRules.PresentationFeature,
     LibraryModule.ProximityFeature to KoverExclusionRules.ProximityFeature,
-    LibraryModule.IssuanceFeature to KoverExclusionRules.IssuanceFeature
+    LibraryModule.IssuanceFeature to KoverExclusionRules.IssuanceFeature,
+    LibraryModule.UserConsent to KoverExclusionRules.UserConsent,
 )
 
 sealed interface KoverExclusionRules {
@@ -200,6 +201,16 @@ sealed interface KoverExclusionRules {
         override val packages: List<String>
             get() = commonPackages + listOf(
                 "eu.europa.ec.storagelogic"
+            )
+    }
+
+    object UserConsent : LogicModule {
+        override val classes: List<String>
+            get() = commonClasses
+
+        override val packages: List<String>
+            get() = commonPackages + listOf(
+                "eu.europa.ec.constent_user"
             )
     }
 }

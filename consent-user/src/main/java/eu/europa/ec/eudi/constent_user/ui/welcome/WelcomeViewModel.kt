@@ -17,13 +17,14 @@
 package eu.europa.ec.eudi.constent_user.ui.welcome
 
 
-import eu.europa.ec.eudi.constent_user.R
+import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
-import eu.europa.ec.uilogic.mvi.annotation.KoinViewModel
+import eu.europa.ec.uilogic.navigation.ConsentUserScreens
+import org.koin.android.annotation.KoinViewModel
 
 
 data class State(
@@ -47,18 +48,18 @@ class WelcomeViewModel : MviViewModel<Event, State, Effect>() {
     override fun setInitialState(): State = State(
         pages = listOf(
             SinglePageConfig(
-                title = R.string.welcome_title_1,
-                description = R.string.welcome_page_1,
+                title = R.string.user_consent_step_1_title,
+                description = R.string.user_consent_step_1_description,
                 icon = AppIcons.PresentDocumentInPerson
             ),
             SinglePageConfig(
-                title = R.string.welcome_title_2,
-                description = R.string.welcome_page_2,
+                title = R.string.user_consent_step_2_title,
+                description = R.string.user_consent_step_2_description,
                 icon = AppIcons.WalletActivated
             ),
             SinglePageConfig(
-                title = R.string.welcome_title_3,
-                description = R.string.welcome_page_3,
+                title = R.string.user_consent_step_3_title,
+                description = R.string.user_consent_step_3_description,
                 icon = AppIcons.WalletSecured
             )
         )
@@ -67,7 +68,7 @@ class WelcomeViewModel : MviViewModel<Event, State, Effect>() {
     override fun handleEvents(event: Event) {
         when (event) {
             Event.GoNext -> {
-                setEffect { Effect.Navigation.SwitchScreen(OnboardingScreens.Consent.screenRoute) }
+                setEffect { Effect.Navigation.SwitchScreen(ConsentUserScreens.Consent.screenRoute) }
             }
 
             Event.Pop -> {

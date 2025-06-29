@@ -41,7 +41,7 @@ enum class ButtonType {
     SECONDARY,
 }
 
-private val buttonsShape: RoundedCornerShape = RoundedCornerShape(SIZE_100.dp)
+public val buttonsShape: RoundedCornerShape = RoundedCornerShape(SIZE_100.dp)
 
 private val buttonsContentPadding: PaddingValues = PaddingValues(
     vertical = 10.dp,

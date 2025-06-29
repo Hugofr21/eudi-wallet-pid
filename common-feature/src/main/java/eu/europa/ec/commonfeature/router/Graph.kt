@@ -27,6 +27,7 @@ import eu.europa.ec.commonfeature.BuildConfig
 import eu.europa.ec.commonfeature.config.BiometricUiConfig
 import eu.europa.ec.commonfeature.config.QrScanUiConfig
 import eu.europa.ec.commonfeature.config.SuccessUIConfig
+import eu.europa.ec.commonfeature.model.BiometricFlow
 import eu.europa.ec.commonfeature.model.PinFlow
 import eu.europa.ec.commonfeature.ui.biometric.BiometricScreen
 import eu.europa.ec.commonfeature.ui.pin.PinScreen

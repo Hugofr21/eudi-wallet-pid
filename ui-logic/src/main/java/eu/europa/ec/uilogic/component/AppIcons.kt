@@ -412,4 +412,11 @@ object AppIcons {
         contentDescriptionId = R.string.content_description_settings_icon,
         imageVector = null
     )
+
+    val Backup: IconDataUi = IconDataUi(
+        resourceId = R.drawable.ic_backup,
+        contentDescriptionId = R.string.content_description_backup_icon,
+        imageVector = null
+    )
+
 }

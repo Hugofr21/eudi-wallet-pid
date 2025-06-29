@@ -34,6 +34,9 @@ internal class WalletCoreConfigImpl(
         const val VCI_ISSUER_URL = "https://issuer.eudiw.dev"
         const val VCI_CLIENT_ID = "wallet-dev"
         const val AUTHENTICATION_REQUIRED = false
+
+        // Proof age verification
+        const val VCI_ISSUER_URL_PROOF_AGE = "https://issuer.ageverification.dev/"
     }
 
     private var _config: EudiWalletConfig? = null
@@ -44,7 +47,7 @@ internal class WalletCoreConfigImpl(
                 _config = EudiWalletConfig {
                     configureDocumentKeyCreation(
                         userAuthenticationRequired = AUTHENTICATION_REQUIRED,
-                        userAuthenticationTimeout = 30_000L,
+                        userAuthenticationTimeout = 30_000L, // 30s
                         useStrongBoxForKeys = true
                     )
                     configureOpenId4Vp {
@@ -79,6 +82,7 @@ internal class WalletCoreConfigImpl(
                         withUseDPoPIfSupported(true)
                     }
 
+                    // reader C.A
                     configureReaderTrustStore(
                         context,
                         R.raw.pidissuerca02_cz,

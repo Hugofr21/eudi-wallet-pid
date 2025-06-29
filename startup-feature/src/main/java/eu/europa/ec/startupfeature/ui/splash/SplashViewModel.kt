@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 
 data class State(
-    val logoAnimationDuration: Int = 1500
+    val logoAnimationDuration: Int = 1000
 ) : ViewState
 
 sealed class Event : ViewEvent {

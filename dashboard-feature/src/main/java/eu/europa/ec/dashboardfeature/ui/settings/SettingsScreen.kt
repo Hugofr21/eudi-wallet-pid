@@ -227,6 +227,22 @@ private fun SettingsScreenPreview() {
                         iconData = AppIcons.KeyboardArrowRight
                     )
                 )
+            ),
+            // added backup
+            SettingsItemUi(
+                type = SettingsMenuItemType.BACKUP,
+                data = ListItemDataUi(
+                    itemId = stringResource(R.string.settings_screen_option_backup),
+                    mainContentData = ListItemMainContentDataUi.Text(
+                        text = stringResource(R.string.settings_screen_option_backup)
+                    ),
+                    leadingContentData = ListItemLeadingContentDataUi.Icon(
+                        iconData = AppIcons.Backup
+                    ),
+                    trailingContentData = ListItemTrailingContentDataUi.Icon(
+                        iconData = AppIcons.KeyboardArrowRight
+                    )
+                )
             )
         )
 

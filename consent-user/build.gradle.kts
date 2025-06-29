@@ -1,46 +1,35 @@
+import project.convention.logic.config.LibraryModule
+import project.convention.logic.kover.KoverExclusionRules
+import project.convention.logic.kover.excludeFromKoverReport
+
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.org.jetbrains.kotlin.android)
+    id("project.android.library")
+    id("project.android.feature")
 }
 
 android {
     namespace = "eu.europa.ec.eudi.constent_user"
-    compileSdk = 35
-
-    defaultConfig {
-        applicationId = "eu.europa.ec.eudi.constent_user"
-        minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
 }
+
+
 
 dependencies {
 
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    testImplementation(libs.junit4)
-    androidTestImplementation(libs.androidx.test.orchestrator)
-    androidTestImplementation(libs.androidx.test.espresso.core)
+//    implementation(libs.androidx.core.ktx)
+//    implementation(libs.androidx.appcompat)
+//    implementation(libs.material)
+//    testImplementation(libs.junit4)
+//    androidTestImplementation(libs.androidx.test.orchestrator)
+//    androidTestImplementation(libs.androidx.test.espresso.core)
+
+    implementation(project(LibraryModule.BusinessLogic.path))
+    implementation(project(LibraryModule.CoreLogic.path))
+    implementation(project(LibraryModule.UiLogic.path))
+    implementation(project(LibraryModule.ResourcesLogic.path))
+
 }
+
+excludeFromKoverReport (
+    excludedClasses = KoverExclusionRules.UserConsent.classes,
+    excludedPackages = KoverExclusionRules.UserConsent.packages,
+)

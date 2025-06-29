@@ -88,4 +88,8 @@ sealed class DocumentCategory(
     data object Other : DocumentCategory(
         stringResId = R.string.document_category_other, id = 8, order = 8
     )
+
+    data object Proof_AGE : DocumentCategory(
+        stringResId = R.string.document_category_age_over_18, id = 9, order = 9
+    )
 }
