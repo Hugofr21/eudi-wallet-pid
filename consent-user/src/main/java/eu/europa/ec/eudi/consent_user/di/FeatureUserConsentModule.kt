@@ -14,7 +14,19 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.dashboardfeature.ui.log
+package eu.europa.ec.eudi.consent_user.di
 
-class LogScreen {
-}
+
+import eu.europa.ec.eudi.consent_user.interactor.ConsentInteractor
+import eu.europa.ec.eudi.consent_user.interactor.ConsentInteractorImpl
+import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Factory
+import org.koin.core.annotation.Module
+
+@Module
+@ComponentScan("eu.europa.ec.consent_user")
+class FeatureConsentUserModule
+
+@Factory
+fun provideConsentInteractor(): ConsentInteractor = ConsentInteractorImpl()
+

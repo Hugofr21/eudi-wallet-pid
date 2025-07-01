@@ -61,6 +61,8 @@ interface WalletCoreConfig {
                 DocumentCategory.Government to listOf(
                     DocumentIdentifier.MdocPid,
                     DocumentIdentifier.SdJwtPid,
+                    DocumentIdentifier.AgeOver18Pid,
+                    DocumentIdentifier.MdocAgeOver18ProofPseudonym,
                     DocumentIdentifier.OTHER(
                         formatType = "org.iso.18013.5.1.mDL"
                     ),
@@ -144,7 +146,7 @@ interface WalletCoreConfig {
                         formatType = "urn:eu.europa.ec.eudi:por:1"
                     ),
                 ),
-                DocumentCategory.Proof_AGE to listOf(
+                DocumentCategory.PseudonymAGE to listOf(
                     DocumentIdentifier.OTHER(
                         formatType = "eu.europa.ec.eudi.age_verification_mdoc"
                     )

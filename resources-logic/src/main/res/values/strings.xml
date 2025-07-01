@@ -118,6 +118,8 @@
     <string name="content_description_date_range_icon">Select filter date range</string>
     <string name="content_description_settings_icon">Settings</string>
     <string name="content_description_backup_icon">Backup</string>
+    <string name="icon_eid_description">Electronic Identification</string>
+
 
     <!-- Biometric prompt -->
     <string name="biometric_prompt_title">Biometric authentication</string>
@@ -431,7 +433,7 @@
     <string name="document_category_social_security">SOCIAL SECURITY</string>
     <string name="document_category_retail">RETAIL</string>
     <string name="document_category_other">OTHER</string>
-    <string name="document_category_age_over_18">AGE OVER 18</string>">
+    <string name="document_category_age_over_18">PSEUDONYM</string>">
 
     <!-- Transaction Categories -->
     <string name="transaction_category_today">TODAY</string>">
@@ -450,6 +452,17 @@
 
     <string name="welcome_screen_next">Next</string>
     <string name="welcome_screen_skip">Skip</string>
+    <string name="wrap_link_consent">\"Data Protection Information\"</string>
+    <string name="consent_screen_tos_checkbox">I accept the Terms of Service</string>
+    <string name="consent_screen_data_protection_checkbox">I accept the Data Protection Information</string>
+    <string name="consent_screen_confirm_button">Confirm</string>
+    <string name="consent_screen_title">First we need your consent</string>
+    <string name="consent_screen_tos_button">Terms information</string>
+    <string name="consent_screen_data_protection_button">Data Protection Information</string>
+    <string name="consent_verification_national_id">Electronic Identification</string>
+    <string name="consent_verification_national_id_description">Under applicable regulations and legislation, you may not create a profile solely to obtain identification. To verify your identity, please request credential validation directly from the PID provider.</string>
+    <string name="consent_verification_content_title">Identity Verification Requirement</string>
+    <string name="consent_verification_content_description">An electronic ID (eID) is a secure, government‑issued digital identity credential that allows holders to authenticate themselves online and access a wide variety of public and private services.</string>
 
 
 </resources>

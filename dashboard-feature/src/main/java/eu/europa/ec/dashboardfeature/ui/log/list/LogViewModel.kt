@@ -14,5 +14,5 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.eudi.constent_user.ui.consent
+package eu.europa.ec.dashboardfeature.ui.log.list
 

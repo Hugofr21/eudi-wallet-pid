@@ -14,5 +14,26 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.dashboardfeature.ui.log
+package eu.europa.ec.eudi.consent_user.interactor
 
+import eu.europa.ec.commonfeature.model.PinFlow
+import eu.europa.ec.uilogic.navigation.CommonScreens
+import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
+import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
+
+interface ConsentInteractor {
+    fun getNextRoute(): String
+}
+
+class ConsentInteractorImpl(
+) : ConsentInteractor {
+
+    override fun getNextRoute(): String {
+        return generateComposableNavigationLink(
+            screen = CommonScreens.QuickPin,
+            arguments = generateComposableArguments(mapOf("pinFlow" to PinFlow.CREATE))
+        )
+    }
+
+
+}

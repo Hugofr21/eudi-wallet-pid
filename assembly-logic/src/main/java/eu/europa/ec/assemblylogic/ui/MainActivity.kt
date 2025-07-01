@@ -20,6 +20,7 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import eu.europa.ec.commonfeature.router.featureCommonGraph
 import eu.europa.ec.dashboardfeature.router.featureDashboardGraph
+import eu.europa.ec.eudi.consent_user.router.featureConsentUserGraph
 import eu.europa.ec.issuancefeature.router.featureIssuanceGraph
 import eu.europa.ec.presentationfeature.router.presentationGraph
 import eu.europa.ec.proximityfeature.router.featureProximityGraph
@@ -31,6 +32,8 @@ class MainActivity : EudiComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             Content(intent) {
+                // added consent user module
+                featureConsentUserGraph(it)
                 featureStartupGraph(it)
                 featureCommonGraph(it)
                 featureDashboardGraph(it)

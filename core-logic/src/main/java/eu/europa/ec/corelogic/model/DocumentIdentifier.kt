@@ -35,6 +35,16 @@ sealed interface DocumentIdentifier {
             get() = "urn:eudi:pid:1"
     }
 
+    data object MdocAgeOver18ProofPseudonym : DocumentIdentifier {
+        override val formatType: FormatType
+            get() = "eu.europa.ec.eudi.pseudonym.age_over_18.1"
+    }
+
+    data object AgeOver18Pid : DocumentIdentifier {
+        override val formatType: FormatType
+            get() = "eu.europa.ec.av.2"
+    }
+
     data class OTHER(
         override val formatType: FormatType,
     ) : DocumentIdentifier
@@ -46,6 +56,8 @@ sealed interface DocumentIdentifier {
 fun FormatType.toDocumentIdentifier(): DocumentIdentifier = when (this.lowercase()) {
     DocumentIdentifier.MdocPid.formatType.lowercase() -> DocumentIdentifier.MdocPid
     DocumentIdentifier.SdJwtPid.formatType.lowercase() -> DocumentIdentifier.SdJwtPid
+    DocumentIdentifier.MdocAgeOver18ProofPseudonym.formatType.lowercase() -> DocumentIdentifier.MdocAgeOver18ProofPseudonym
+    DocumentIdentifier.AgeOver18Pid.formatType.lowercase() -> DocumentIdentifier.AgeOver18Pid
     else -> DocumentIdentifier.OTHER(formatType = this)
 }
 
@@ -63,6 +75,8 @@ private fun createDocumentIdentifier(
     return when (formatType.lowercase()) {
         DocumentIdentifier.MdocPid.formatType.lowercase() -> DocumentIdentifier.MdocPid
         DocumentIdentifier.SdJwtPid.formatType.lowercase() -> DocumentIdentifier.SdJwtPid
+        DocumentIdentifier.MdocAgeOver18ProofPseudonym.formatType.lowercase() -> DocumentIdentifier.MdocAgeOver18ProofPseudonym
+        DocumentIdentifier.AgeOver18Pid.formatType.lowercase() -> DocumentIdentifier.AgeOver18Pid
         else -> DocumentIdentifier.OTHER(formatType = formatType)
     }
 }

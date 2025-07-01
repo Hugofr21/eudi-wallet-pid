@@ -30,6 +30,7 @@ import eu.europa.ec.uilogic.config.NavigationType
 import eu.europa.ec.uilogic.navigation.CommonScreens
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.IssuanceScreens
+import eu.europa.ec.uilogic.navigation.UserConsentScreens
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import eu.europa.ec.uilogic.serializer.UiSerializer
@@ -56,6 +57,15 @@ class SplashInteractorImpl(
         false -> {
             getQuickPinConfig()
         }
+
+
+    }
+
+    private fun getTutorialConsent(): String{
+        return generateComposableNavigationLink(
+            screen = UserConsentScreens.Welcome,
+            arguments = generateComposableArguments(mapOf("userConsentType" to "tutorial"))
+        )
     }
 
     private fun getQuickPinConfig(): String {

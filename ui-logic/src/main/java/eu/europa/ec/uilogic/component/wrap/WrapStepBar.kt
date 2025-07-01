@@ -224,7 +224,7 @@ fun StartupProgressBarPreview() {
     PreviewTheme {
         WrapStepBar(
             currentStep = 1,
-            steps = listOf("Welcome", "Privacy", "Consent")
+            steps = listOf("Welcome", "Consent", "Verification")
         )
     }
 }

@@ -14,7 +14,7 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.eudi.constent_user.ui.welcome
+package eu.europa.ec.eudi.consent_user.ui.welcome
 
 
 import eu.europa.ec.resourceslogic.R
