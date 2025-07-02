@@ -17,10 +17,12 @@
 package eu.europa.ec.authenticationlogic.storage
 
 import eu.europa.ec.authenticationlogic.provider.PinStorageProvider
+import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import eu.europa.ec.businesslogic.controller.storage.PrefsController
 
 class PrefsPinStorageProvider(
-    private val prefsController: PrefsController
+    private val prefsController: PrefsController,
+    private val cryptoController: CryptoController
 ) : PinStorageProvider {
 
     override fun retrievePin(): String {
@@ -28,7 +30,9 @@ class PrefsPinStorageProvider(
     }
 
     override fun setPin(pin: String) {
+        // encrypt the pin
         prefsController.setString("DevicePin", pin)
+        cryptoController.encryptPin(pin)
     }
 
     override fun isPinValid(pin: String): Boolean = retrievePin() == pin

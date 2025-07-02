@@ -32,9 +32,7 @@ import org.koin.android.annotation.KoinViewModel
 
 data class State(
     val screenTitle: String,
-
     val settingsItems: List<SettingsItemUi> = emptyList(),
-
     val appVersion: String = "",
     val changelogUrl: String?,
 ) : ViewState

@@ -17,7 +17,7 @@
 package eu.europa.ec.corelogic.controller
 
 import androidx.activity.ComponentActivity
-import eu.europa.ec.authenticationlogic.model.BiometricCrypto
+import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
 import eu.europa.ec.businesslogic.extension.addOrReplace
 import eu.europa.ec.businesslogic.extension.safeAsync
 import eu.europa.ec.businesslogic.extension.toUri

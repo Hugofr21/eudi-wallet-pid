@@ -17,8 +17,10 @@
 package eu.europa.ec.proximityfeature.ui.loading
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import eu.europa.ec.commonfeature.ui.loading.LoadingScreen
+import eu.europa.ec.uilogic.component.preview.PreviewTheme
 
 @Composable
 fun ProximityLoadingScreen(
@@ -29,4 +31,12 @@ fun ProximityLoadingScreen(
         navController = navController,
         viewModel = viewModel
     )
+}
+
+@Preview
+@Composable
+private fun ProximityLoadingScreenPreview() {
+    PreviewTheme {
+
+    }
 }

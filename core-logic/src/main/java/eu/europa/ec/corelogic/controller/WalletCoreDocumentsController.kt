@@ -17,7 +17,7 @@
 package eu.europa.ec.corelogic.controller
 
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationResult
-import eu.europa.ec.authenticationlogic.model.BiometricCrypto
+import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
 import eu.europa.ec.businesslogic.extension.safeAsync
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.extension.documentIdentifier

@@ -14,7 +14,7 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.authenticationlogic.model
+package eu.europa.ec.authenticationlogic.model.biometric
 
 import androidx.biometric.BiometricPrompt
 

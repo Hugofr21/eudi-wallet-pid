@@ -55,7 +55,7 @@ data class State(
     val sideMenuTitle: String,
     val sideMenuOptions: List<SideMenuItemUi>,
     val sideMenuAnimation: SideMenuAnimation = SideMenuAnimation.SLIDE,
-    val menuAnimationDuration: Int = 1500,
+    val menuAnimationDuration: Int = 1000,
 
     val isBottomSheetOpen: Boolean = false,
     val sheetContent: DashboardBottomSheetContent = DashboardBottomSheetContent.DocumentRevocation(
@@ -256,6 +256,10 @@ class DashboardViewModel(
             SideMenuTypeUi.SETTINGS -> {
                 hideSideMenu()
                 setEffect { Effect.Navigation.SwitchScreen(screenRoute = DashboardScreens.Settings.screenRoute) }
+            }
+
+            SideMenuTypeUi.BACKUP -> {
+                //  TODO: BACKUP ACTION SLIDER MENU
             }
         }
     }

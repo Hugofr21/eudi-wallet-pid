@@ -49,6 +49,11 @@ sealed class CommonScreens {
         name = "QR_SCAN",
         parameters = "?qrScanConfig={qrScanConfig}"
     )
+
+    data object AuthChoice : Screen(
+        name = "PIN",
+        parameters = "?pinFlow={pinFlow}"
+    )
 }
 
 sealed class DashboardScreens {

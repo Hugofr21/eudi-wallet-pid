@@ -21,7 +21,6 @@ import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 
-typealias GUID = String
 
 interface CryptoController {
     fun generateCodeVerifier(): String
@@ -41,6 +40,8 @@ interface CryptoController {
      * [byteArray] that needed to be encrypted or decrypted (Depending always on [Cipher] provided.
      */
     fun encryptDecryptBiometric(cipher: Cipher?, byteArray: ByteArray): ByteArray
+
+    fun encryptPin(pin: String)
 }
 
 class CryptoControllerImpl(
@@ -49,15 +50,18 @@ class CryptoControllerImpl(
 
     companion object {
         private const val AES_EXTERNAL_TRANSFORMATION = "AES/GCM/NoPadding"
-        private const val IV_SIZE = 128
+        private const val GCM_TAG_SIZE_BITS = 128
+        private const val CODE_VERIFIER_MIN = 43
+        private const val CODE_VERIFIER_MAX = 128
         const val MAX_GUID_LENGTH = 64
     }
 
+
     override fun generateCodeVerifier(): String {
-        val code = ByteArray(32)
-        SecureRandom().apply {
-            nextBytes(code)
-        }
+        val codeLength = (CODE_VERIFIER_MIN..CODE_VERIFIER_MAX).random()
+        val random = SecureRandom()
+        val code = ByteArray(codeLength)
+        random.nextBytes(code)
         return Base64.encodeToString(code, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
     }
 
@@ -73,13 +77,18 @@ class CryptoControllerImpl(
                     init(
                         Cipher.DECRYPT_MODE,
                         keystoreController.retrieveOrGenerateBiometricSecretKey(),
-                        GCMParameterSpec(IV_SIZE, ivBytes)
+                        GCMParameterSpec(GCM_TAG_SIZE_BITS, ivBytes)
                     )
                 }
             }
         } catch (e: Exception) {
             null
         }
+
+    // PBKDF2 with HmacSHA256
+    override fun encryptPin(pin: String) {
+
+    }
 
 
     override fun encryptDecryptBiometric(cipher: Cipher?, byteArray: ByteArray): ByteArray {

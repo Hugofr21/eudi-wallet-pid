@@ -17,7 +17,7 @@
 package eu.europa.ec.authenticationlogic.controller.storage
 
 import eu.europa.ec.authenticationlogic.config.StorageConfig
-import eu.europa.ec.authenticationlogic.model.BiometricAuthentication
+import eu.europa.ec.authenticationlogic.model.biometric.BiometricAuthentication
 
 interface BiometryStorageController {
     fun getBiometricAuthentication(): BiometricAuthentication?

@@ -36,6 +36,14 @@ import eu.europa.ec.uilogic.component.IconDataUi
 import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.wrap.WrapIcon
+import androidx.compose.ui.graphics.Color
+
+
+val LightSkyBlue   = Color(0xFFCAE6FD)
+val OceanBlue      = Color(0xFF2A5ED9)
+val DeepBlue       = Color(0xFF0048D2)
+val SoftYellow     = Color(0xFFFFF1BA)
+val CoralRed       = Color(0xFFFF6E70)
 
 sealed class BottomNavigationItem(
     val route: String,
@@ -59,6 +67,12 @@ sealed class BottomNavigationItem(
         titleRes = R.string.transactions_screen_title,
         icon = AppIcons.Transactions
     )
+
+    data object Logs : BottomNavigationItem(
+        route = "LOG",
+        titleRes = R.string.logs_screen_title,
+        icon = AppIcons.Logs
+    )
 }
 
 @Composable
@@ -67,13 +81,14 @@ fun BottomNavigationBar(navController: NavController) {
         BottomNavigationItem.Home,
         BottomNavigationItem.Documents,
         BottomNavigationItem.Transactions,
+        BottomNavigationItem.Logs
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        containerColor = LightSkyBlue.copy(alpha = 0.5f),
     ) {
         navItems.forEach { screen ->
             NavigationBarItem(

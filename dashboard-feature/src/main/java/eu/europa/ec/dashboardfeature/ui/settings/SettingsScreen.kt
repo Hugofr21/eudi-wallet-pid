@@ -128,17 +128,20 @@ private fun Content(
                 items = state.settingsItems,
                 onEventSent = onEventSend,
             )
+
+
+
         }
 
-        Text(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = SPACING_MEDIUM.dp),
-            text = state.appVersion,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
-        )
+//        Text(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(top = SPACING_MEDIUM.dp),
+//            text = state.appVersion,
+//            style = MaterialTheme.typography.bodyMedium,
+//            color = MaterialTheme.colorScheme.onSurface,
+//            textAlign = TextAlign.Center
+//        )
     }
 
     LaunchedEffect(Unit) {

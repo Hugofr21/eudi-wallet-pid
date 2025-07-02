@@ -16,7 +16,7 @@
 
 package eu.europa.ec.authenticationlogic.provider
 
-import eu.europa.ec.authenticationlogic.model.BiometricAuthentication
+import eu.europa.ec.authenticationlogic.model.biometric.BiometricAuthentication
 
 interface BiometryStorageProvider {
     fun getBiometricAuthentication(): BiometricAuthentication?

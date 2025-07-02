@@ -119,6 +119,7 @@
     <string name="content_description_settings_icon">Settings</string>
     <string name="content_description_backup_icon">Backup</string>
     <string name="icon_eid_description">Electronic Identification</string>
+    <string name="logs_eid_description">Logs</string>
 
 
     <!-- Biometric prompt -->
@@ -228,7 +229,8 @@
     <string name="settings_screen_option_changelog">Changelog</string>
     <string name="settings_screen_option_changelog_id">changelogId</string>
     <string name="settings_intent_chooser_logs_share_title">Share logs</string>
-    <string name="settings_screen_option_backup">BackupId</string>
+    <string name="settings_screen_option_backup_id">BackupId</string>
+    <string name="settings_screen_option_backup">Backup</string>
 
     <!-- Home Screen -->
     <string name="home_screen_title">Home</string>
@@ -463,6 +465,8 @@
     <string name="consent_verification_national_id_description">Under applicable regulations and legislation, you may not create a profile solely to obtain identification. To verify your identity, please request credential validation directly from the PID provider.</string>
     <string name="consent_verification_content_title">Identity Verification Requirement</string>
     <string name="consent_verification_content_description">An electronic ID (eID) is a secure, government‑issued digital identity credential that allows holders to authenticate themselves online and access a wide variety of public and private services.</string>
+    <string name="logs_screen_title">Logs</string>
+    <string name="icon_logs_description">Logs icon</string>
 
-
+    <!-- Logs Screen -->
 </resources>

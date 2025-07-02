@@ -26,4 +26,5 @@ data class SideMenuItemUi(
 enum class SideMenuTypeUi {
     CHANGE_PIN,
     SETTINGS,
+    BACKUP
 }

@@ -16,7 +16,7 @@
 
 package eu.europa.ec.corelogic.model
 
-import eu.europa.ec.authenticationlogic.model.BiometricCrypto
+import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
 
 data class AuthenticationData(
     val crypto: BiometricCrypto,

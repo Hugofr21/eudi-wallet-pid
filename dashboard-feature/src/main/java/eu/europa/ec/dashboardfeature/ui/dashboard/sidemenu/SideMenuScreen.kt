@@ -167,6 +167,19 @@ private fun SideMenuContentPreview() {
                             )
                         )
                     ),
+
+                    SideMenuItemUi(
+                        type = SideMenuTypeUi.BACKUP,
+                        data = ListItemDataUi(
+                            itemId = stringResource(R.string.settings_screen_option_backup_id),
+                            mainContentData = ListItemMainContentDataUi.Text(
+                                text = stringResource(R.string.content_description_backup_icon)
+                            ),
+                            leadingContentData = ListItemLeadingContentDataUi.Icon(
+                                iconData = AppIcons.Backup
+                            )
+                        )
+                    ),
                 ),
             ),
             onEventSent = {},

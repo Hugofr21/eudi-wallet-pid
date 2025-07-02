@@ -16,30 +16,38 @@
 
 package eu.europa.ec.businesslogic.controller.crypto
 
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Base64
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.controller.storage.PrefKeys
-import eu.europa.ec.businesslogic.provider.UuidProvider
 import java.security.KeyStore
+import java.security.SecureRandom
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
 interface KeystoreController {
     fun retrieveOrGenerateBiometricSecretKey(): SecretKey?
+    fun deleteKey(alias: String)
+    fun rotateKey(oldAlias: String): String?
 }
 
 class KeystoreControllerImpl(
     private val prefKeys: PrefKeys,
     private val logController: LogController,
-    private val uuidProvider: UuidProvider
 ) : KeystoreController {
 
     companion object {
         private const val STORE_TYPE = "AndroidKeyStore"
+        private const val KEY__ALGORITHM  = KeyProperties.KEY_ALGORITHM_AES // KEY_ALGORITHM_EC
+        private const val BLOCK_MODE = KeyProperties.BLOCK_MODE_GCM
+        private const val PADDING = KeyProperties.ENCRYPTION_PADDING_NONE // ENCRYPTION_PADDING_PKCS7
+        private const val KEY_SIZE = 256
     }
 
     private var androidKeyStore: KeyStore? = null
+    private val randomSecret = SecureRandom()
 
     init {
         loadKeyStore()
@@ -77,24 +85,38 @@ class KeystoreControllerImpl(
 
     @Suppress("DEPRECATION")
     private fun generateBiometricSecretKey(alias: String) {
-        val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, STORE_TYPE)
-        keyGenerator.init(
-            KeyGenParameterSpec.Builder(
-                alias,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setUserAuthenticationRequired(true)
-                .setInvalidatedByBiometricEnrollment(true)
-                .setUserAuthenticationParameters(
-                    0,
-                    KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
-                )
-                .build()
+        val keyGenerator = KeyGenerator.getInstance(
+            KEY__ALGORITHM,
+            STORE_TYPE
         )
+
+        keyGenerator.init(createdKeyGenParameterSpec(alias))
         keyGenerator.generateKey()
     }
+
+
+    private fun createdKeyGenParameterSpec(alias: String): KeyGenParameterSpec {
+        val builder = KeyGenParameterSpec.Builder(
+            alias,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+        )
+            .setBlockModes(BLOCK_MODE)
+            .setEncryptionPaddings(PADDING)
+            .setKeySize(KEY_SIZE)
+            .setUserAuthenticationRequired(true)
+            .setInvalidatedByBiometricEnrollment(true)
+            .setUserAuthenticationValidityDurationSeconds(-1)
+            .setUserAuthenticationParameters(
+                0,
+                KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
+            )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            builder.setIsStrongBoxBacked(true)
+        }
+        return builder.build()
+    }
+
 
     private fun getBiometricSecretKey(keyStore: KeyStore, alias: String): SecretKey {
         keyStore.load(null)
@@ -102,11 +124,35 @@ class KeystoreControllerImpl(
     }
 
     /**
-     * Get random GUID string
+     * Get random string
      *
      * @return a string containing 64 characters
      */
-    private fun createPublicKey(): GUID =
-        (uuidProvider.provideUuid() + uuidProvider.provideUuid())
-            .take(CryptoControllerImpl.MAX_GUID_LENGTH)
+    private fun createPublicKey(): String {
+        val randomBytes = ByteArray(32);
+        randomSecret.nextBytes(randomBytes)
+        val stringBase64 = Base64.encodeToString(randomBytes, Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP)
+        return stringBase64.substring(0, 32)
+    }
+
+
+    override fun deleteKey(alias: String){
+        try {
+            androidKeyStore?.deleteEntry(alias)
+            prefKeys.setBiometricAlias("")
+            logController.d(this.javaClass.simpleName, { "Key $alias deleted" })
+        }catch (e: Exception){
+            logController.e(this.javaClass.simpleName, e)
+        }
+    }
+
+    override fun rotateKey(oldAlias: String): String? {
+        val newAlias = createPublicKey()
+        androidKeyStore?.deleteEntry(oldAlias)
+        generateBiometricSecretKey(newAlias)
+        prefKeys.setBiometricAlias(newAlias)
+        return  newAlias
+    }
+
+
 }

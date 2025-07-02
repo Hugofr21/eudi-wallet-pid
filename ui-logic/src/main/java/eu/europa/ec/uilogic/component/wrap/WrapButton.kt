@@ -41,7 +41,7 @@ enum class ButtonType {
     SECONDARY,
 }
 
-public val buttonsShape: RoundedCornerShape = RoundedCornerShape(SIZE_100.dp)
+public val buttonsShape: RoundedCornerShape = RoundedCornerShape(0.dp)
 
 private val buttonsContentPadding: PaddingValues = PaddingValues(
     vertical = 10.dp,
@@ -53,7 +53,7 @@ data class ButtonConfig(
     val enabled: Boolean = true,
     val onClick: () -> Unit,
     val isWarning: Boolean = false,
-    val shape: Shape = buttonsShape,
+    val shape: Shape = buttonsShape ,
     val contentPadding: PaddingValues = buttonsContentPadding,
     val buttonColors: ButtonColors? = null,
 )

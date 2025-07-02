@@ -39,6 +39,22 @@ interface QuickPinInteractor : FormValidator {
     fun hasPin(): Boolean
 }
 
+
+interface QuickBiometricInteractor : FormValidator {
+    fun setPin(newPin: String, initialPin: String): Flow<QuickBiometricInteractorSetPinPartialState>
+    fun changePin(
+        newPin: String
+    ): Flow<QuickBiometricInteractorSetPinPartialState>
+
+    fun isCurrentPinValid(pin: String): Flow<QuickBiometricInteractorPinValidPartialState>
+    fun isPinMatched(
+        currentPin: String,
+        newPin: String
+    ): Flow<QuickBiometricInteractorPinValidPartialState>
+
+    fun hasBiometric(): Boolean
+}
+
 class QuickPinInteractorImpl(
     private val formValidator: FormValidator,
     private val pinStorageController: PinStorageController,
@@ -139,4 +155,14 @@ sealed class QuickPinInteractorSetPinPartialState {
 sealed class QuickPinInteractorPinValidPartialState {
     data object Success : QuickPinInteractorPinValidPartialState()
     data class Failed(val errorMessage: String) : QuickPinInteractorPinValidPartialState()
+}
+
+sealed class QuickBiometricInteractorSetPinPartialState {
+    data object Success : QuickBiometricInteractorSetPinPartialState()
+    data class Failed(val errorMessage: String) : QuickBiometricInteractorSetPinPartialState()
+}
+
+sealed class QuickBiometricInteractorPinValidPartialState {
+    data object Success : QuickBiometricInteractorPinValidPartialState()
+    data class Failed(val errorMessage: String) : QuickBiometricInteractorPinValidPartialState()
 }

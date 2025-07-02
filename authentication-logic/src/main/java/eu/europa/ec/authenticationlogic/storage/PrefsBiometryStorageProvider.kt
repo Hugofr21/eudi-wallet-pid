@@ -17,7 +17,7 @@
 package eu.europa.ec.authenticationlogic.storage
 
 import com.google.gson.Gson
-import eu.europa.ec.authenticationlogic.model.BiometricAuthentication
+import eu.europa.ec.authenticationlogic.model.biometric.BiometricAuthentication
 import eu.europa.ec.authenticationlogic.provider.BiometryStorageProvider
 import eu.europa.ec.businesslogic.controller.storage.PrefsController
 

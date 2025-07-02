@@ -59,6 +59,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import coil3.request.colorSpace
 import eu.europa.ec.corelogic.model.DocumentCategory
 import eu.europa.ec.corelogic.model.DocumentIdentifier
 import eu.europa.ec.corelogic.util.CoreActions
@@ -212,6 +213,7 @@ private fun TopBar(
                 horizontal = SPACING_SMALL.dp,
                 vertical = SPACING_MEDIUM.dp
             )
+
     ) {
         WrapIconButton(
             modifier = Modifier.align(Alignment.CenterStart),

@@ -31,8 +31,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
-import eu.europa.ec.uilogic.component.utils.SIZE_SMALL
 import eu.europa.ec.uilogic.extension.throttledClickable
+
 
 @Composable
 fun WrapCard(
@@ -44,10 +44,10 @@ fun WrapCard(
     colors: CardColors? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val cardShape = shape ?: RoundedCornerShape(SIZE_SMALL.dp)
+    val cardShape = shape ?: RoundedCornerShape(0.dp)
     val cardColors = colors ?: CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     )
     val cardModifier = Modifier
         .clip(cardShape)

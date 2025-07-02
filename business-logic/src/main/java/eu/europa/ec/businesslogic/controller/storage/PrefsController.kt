@@ -309,7 +309,6 @@ class PrefsControllerImpl(
 interface PrefKeys {
     fun getBiometricAlias(): String
     fun setBiometricAlias(value: String)
-
     fun getShowBatchIssuanceCounter(): Boolean
     fun setShowBatchIssuanceCounter(value: Boolean)
 }

@@ -425,4 +425,10 @@ object AppIcons {
         imageVector = null
     )
 
+    val Logs: IconDataUi = IconDataUi(
+        resourceId = R.drawable.ic_logs,
+        contentDescriptionId = R.string.logs_eid_description,
+        imageVector = null
+    )
+
 }

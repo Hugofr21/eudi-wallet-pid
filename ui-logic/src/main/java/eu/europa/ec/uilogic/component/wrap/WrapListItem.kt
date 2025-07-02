@@ -41,6 +41,12 @@ import eu.europa.ec.uilogic.component.preview.TextLengthPreviewProvider
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 
+val LightSkyBlue   = Color(0xFFCAE6FD)
+val OceanBlue      = Color(0xFF2A5ED9)
+val DeepBlue       = Color(0xFF0048D2)
+val SoftYellow     = Color(0xFFFFF1BA)
+val CoralRed       = Color(0xFFFF6E70)
+
 @Composable
 fun WrapListItem(
     modifier: Modifier = Modifier,

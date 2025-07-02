@@ -38,7 +38,7 @@ const val SPACING_EXTRA_SMALL = 4
 const val SPACING_SMALL = 8
 
 /** Value 12 */
-const val SPACING_SMALL_12 = 8
+const val SPACING_SMALL_12 = 12
 
 /** Value 16 */
 const val SPACING_MEDIUM = 16
