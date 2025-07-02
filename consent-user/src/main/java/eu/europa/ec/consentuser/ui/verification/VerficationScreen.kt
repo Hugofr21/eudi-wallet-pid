@@ -14,7 +14,7 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.eudi.consent_user.ui.verification
+package eu.europa.ec.consentuser.ui.verification
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -138,7 +138,7 @@ private fun MainContent(
             .padding(paddingValues)
     ) {
 
-        TopStepBar(currentStep = 2)
+//        TopStepBar(currentStep = 2)
 
         VSpacer.ExtraLarge()
 

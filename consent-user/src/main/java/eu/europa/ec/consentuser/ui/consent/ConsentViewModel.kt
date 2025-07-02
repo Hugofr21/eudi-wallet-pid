@@ -14,7 +14,7 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.eudi.consent_user.ui.verification
+package eu.europa.ec.consentuser.ui.consent
 
 import eu.europa.ec.commonfeature.model.PinFlow
 import eu.europa.ec.uilogic.mvi.MviViewModel
@@ -22,6 +22,7 @@ import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.CommonScreens
+import eu.europa.ec.uilogic.navigation.ConsentUserScreens
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import org.koin.android.annotation.KoinViewModel
@@ -29,38 +30,43 @@ import org.koin.android.annotation.KoinViewModel
 data class State(
     val tosAccepted: Boolean = false,
     val dataProtectionAccepted: Boolean = false,
-    val isButtonEnabled: Boolean = false
+    val isButtonEnabled: Boolean = false,
 ) : ViewState
 
 sealed class Event : ViewEvent {
-    object GoNext : Event()
-    object GoBack : Event()
-    object TosSelected : Event()
-    object DataProtectionSelected : Event()
+    data object GoNext : Event()
+    data object GoBack : Event()
+    data object TosSelected : Event()
+    data object DataProtectionSelected : Event()
 }
 
 sealed class Effect : ViewSideEffect {
     sealed class Navigation : Effect() {
         data class SwitchScreen(val screenRoute: String) : Navigation()
-        object Pop : Navigation()
+        data object Pop : Navigation()
     }
-    }
+}
 
 @KoinViewModel
-public class VerificationViewModel : MviViewModel<Event, State, Effect>() {
+class ConsentViewModel : MviViewModel<Event, State, Effect>() {
     override fun setInitialState(): State = State()
 
     override fun handleEvents(event: Event) {
         when (event) {
             Event.GoNext -> {
-                val nextRoute = getQuickPinConfig()
-                setEffect { Effect.Navigation.SwitchScreen(nextRoute) }
+                val nextScreenRoute = getVerificationLayout()
+                setEffect { Effect.Navigation.SwitchScreen(nextScreenRoute) }
             }
-            Event.GoBack -> setEffect { Effect.Navigation.Pop }
+
+            Event.GoBack -> {
+                setEffect { Effect.Navigation.Pop }
+            }
+
             Event.TosSelected -> {
                 setState { copy(tosAccepted = !tosAccepted) }
                 validateForm()
             }
+
             Event.DataProtectionSelected -> {
                 setState { copy(dataProtectionAccepted = !dataProtectionAccepted) }
                 validateForm()
@@ -69,13 +75,12 @@ public class VerificationViewModel : MviViewModel<Event, State, Effect>() {
     }
 
     private fun validateForm() {
-        val enabled = viewState.value.tosAccepted && viewState.value.dataProtectionAccepted
-        setState { copy(isButtonEnabled = enabled) }
+        val isButtonEnabled = viewState.value.tosAccepted &&
+                viewState.value.dataProtectionAccepted
+        setState { copy(isButtonEnabled = isButtonEnabled) }
     }
 
-    private fun getQuickPinConfig(): String =
-        generateComposableNavigationLink(
-            screen = CommonScreens.QuickPin,
-            arguments = generateComposableArguments(mapOf("pinFlow" to PinFlow.CREATE))
-        )
+    private fun getVerificationLayout(): String {
+      return ConsentUserScreens.Verification.screenRoute
+    }
 }

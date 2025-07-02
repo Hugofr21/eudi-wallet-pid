@@ -19,6 +19,7 @@ package eu.europa.ec.uilogic.component.wrap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -41,6 +42,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -65,8 +67,10 @@ import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.EmptyTextToolbar
 import eu.europa.ec.uilogic.component.utils.HSpacer
 import eu.europa.ec.uilogic.component.utils.OneTimeLaunchedEffect
+import eu.europa.ec.uilogic.component.utils.SIZE_EXTRA_SMALL
 import eu.europa.ec.uilogic.component.utils.SIZE_SMALL
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
+
 
 @Composable
 fun WrapPinTextField(
@@ -92,7 +96,10 @@ fun WrapPinTextField(
     }
 
     // Text field range.
-    val fieldsRange = 0 until length
+    val fieldsRange = (0 until length).toList()
+
+    // Split text field range into rows.
+    val rows = remember(length) { fieldsRange.chunked(4) }
 
     // Get keyboard controller.
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -135,120 +142,131 @@ fun WrapPinTextField(
             backgroundColor = Color.Transparent
         )
     ) {
-        Column(modifier = modifier) {
-            Row(
-                modifier = Modifier.wrapContentWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                for (currentTextField in fieldsRange) {
-                    DisableSelection {
-                        OutlinedTextField(
-                            modifier = Modifier
-                                .focusRequester(focusRequesters[currentTextField])
-                                .then(pinWidth?.let { dp ->
-                                    Modifier
-                                        .width(dp)
-                                        .padding(vertical = SPACING_SMALL.dp)
-                                } ?: Modifier
-                                    .weight(1f)
-                                    .wrapContentSize())
-                                .then(
-                                    Modifier.onKeyEvent { keyEvent ->
-                                        if (keyEvent.key == Key.Backspace) {
-                                            if (textFieldStateList[currentTextField].value.isNotEmpty()) {
-                                                textFieldStateList[currentTextField].value = ""
-                                                // Notify listener.
-                                                onPinUpdate.invoke(
-                                                    textFieldStateList.joinToString(
-                                                        separator = "",
-                                                        transform = { textField ->
-                                                            textField.value
-                                                        }
+        Column(
+            modifier = modifier,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            rows.forEach { rows ->
+                Row(
+                    modifier = Modifier.wrapContentWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(SIZE_EXTRA_SMALL.dp),
+                ) {
+                    for (currentTextField in rows) {
+                        DisableSelection {
+                            OutlinedTextField(
+                                modifier = Modifier
+                                    .focusRequester(focusRequesters[currentTextField])
+                                    .then(pinWidth?.let { dp ->
+                                        Modifier
+                                            .width(dp)
+                                            .padding(vertical = SPACING_SMALL.dp)
+                                    } ?: Modifier
+                                        .weight(1f)
+                                        .wrapContentSize())
+                                    .then(
+                                        Modifier.onKeyEvent { keyEvent ->
+                                            if (keyEvent.key == Key.Backspace) {
+                                                if (textFieldStateList[currentTextField].value.isNotEmpty()) {
+                                                    textFieldStateList[currentTextField].value = ""
+                                                    // Notify listener.
+                                                    onPinUpdate.invoke(
+                                                        textFieldStateList.joinToString(
+                                                            separator = "",
+                                                            transform = { textField ->
+                                                                textField.value
+                                                            }
+                                                        )
                                                     )
-                                                )
+                                                }
+                                                focusRequesters.requestFocus(currentTextField - 1)
+                                                true
+                                            } else {
+                                                false
                                             }
-                                            focusRequesters.requestFocus(currentTextField - 1)
-                                            true
-                                        } else {
-                                            false
                                         }
+                                    ),
+                                shape = RoundedCornerShape(0.dp),
+                                value = textFieldStateList[currentTextField].value,
+                                textStyle = LocalTextStyle.current.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                ),
+                                colors = colors.copy(
+                                    cursorColor = Color.Transparent,
+                                    errorCursorColor = Color.Transparent
+                                ),
+                                visualTransformation = visualTransformation,
+                                isError = hasError,
+                                singleLine = true,
+                                onValueChange = { newText: String ->
+
+                                    if (
+                                        !newText.isDigitsOnly()
+                                        || ((textFieldStateList.all { textField -> textField.value.isEmpty() }
+                                                || textFieldStateList.all { textField -> textField.value.isNotEmpty() })
+                                                && currentTextField == rows.last()
+                                                && newText.isNotEmpty())
+                                    ) {
+                                        return@OutlinedTextField
+                                    }
+
+                                    if (newText != textFieldStateList[currentTextField].value) {
+                                        textFieldStateList[currentTextField].value =
+                                            newText.replaceFirst(
+                                                textFieldStateList[currentTextField].value,
+                                                ""
+                                            )
+
+                                        // Check if all fields are valid.
+                                        if (
+                                            !textFieldStateList.any { textField -> textField.value.isEmpty() }
+                                            && shouldHideKeyboardOnCompletion
+                                        ) {
+                                            focusManager.clearFocus()
+                                            keyboardController?.hide()
+                                        } else if (currentTextField < rows.last() && newText.isNotEmpty()) {
+                                            focusRequesters.requestFocus(currentTextField + 1)
+                                        }
+                                        // Notify listener.
+                                        onPinUpdate.invoke(
+                                            textFieldStateList.joinToString(
+                                                separator = "",
+                                                transform = { textField ->
+                                                    textField.value
+                                                }
+                                            )
+                                        )
+                                    }
+                                },
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.NumberPassword,
+                                    imeAction = when (currentTextField < rows.last()) {
+                                        true -> ImeAction.Next
+                                        false -> ImeAction.Done
                                     }
                                 ),
-                            shape = RoundedCornerShape(SIZE_SMALL.dp),
-                            value = textFieldStateList[currentTextField].value,
-                            textStyle = LocalTextStyle.current.copy(
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                            ),
-                            colors = colors.copy(
-                                cursorColor = Color.Transparent,
-                                errorCursorColor = Color.Transparent
-                            ),
-                            visualTransformation = visualTransformation,
-                            isError = hasError,
-                            singleLine = true,
-                            onValueChange = { newText: String ->
-
-                                if (
-                                    !newText.isDigitsOnly()
-                                    || ((textFieldStateList.all { textField -> textField.value.isEmpty() }
-                                            || textFieldStateList.all { textField -> textField.value.isNotEmpty() })
-                                            && currentTextField == fieldsRange.last
-                                            && newText.isNotEmpty())
-                                ) {
-                                    return@OutlinedTextField
-                                }
-
-                                if (newText != textFieldStateList[currentTextField].value) {
-                                    textFieldStateList[currentTextField].value =
-                                        newText.replaceFirst(
-                                            textFieldStateList[currentTextField].value,
-                                            ""
-                                        )
-
-                                    // Check if all fields are valid.
-                                    if (
-                                        !textFieldStateList.any { textField -> textField.value.isEmpty() }
-                                        && shouldHideKeyboardOnCompletion
-                                    ) {
-                                        focusManager.clearFocus()
-                                        keyboardController?.hide()
-                                    } else if (currentTextField < fieldsRange.last && newText.isNotEmpty()) {
+                                keyboardActions = KeyboardActions(
+                                    onNext = {
                                         focusRequesters.requestFocus(currentTextField + 1)
+                                    }, onDone = {
+                                        keyboardController?.hide()
                                     }
-                                    // Notify listener.
-                                    onPinUpdate.invoke(
-                                        textFieldStateList.joinToString(
-                                            separator = "",
-                                            transform = { textField ->
-                                                textField.value
-                                            }
-                                        )
-                                    )
-                                }
-                            },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.NumberPassword,
-                                imeAction = when (currentTextField < fieldsRange.last) {
-                                    true -> ImeAction.Next
-                                    false -> ImeAction.Done
-                                }
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onNext = {
-                                    focusRequesters.requestFocus(currentTextField + 1)
-                                }, onDone = {
-                                    keyboardController?.hide()
-                                }
+                                )
                             )
-                        )
-                    }
+                        }
 
-                    if (currentTextField != fieldsRange.last) {
-                        HSpacer.Small()
+                        if (currentTextField != rows.last()) {
+                            HSpacer.Small()
+                        }
+                    }
+                    if (rows.size < 4) {
+                        repeat(4 - rows.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
+
             errorMessage?.let {
                 Text(
                     text = it,

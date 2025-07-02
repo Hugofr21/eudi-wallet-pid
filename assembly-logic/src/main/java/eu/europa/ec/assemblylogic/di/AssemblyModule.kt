@@ -23,7 +23,7 @@ import eu.europa.ec.businesslogic.di.LogicBusinessModule
 import eu.europa.ec.commonfeature.di.FeatureCommonModule
 import eu.europa.ec.corelogic.di.LogicCoreModule
 import eu.europa.ec.dashboardfeature.di.FeatureDashboardModule
-import eu.europa.ec.eudi.consent_user.di.FeatureConsentUserModule
+import eu.europa.ec.consentuser.di.FeatureConsentUserModule
 import eu.europa.ec.issuancefeature.di.FeatureIssuanceModule
 import eu.europa.ec.networklogic.di.LogicNetworkModule
 import eu.europa.ec.presentationfeature.di.FeaturePresentationModule
@@ -49,7 +49,6 @@ private val assembledModules = listOf(
     LogicAuthenticationModule().module,
     LogicCoreModule().module,
     LogicStorageModule().module,
-    FeatureConsentUserModule().module,
 
 
     // Feature Modules
@@ -58,7 +57,8 @@ private val assembledModules = listOf(
     FeatureStartupModule().module,
     FeaturePresentationModule().module,
     FeatureProximityModule().module,
-    FeatureIssuanceModule().module
+    FeatureIssuanceModule().module,
+    FeatureConsentUserModule().module
 )
 
 internal fun Application.setupKoin(): KoinApplication {

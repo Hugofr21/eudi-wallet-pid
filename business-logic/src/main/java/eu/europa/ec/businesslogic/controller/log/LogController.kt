@@ -20,8 +20,12 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
+import com.nimbusds.jose.Payload
 import eu.europa.ec.businesslogic.config.ConfigLogic
+import eu.europa.ec.businesslogic.model.LogFormat
+import eu.europa.ec.businesslogic.model.LogLevel
 import fr.bipi.treessence.file.FileLoggerTree
+import io.ktor.http.Headers
 import timber.log.Timber
 import java.io.File
 
@@ -36,8 +40,23 @@ interface LogController {
     fun w(message: () -> String)
     fun i(tag: String, message: () -> String)
     fun i(message: () -> String)
+
     fun retrieveLogFileUris(): List<Uri>
+    fun exportType(options: String)
+    fun getLogStatistics(): LogStatistics
+    fun clearLogs()
 }
+
+
+data class LogStatistics(
+    val headers: Headers,
+    val payload: Payload,
+    val logFormat: LogFormat? = null,
+    val logLevel: LogLevel,
+    val method: String? = null,
+    val timestamp: String,
+    val url: String? = null
+)
 
 class LogControllerImpl(
     private val context: Context,
@@ -111,5 +130,17 @@ class LogControllerImpl(
         return fileLoggerTree.files.map {
             FileProvider.getUriForFile(context, "${context.packageName}.provider", it)
         }
+    }
+
+    override fun exportType(options: String) {
+
+    }
+
+    override fun getLogStatistics(): LogStatistics {
+        TODO("Not yet implemented")
+    }
+
+    override fun clearLogs() {
+        TODO("Not yet implemented")
     }
 }

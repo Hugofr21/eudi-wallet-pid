@@ -14,7 +14,7 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.eudi.consent_user.ui.welcome
+package eu.europa.ec.consentuser.ui.welcome
 
 
 import eu.europa.ec.resourceslogic.R
@@ -25,7 +25,6 @@ import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.ConsentUserScreens
 import org.koin.android.annotation.KoinViewModel
-
 
 data class State(
     val pages: List<SinglePageConfig> = emptyList()
@@ -44,7 +43,7 @@ sealed class Effect : ViewSideEffect {
 }
 
 @KoinViewModel
-class WelcomeViewModel : MviViewModel<Event, State, Effect>() {
+class WelcomeViewModel :  MviViewModel<Event, State, Effect>() {
     override fun setInitialState(): State = State(
         pages = listOf(
             SinglePageConfig(

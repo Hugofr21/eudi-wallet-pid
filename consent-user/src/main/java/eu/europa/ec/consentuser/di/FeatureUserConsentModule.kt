@@ -14,17 +14,18 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.eudi.consent_user.di
+package eu.europa.ec.consentuser.di
 
 
-import eu.europa.ec.eudi.consent_user.interactor.ConsentInteractor
-import eu.europa.ec.eudi.consent_user.interactor.ConsentInteractorImpl
+
+import eu.europa.ec.consentuser.interactor.ConsentInteractor
+import eu.europa.ec.consentuser.interactor.ConsentInteractorImpl
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
 
 @Module
-@ComponentScan("eu.europa.ec.consent_user")
+@ComponentScan("eu.europa.ec.consentuser")
 class FeatureConsentUserModule
 
 @Factory

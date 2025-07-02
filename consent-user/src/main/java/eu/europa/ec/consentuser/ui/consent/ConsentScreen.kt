@@ -14,7 +14,7 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.eudi.consent_user.ui.consent
+package eu.europa.ec.consentuser.ui.consent
 
 
 import androidx.compose.foundation.layout.Column

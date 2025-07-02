@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.constent_user
+package eu.europa.ec.eudi.consentuser
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

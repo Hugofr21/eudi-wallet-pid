@@ -26,7 +26,7 @@ open class Screen(name: String, parameters: String = "") : NavigatableItem {
 sealed class ConsentUserScreens {
     data object Welcome : Screen(name = "WELCOME")
     data object Consent : Screen(name = "CONSENT")
-    data object Enrollment : Screen(name = "ENROLLMENT")
+    data object Verification : Screen(name = "VERIFICATION")
 }
 
 
@@ -121,13 +121,6 @@ sealed class IssuanceScreens {
         name = "ISSUANCE_DOCUMENT_SUCCESS",
         parameters = "?issuanceSuccessConfig={issuanceSuccessConfig}"
     )
-}
-
-sealed class UserConsentScreens {
-    data object Welcome : Screen(name = "WELCOME")
-    data object Consent : Screen(name = "CONSENT")
-    data object Enrollment : Screen(name = "ENROLLMENT")
-
 }
 
 

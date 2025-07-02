@@ -41,7 +41,7 @@ val koverModules: Map<LibraryModule, KoverExclusionRules> = mapOf(
     LibraryModule.PresentationFeature to KoverExclusionRules.PresentationFeature,
     LibraryModule.ProximityFeature to KoverExclusionRules.ProximityFeature,
     LibraryModule.IssuanceFeature to KoverExclusionRules.IssuanceFeature,
-    LibraryModule.UserConsent to KoverExclusionRules.UserConsent,
+    LibraryModule.UserConsentFeature to KoverExclusionRules.UserConsent,
 )
 
 sealed interface KoverExclusionRules {
@@ -204,13 +204,22 @@ sealed interface KoverExclusionRules {
             )
     }
 
-    object UserConsent : LogicModule {
+//    object UserConsent : FeatureModule {
+//        override val classes: List<String>
+//            get() = commonClasses
+//        override val packages: List<String>
+//            get() = commonPackages
+//    }
+
+    object UserConsent : FeatureModule {
         override val classes: List<String>
             get() = commonClasses
 
         override val packages: List<String>
             get() = commonPackages + listOf(
-                "eu.europa.ec.constent_user"
+                "eu.europa.ec.consentuser"
             )
     }
+
+
 }

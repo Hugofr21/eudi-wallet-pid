@@ -14,15 +14,15 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.eudi.consent_user.router
+package eu.europa.ec.consentuser.router
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
-import eu.europa.ec.eudi.consent_user.ui.consent.ConsentScreen
-import eu.europa.ec.eudi.consent_user.ui.verification.VerificationScreen
-import eu.europa.ec.eudi.consent_user.ui.welcome.WelcomeScreen
+import eu.europa.ec.consentuser.ui.consent.ConsentScreen
+import eu.europa.ec.consentuser.ui.verification.VerificationScreen
+import eu.europa.ec.consentuser.ui.welcome.WelcomeScreen
 import eu.europa.ec.uilogic.navigation.ConsentUserScreens
 import eu.europa.ec.uilogic.navigation.ModuleRoute
 import org.koin.androidx.compose.koinViewModel
@@ -40,7 +40,7 @@ fun NavGraphBuilder.featureConsentUserGraph(navController: NavController) {
         composable(route = ConsentUserScreens.Consent.screenRoute) {
             ConsentScreen(navController, koinViewModel())
         }
-        composable(route = ConsentUserScreens.Enrollment.screenRoute) {
+        composable(route = ConsentUserScreens.Verification.screenRoute) {
             VerificationScreen(navController, koinViewModel())
         }
     }

@@ -8,20 +8,15 @@ plugins {
 }
 
 android {
-    namespace = "eu.europa.ec.eudi.constent_user"
+    namespace = "eu.europa.ec.consentuser"
+}
+
+moduleConfig {
+    module = LibraryModule.UserConsentFeature
 }
 
 
-
 dependencies {
-
-//    implementation(libs.androidx.core.ktx)
-//    implementation(libs.androidx.appcompat)
-//    implementation(libs.material)
-//    testImplementation(libs.junit4)
-//    androidTestImplementation(libs.androidx.test.orchestrator)
-//    androidTestImplementation(libs.androidx.test.espresso.core)
-
     implementation(project(LibraryModule.BusinessLogic.path))
     implementation(project(LibraryModule.CoreLogic.path))
     implementation(project(LibraryModule.UiLogic.path))

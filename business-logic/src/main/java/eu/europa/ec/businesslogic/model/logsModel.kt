@@ -14,26 +14,29 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.eudi.consent_user.interactor
+package eu.europa.ec.businesslogic.model
 
-import eu.europa.ec.commonfeature.model.PinFlow
-import eu.europa.ec.uilogic.navigation.CommonScreens
-import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
-import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
+import java.sql.Timestamp
 
-interface ConsentInteractor {
-    fun getNextRoute(): String
+enum class LogFormat{
+    XML,
+    JSON,
+    TXT
 }
 
-class ConsentInteractorImpl(
-) : ConsentInteractor {
-
-    override fun getNextRoute(): String {
-        return generateComposableNavigationLink(
-            screen = CommonScreens.QuickPin,
-            arguments = generateComposableArguments(mapOf("pinFlow" to PinFlow.CREATE))
-        )
-    }
-
-
+enum class LogLevel{
+    DEBUG,
+    INFO,
+    WARNING,
+    ERROR
 }
+
+
+data class LogsEntry(
+    val timestamp: Timestamp,
+    val from: String ? = null,
+    val level: LogLevel,
+    val message: String,
+    val exception: String?,
+    val exceptionStackTrace: String? = null
+)

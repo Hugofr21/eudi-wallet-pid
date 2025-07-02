@@ -14,7 +14,7 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.eudi.consent_user.ui.consent
+package eu.europa.ec.consentuser.ui.verification
 
 import eu.europa.ec.commonfeature.model.PinFlow
 import eu.europa.ec.uilogic.mvi.MviViewModel
@@ -29,43 +29,38 @@ import org.koin.android.annotation.KoinViewModel
 data class State(
     val tosAccepted: Boolean = false,
     val dataProtectionAccepted: Boolean = false,
-    val isButtonEnabled: Boolean = false,
+    val isButtonEnabled: Boolean = true // active
 ) : ViewState
 
 sealed class Event : ViewEvent {
-    data object GoNext : Event()
-    data object GoBack : Event()
-    data object TosSelected : Event()
-    data object DataProtectionSelected : Event()
+    object GoNext : Event()
+    object GoBack : Event()
+    object TosSelected : Event()
+    object DataProtectionSelected : Event()
 }
 
 sealed class Effect : ViewSideEffect {
     sealed class Navigation : Effect() {
         data class SwitchScreen(val screenRoute: String) : Navigation()
-        data object Pop : Navigation()
+        object Pop : Navigation()
     }
-}
+    }
 
 @KoinViewModel
-class ConsentViewModel : MviViewModel<Event, State, Effect>() {
+class VerificationViewModel : MviViewModel<Event, State, Effect>() {
     override fun setInitialState(): State = State()
 
     override fun handleEvents(event: Event) {
         when (event) {
             Event.GoNext -> {
-                val nextScreenRoute = getQuickPinConfig()
-                setEffect { Effect.Navigation.SwitchScreen(nextScreenRoute) }
+                val nextRoute = getQuickPinConfig()
+                setEffect { Effect.Navigation.SwitchScreen(nextRoute) }
             }
-
-            Event.GoBack -> {
-                setEffect { Effect.Navigation.Pop }
-            }
-
+            Event.GoBack -> setEffect { Effect.Navigation.Pop }
             Event.TosSelected -> {
                 setState { copy(tosAccepted = !tosAccepted) }
                 validateForm()
             }
-
             Event.DataProtectionSelected -> {
                 setState { copy(dataProtectionAccepted = !dataProtectionAccepted) }
                 validateForm()
@@ -74,15 +69,13 @@ class ConsentViewModel : MviViewModel<Event, State, Effect>() {
     }
 
     private fun validateForm() {
-        val isButtonEnabled = viewState.value.tosAccepted &&
-                viewState.value.dataProtectionAccepted
-        setState { copy(isButtonEnabled = isButtonEnabled) }
+        val enabled = viewState.value.tosAccepted && viewState.value.dataProtectionAccepted
+        setState { copy(isButtonEnabled = enabled) }
     }
 
-    private fun getQuickPinConfig(): String {
-        return generateComposableNavigationLink(
+    private fun getQuickPinConfig(): String =
+        generateComposableNavigationLink(
             screen = CommonScreens.QuickPin,
             arguments = generateComposableArguments(mapOf("pinFlow" to PinFlow.CREATE))
         )
-    }
 }

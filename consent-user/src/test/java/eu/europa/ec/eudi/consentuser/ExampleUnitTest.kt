@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.constent_user
+package eu.europa.ec.eudi.consentuser
 
 import org.junit.Test
 
