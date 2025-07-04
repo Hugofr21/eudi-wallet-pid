@@ -54,6 +54,7 @@ class DocumentSignInteractorImpl(
                 trailingContentData = ListItemTrailingContentDataUi.Icon(
                     iconData = AppIcons.Add
                 ),
+
             )
         )
     }

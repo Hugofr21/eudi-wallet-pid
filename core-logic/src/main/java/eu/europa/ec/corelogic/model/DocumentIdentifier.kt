@@ -42,7 +42,7 @@ sealed interface DocumentIdentifier {
 
     data object AgeOver18Pid : DocumentIdentifier {
         override val formatType: FormatType
-            get() = "eu.europa.ec.av.2"
+            get() = "eu.europa.ec.av.1"
     }
 
     data class OTHER(

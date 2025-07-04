@@ -467,6 +467,7 @@
     <string name="consent_verification_content_description">An electronic ID (eID) is a secure, government‑issued digital identity credential that allows holders to authenticate themselves online and access a wide variety of public and private services.</string>
     <string name="logs_screen_title">Logs</string>
     <string name="icon_logs_description">Logs icon</string>
+    <string name="landing_screen_title">EUDI Wallet</string>
 
     <!-- Logs Screen -->
 </resources>

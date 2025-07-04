@@ -94,7 +94,7 @@ fun WrapStepBar(currentStep: Int, steps: List<String>, modifier: Modifier = Modi
                     .fillMaxWidth()
                     .clipToBounds(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start,
+                horizontalArrangement = Arrangement.Center,
                 userScrollEnabled = true
             ) {
                 itemsIndexed(steps) { index, text ->

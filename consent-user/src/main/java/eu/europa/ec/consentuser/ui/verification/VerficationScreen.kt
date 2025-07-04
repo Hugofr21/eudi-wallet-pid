@@ -97,7 +97,7 @@ private fun NavigationSlider(
             .fillMaxWidth()
             .padding(paddingValues)
     ) {
-        TopStepBar(currentStep = 3)
+        TopStepBar(currentStep = 2)
         MainContent(
             paddingValues = paddingValues,
         )

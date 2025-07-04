@@ -64,6 +64,7 @@ import eu.europa.ec.uilogic.extension.resetBackStack
 import eu.europa.ec.uilogic.extension.setBackStackFlowCancelled
 import eu.europa.ec.uilogic.extension.setBackStackFlowSuccess
 import eu.europa.ec.uilogic.navigation.CommonScreens
+import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.helper.handleDeepLinkAction
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -349,30 +350,41 @@ private fun PinFieldLayout(
 @Composable
 private fun PreviewBiometricScreen() {
     PreviewTheme {
-        Body(
-            state = State(
-                config = BiometricUiConfig(
-                    mode = BiometricMode.Default(
-                        descriptionWhenBiometricsEnabled = stringResource(R.string.loading_biometry_biometrics_enabled_description),
-                        descriptionWhenBiometricsNotEnabled = stringResource(R.string.loading_biometry_biometrics_not_enabled_description),
-                        textAbovePin = stringResource(R.string.biometric_default_mode_text_above_pin_field),
-                    ),
-                    isPreAuthorization = true,
-                    onSuccessNavigation = ConfigNavigation(
-                        navigationType = NavigationType.PushScreen(CommonScreens.Biometric)
-                    ),
-                    onBackNavigationConfig = OnBackNavigationConfig(
-                        onBackNavigation = ConfigNavigation(
-                            navigationType = NavigationType.PushScreen(CommonScreens.Biometric),
-                        ),
-                        hasToolbarBackIcon = true
-                    )
-                )
+        val fakeConfig = BiometricUiConfig(
+            mode = BiometricMode.Default(
+                descriptionWhenBiometricsEnabled = "Put your finger on the sensor",
+                descriptionWhenBiometricsNotEnabled = "Biometrics not available",
+                textAbovePin = "Or enter your PIN"
             ),
+            isPreAuthorization = true,
+            onSuccessNavigation = ConfigNavigation(
+                navigationType = NavigationType.PushScreen(DashboardScreens.Dashboard)
+            ),
+            onBackNavigationConfig = OnBackNavigationConfig(
+                onBackNavigation = ConfigNavigation(
+                    navigationType = NavigationType.PushScreen(
+                        CommonScreens.Biometric
+                    )
+                ),
+                hasToolbarBackIcon = true
+            )
+        )
+
+        val fakeState = State(
+            config = fakeConfig,
+            isLoading = false,
+            userBiometricsAreEnabled = true,
+            quickPinSize = 4,
+            quickPinError = null
+        )
+
+
+        Body(
+            state = fakeState,
             effectFlow = Channel<Effect>().receiveAsFlow(),
             onEventSent = {},
             onNavigationRequested = {},
-            padding = PaddingValues(SIZE_MEDIUM.dp)
+            padding = PaddingValues(16.dp)
         )
     }
 }

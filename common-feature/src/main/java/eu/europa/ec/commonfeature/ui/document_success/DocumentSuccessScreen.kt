@@ -16,6 +16,7 @@
 
 package eu.europa.ec.commonfeature.ui.document_success
 
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,25 +34,39 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import eu.europa.ec.resourceslogic.R
+import eu.europa.ec.uilogic.component.AppIconAndTextDataUi
+import eu.europa.ec.uilogic.component.AppIcons
+import eu.europa.ec.uilogic.component.ListItemDataUi
+import eu.europa.ec.uilogic.component.ListItemLeadingContentDataUi
+import eu.europa.ec.uilogic.component.ListItemMainContentDataUi
+import eu.europa.ec.uilogic.component.ListItemTrailingContentDataUi
+import eu.europa.ec.uilogic.component.RelyingPartyDataUi
 import eu.europa.ec.uilogic.component.content.ContentHeader
+import eu.europa.ec.uilogic.component.content.ContentHeaderConfig
 import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
+import eu.europa.ec.uilogic.component.preview.PreviewTheme
+import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.OneTimeLaunchedEffect
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
 import eu.europa.ec.uilogic.component.wrap.ButtonConfig
 import eu.europa.ec.uilogic.component.wrap.ButtonType
+import eu.europa.ec.uilogic.component.wrap.ExpandableListItemUi
 import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
 import eu.europa.ec.uilogic.component.wrap.StickyBottomType
+import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapExpandableListItem
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 import eu.europa.ec.uilogic.extension.cacheDeepLink
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.onEach
 
 @Composable
@@ -182,5 +197,85 @@ private fun Content(
                 is Effect.Navigation -> onNavigationRequested(effect)
             }
         }.collect()
+    }
+}
+
+
+@ThemeModePreviews
+@Composable
+private fun PreviewDocumentSuccessContent() {
+    PreviewTheme {
+        // 1) Fake header with both mainText and description
+        val fakeHeader = ContentHeaderConfig(
+            appIconAndTextData = AppIconAndTextDataUi(
+                appIcon = AppIcons.LogoPlain,
+                appText = AppIcons.LogoText,
+            ),
+            mainText = "Document Submitted",
+            description = "Your ID document was successfully uploaded and verified.",
+            mainTextConfig = TextConfig(
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            ),
+            descriptionTextConfig = TextConfig(
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                maxLines = 2
+            ),
+            relyingPartyData = RelyingPartyDataUi(
+                name = "Example Service",
+                isVerified = true,
+            )
+        )
+
+        fun makeListItem(
+            id: String,
+            title: String,
+            overline: String? = null,
+            supporting: String? = null,
+            leading: ListItemLeadingContentDataUi? = null,
+            trailing: ListItemTrailingContentDataUi? = null
+        ) = ListItemDataUi(
+            itemId = id,
+            mainContentData = ListItemMainContentDataUi.Text(text = title),
+            overlineText = overline,
+            supportingText = supporting,
+            leadingContentData = leading,
+            trailingContentData = trailing
+        )
+
+
+        val fakeItems = listOf(
+            ExpandableListItemUi.NestedListItem(
+                header = makeListItem("age_check", "Age Verification"),
+                nestedItems = listOf(
+                    ExpandableListItemUi.SingleListItem(
+                        header = makeListItem("age_detail", "User is over 18")
+                    )
+                ),
+                isExpanded = true
+            ),
+
+            ExpandableListItemUi.NestedListItem(
+                header = makeListItem("doc_status", "Document Status"),
+                nestedItems = emptyList(),
+                isExpanded = false
+            )
+        )
+
+        val fakeState = State(
+            isLoading = false,
+            headerConfig = fakeHeader,
+            items = fakeItems
+        )
+
+        Content(
+            state = fakeState,
+            effectFlow = emptyFlow(),
+            onEventSend = {},
+            onNavigationRequested = {},
+            paddingValues = PaddingValues(16.dp)
+        )
     }
 }

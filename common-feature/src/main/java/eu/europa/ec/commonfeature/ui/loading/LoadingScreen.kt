@@ -27,14 +27,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import eu.europa.ec.uilogic.component.AppIconAndTextDataUi
+import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.content.ContentHeader
+import eu.europa.ec.uilogic.component.content.ContentHeaderConfig
 import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
+import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.OneTimeLaunchedEffect
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
 
 @Composable
@@ -117,4 +123,22 @@ private fun Content(
             }
         }.collect()
     }
+}
+
+@ThemeModePreviews
+@Composable
+fun LoadingScreenPreview() {
+    Content(
+        state = State(
+            headerConfig = ContentHeaderConfig(
+                description = "Text"
+            ),
+            error = null,
+            isCancellable = true,
+            notifyOnAuthenticationFailure = false
+        ),
+        effectFlow = flowOf(),
+        onNavigationRequested = {},
+        paddingValues = PaddingValues()
+    )
 }

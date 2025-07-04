@@ -66,7 +66,7 @@ class HomeInteractorImpl(
             val userFirstName = mainPid?.let {
                 return@let extractValueFromDocumentOrEmpty(
                     document = it,
-                    key = DocumentJsonKeys.FIRST_NAME
+                    key = DocumentJsonKeys.GIVEN_NAME
                 )
             }.orEmpty()
 

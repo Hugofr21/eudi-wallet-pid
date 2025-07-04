@@ -49,6 +49,7 @@ private val assembledModules = listOf(
     LogicAuthenticationModule().module,
     LogicCoreModule().module,
     LogicStorageModule().module,
+//    LogicBackupModule().module,
 
 
     // Feature Modules

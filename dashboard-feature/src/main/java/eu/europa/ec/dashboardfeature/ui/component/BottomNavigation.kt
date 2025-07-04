@@ -88,7 +88,7 @@ fun BottomNavigationBar(navController: NavController) {
     val currentDestination = navBackStackEntry?.destination
 
     NavigationBar(
-        containerColor = LightSkyBlue.copy(alpha = 0.5f),
+        containerColor = LightSkyBlue.copy(alpha = 0.3f),
     ) {
         navItems.forEach { screen ->
             NavigationBarItem(

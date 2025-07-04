@@ -51,16 +51,17 @@ class SplashInteractorImpl(
 
     override fun getAfterSplashRoute(): String = when (quickPinInteractor.hasPin()) {
         true -> {
-            getBiometricsConfig()
+            getPinConfig()
         }
 
         false -> {
-//            getQuickPinConfig()
+            //
             getUserConsentRoute()
         }
 
-
     }
+//
+//    override fun getAfterSplashRoute(): String = getUserConsentRoute()
 
     private fun getUserConsentRoute(): String {
         return ConsentUserScreens.Welcome.screenRoute
@@ -74,7 +75,7 @@ class SplashInteractorImpl(
         )
     }
 
-    private fun getBiometricsConfig(): String {
+    private fun getPinConfig(): String {
         return generateComposableNavigationLink(
             screen = CommonScreens.Biometric,
             arguments = generateComposableArguments(

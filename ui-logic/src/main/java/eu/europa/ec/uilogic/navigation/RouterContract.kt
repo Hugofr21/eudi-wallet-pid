@@ -42,6 +42,9 @@ sealed class CommonScreens {
         parameters = "?biometricConfig={biometricConfig}"
     )
 
+
+    data object BiometricCreatedConfig : Screen(name = "BIOMETRIC_CREATED_CONFIG")
+
     data object QuickPin :
         Screen(name = "QUICK_PIN", parameters = "?pinFlow={pinFlow}")
 

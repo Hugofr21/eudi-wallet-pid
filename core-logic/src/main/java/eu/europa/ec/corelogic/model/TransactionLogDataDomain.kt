@@ -19,6 +19,7 @@ package eu.europa.ec.corelogic.model
 import eu.europa.ec.corelogic.extension.getLocalizedDocumentName
 import eu.europa.ec.eudi.wallet.transactionLogging.TransactionLog
 import eu.europa.ec.eudi.wallet.transactionLogging.presentation.PresentedDocument
+
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import java.time.LocalDate
 import java.time.LocalDateTime

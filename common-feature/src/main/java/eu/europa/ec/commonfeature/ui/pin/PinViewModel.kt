@@ -37,7 +37,6 @@ import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.CommonScreens
-import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.IssuanceScreens
 import eu.europa.ec.uilogic.navigation.ModuleRoute
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
@@ -360,7 +359,7 @@ class PinViewModel(
         )
 
         val navigationAfterUpdate = ConfigNavigation(
-            navigationType = NavigationType.PopTo(DashboardScreens.Dashboard),
+            navigationType = NavigationType.PopTo(CommonScreens.Biometric),
         )
 
         return generateComposableNavigationLink(
