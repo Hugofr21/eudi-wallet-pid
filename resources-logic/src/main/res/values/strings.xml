@@ -465,9 +465,16 @@
     <string name="consent_verification_national_id_description">Under applicable regulations and legislation, you may not create a profile solely to obtain identification. To verify your identity, please request credential validation directly from the PID provider.</string>
     <string name="consent_verification_content_title">Identity Verification Requirement</string>
     <string name="consent_verification_content_description">An electronic ID (eID) is a secure, government‑issued digital identity credential that allows holders to authenticate themselves online and access a wide variety of public and private services.</string>
-    <string name="logs_screen_title">Logs</string>
+    <string name="QR_code_screen_title">Qr Code</string>
     <string name="icon_logs_description">Logs icon</string>
     <string name="landing_screen_title">EUDI Wallet</string>
+    <string name="settings_screen_option_logs_id">LogsId</string>
+    <string name="settings_screen_option_logs">List Of Logs</string>
+    <string name="settings_screen_option_profile_id">ProfileId</string>
+    <string name="settings_screen_profile_backup">Profile</string>
+    <string name="logs_screen_title">Logs</string>
+    <string name="profile_screen_search_no_results_id">noProfileId</string>
+    <string name="profile_screen_search_no_results">No claims found. Try changing your search query or filters.</string>
 
     <!-- Logs Screen -->
 </resources>

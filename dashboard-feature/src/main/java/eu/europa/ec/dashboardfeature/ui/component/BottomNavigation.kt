@@ -68,10 +68,10 @@ sealed class BottomNavigationItem(
         icon = AppIcons.Transactions
     )
 
-    data object Logs : BottomNavigationItem(
-        route = "LOG",
-        titleRes = R.string.logs_screen_title,
-        icon = AppIcons.Logs
+    data object Qrscanner : BottomNavigationItem(
+        route = "QRSCANNER",
+        titleRes = R.string.QR_code_screen_title,
+        icon = AppIcons.QrScanner
     )
 }
 
@@ -81,7 +81,7 @@ fun BottomNavigationBar(navController: NavController) {
         BottomNavigationItem.Home,
         BottomNavigationItem.Documents,
         BottomNavigationItem.Transactions,
-        BottomNavigationItem.Logs
+        BottomNavigationItem.Qrscanner
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -91,6 +91,22 @@ fun BottomNavigationBar(navController: NavController) {
         containerColor = LightSkyBlue.copy(alpha = 0.3f),
     ) {
         navItems.forEach { screen ->
+            val itemColors = if (screen is BottomNavigationItem.Qrscanner) {
+                NavigationBarItemDefaults.colors(
+                    selectedIconColor = DeepBlue,
+                    selectedTextColor = DeepBlue,
+                    indicatorColor = DeepBlue,
+                    unselectedIconColor = DeepBlue.copy(alpha = 0.3f),
+                    unselectedTextColor = DeepBlue.copy(alpha = 0.3f)
+                )
+            } else {
+                NavigationBarItemDefaults.colors()
+                    .copy(
+                        selectedIndicatorColor = MaterialTheme.colorScheme.primary,
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimary
+                    )
+            }
+
             NavigationBarItem(
                 icon = {
                     WrapIcon(
@@ -98,11 +114,7 @@ fun BottomNavigationBar(navController: NavController) {
                     )
                 },
                 label = { Text(text = stringResource(screen.titleRes)) },
-                colors = NavigationBarItemDefaults.colors()
-                    .copy(
-                        selectedIndicatorColor = MaterialTheme.colorScheme.primary,
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimary
-                    ),
+                colors = itemColors,
                 selected = currentDestination?.hierarchy?.any {
                     it.route == screen.route
                 } == true,

@@ -53,10 +53,6 @@ sealed class CommonScreens {
         parameters = "?qrScanConfig={qrScanConfig}"
     )
 
-    data object AuthChoice : Screen(
-        name = "PIN",
-        parameters = "?pinFlow={pinFlow}"
-    )
 }
 
 sealed class DashboardScreens {
@@ -75,6 +71,13 @@ sealed class DashboardScreens {
         name = "TRANSACTION_DETAILS",
         parameters = "?transactionId={transactionId}"
     )
+
+    data object Profile : Screen(name = "PROFILE")
+
+    data object Logs : Screen(name = "LISTOFLOGS")
+
+    data object Backup : Screen(name = "BACKUP")
+
 }
 
 sealed class PresentationScreens {

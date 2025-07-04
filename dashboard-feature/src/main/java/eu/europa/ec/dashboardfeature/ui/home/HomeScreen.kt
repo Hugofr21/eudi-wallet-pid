@@ -517,7 +517,7 @@ private fun HomeScreenContentPreview() {
             Content(
                 state = State(
                     isBottomSheetOpen = false,
-                    welcomeUserMessage = "Welcome back, Alex",
+                    welcomeUserMessage = "Welcome back, Hugo",
                     authenticateCardConfig = ActionCardConfig(
                         title = stringResource(R.string.home_screen_authentication_card_title),
                         icon = AppIcons.WalletActivated,

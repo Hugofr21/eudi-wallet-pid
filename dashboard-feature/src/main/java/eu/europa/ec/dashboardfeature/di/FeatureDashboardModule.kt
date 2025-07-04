@@ -33,6 +33,8 @@ import eu.europa.ec.dashboardfeature.interactor.DocumentsInteractor
 import eu.europa.ec.dashboardfeature.interactor.DocumentsInteractorImpl
 import eu.europa.ec.dashboardfeature.interactor.HomeInteractor
 import eu.europa.ec.dashboardfeature.interactor.HomeInteractorImpl
+import eu.europa.ec.dashboardfeature.interactor.PersonIdentificationDataImpl
+import eu.europa.ec.dashboardfeature.interactor.PersonIdentificationDataInteractor
 import eu.europa.ec.dashboardfeature.interactor.SettingsInteractor
 import eu.europa.ec.dashboardfeature.interactor.SettingsInteractorImpl
 import eu.europa.ec.dashboardfeature.interactor.TransactionDetailsInteractor
@@ -136,3 +138,10 @@ fun provideTransactionDetailsInteractor(
         resourceProvider,
         uuidProvider
     )
+
+@Factory
+fun PersonIdentificationDataInreractor(
+    walletCoreDocumentsController: WalletCoreDocumentsController,
+): PersonIdentificationDataInteractor = PersonIdentificationDataImpl(
+    walletCoreDocumentsController
+)

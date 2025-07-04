@@ -261,6 +261,15 @@ class DashboardViewModel(
             SideMenuTypeUi.BACKUP -> {
                 //  TODO: BACKUP ACTION SLIDER MENU
             }
+            SideMenuTypeUi.LOGS -> {
+                hideSideMenu()
+                setEffect { Effect.Navigation.SwitchScreen(screenRoute = DashboardScreens.Logs.screenRoute) }
+            }
+            SideMenuTypeUi.PROFILE -> {
+                hideSideMenu()
+                setEffect { Effect.Navigation.SwitchScreen(screenRoute = DashboardScreens.Profile.screenRoute) }
+            }
+
         }
     }
 
