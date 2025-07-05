@@ -475,6 +475,7 @@
     <string name="logs_screen_title">Logs</string>
     <string name="profile_screen_search_no_results_id">noProfileId</string>
     <string name="profile_screen_search_no_results">No claims found. Try changing your search query or filters.</string>
+    <string name="profile_screen_title">Profile</string>
 
     <!-- Logs Screen -->
 </resources>

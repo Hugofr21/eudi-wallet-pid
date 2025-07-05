@@ -31,6 +31,7 @@ data class State(
     val firstName: String,
     val lastName: String,
     val isLoading: Boolean = false,
+    val image: String? = null,
 ) : ViewState
 
 sealed class Event : ViewEvent {

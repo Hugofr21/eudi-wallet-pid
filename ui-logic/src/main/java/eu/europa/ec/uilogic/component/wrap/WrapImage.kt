@@ -25,7 +25,16 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.IconDataUi
+import eu.europa.ec.uilogic.component.ListItemDataUi
+import eu.europa.ec.uilogic.component.ListItemLeadingContentDataUi
+import eu.europa.ec.uilogic.component.ListItemMainContentDataUi
+import eu.europa.ec.uilogic.component.ListItemTrailingContentDataUi
+import eu.europa.ec.uilogic.component.preview.PreviewTheme
+import eu.europa.ec.uilogic.component.preview.TextLengthPreviewProvider
+import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 
 @Composable
 fun WrapImage(
@@ -89,6 +98,22 @@ fun WrapImage(
             contentDescription = contentDescription,
             colorFilter = colorFilter,
             contentScale = contentScale ?: ContentScale.FillBounds,
+        )
+    }
+}
+
+
+@ThemeModePreviews
+@Composable
+private fun WrapListItemsPreview(
+    @PreviewParameter(TextLengthPreviewProvider::class) text: String
+) {
+    PreviewTheme {
+        WrapImage(
+            iconData = AppIcons.Sign,
+            modifier = Modifier,
+            colorFilter = null,
+            contentScale = null,
         )
     }
 }

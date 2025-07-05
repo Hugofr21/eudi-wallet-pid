@@ -28,7 +28,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
 interface KeystoreController {
-    fun retrieveOrGenerateBiometricSecretKey(): SecretKey?
+    fun retrieveOrGenerateSecretKey( UserAuthenticationRequired:Boolean = true): SecretKey?
     fun deleteKey(alias: String)
     fun rotateKey(oldAlias: String): String?
 }
@@ -69,13 +69,13 @@ class KeystoreControllerImpl(
      * Retrieves the existing biometric secret key if exists or generates a new one if it is the
      * first time.
      */
-    override fun retrieveOrGenerateBiometricSecretKey(): SecretKey? {
+    override fun retrieveOrGenerateSecretKey(userAuthenticationRequired:Boolean): SecretKey? {
         return androidKeyStore?.let {
-            val alias = prefKeys.getBiometricAlias()
+            val alias = prefKeys.getAlias()
             if (alias.isEmpty()) {
                 val newAlias = createPublicKey()
                 generateBiometricSecretKey(newAlias)
-                prefKeys.setBiometricAlias(newAlias)
+                prefKeys.setAlias(newAlias)
                 getBiometricSecretKey(it, newAlias)
             } else {
                 getBiometricSecretKey(it, alias)
@@ -139,7 +139,7 @@ class KeystoreControllerImpl(
     override fun deleteKey(alias: String){
         try {
             androidKeyStore?.deleteEntry(alias)
-            prefKeys.setBiometricAlias("")
+            prefKeys.setAlias("")
             logController.d(this.javaClass.simpleName, { "Key $alias deleted" })
         }catch (e: Exception){
             logController.e(this.javaClass.simpleName, e)
@@ -150,7 +150,7 @@ class KeystoreControllerImpl(
         val newAlias = createPublicKey()
         androidKeyStore?.deleteEntry(oldAlias)
         generateBiometricSecretKey(newAlias)
-        prefKeys.setBiometricAlias(newAlias)
+        prefKeys.setAlias(newAlias)
         return  newAlias
     }
 

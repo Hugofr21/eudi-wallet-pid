@@ -21,6 +21,9 @@ import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.uilogic.serializer.UiSerializer
 
 interface BackupInteractor {
+    suspend fun backupWallet(): String
+    suspend fun restoreWallet(backupData: String): Boolean
+    suspend fun deleteWallet(): Boolean
 
 }
 
@@ -29,5 +32,17 @@ class BackupInteractorIml (
     private val resourceProvider: ResourceProvider,
     private val walletCoreDocumentsController: WalletCoreDocumentsController
 ): BackupInteractor {
+
+    override suspend fun backupWallet(): String {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun restoreWallet(backupData: String): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun deleteWallet(): Boolean {
+        TODO("Not yet implemented")
+    }
 
 }

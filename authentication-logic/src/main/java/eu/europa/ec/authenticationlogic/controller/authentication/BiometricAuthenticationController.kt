@@ -189,7 +189,7 @@ class BiometricAuthenticationControllerImpl(
     private suspend fun retrieveCrypto(): Pair<BiometricAuthentication?, Cipher?> =
         withContext(dispatcher) {
             val biometricData = biometryStorageController.getBiometricAuthentication()
-            val cipher = cryptoController.getBiometricCipher(
+            val cipher = cryptoController.getCipher(
                 encrypt = biometricData == null,
                 ivBytes = biometricData?.ivString?.decodeFromPemBase64String() ?: ByteArray(0)
             )
@@ -207,7 +207,7 @@ class BiometricAuthenticationControllerImpl(
                 biometryStorageController.setBiometricAuthentication(
                     BiometricAuthentication(
                         randomString = randomString,
-                        encryptedString = cryptoController.encryptDecryptBiometric(
+                        encryptedString = cryptoController.encryptDecrypt(
                             cipher = it,
                             byteArray = randomString.toByteArray(StandardCharsets.UTF_8)
                         ).encodeToPemBase64String().orEmpty(),
@@ -219,7 +219,7 @@ class BiometricAuthenticationControllerImpl(
                 if (biometricAuthentication.randomString
                         .toByteArray(StandardCharsets.UTF_8)
                         .contentEquals(
-                            cryptoController.encryptDecryptBiometric(
+                            cryptoController.encryptDecrypt(
                                 cipher = it,
                                 byteArray = biometricAuthentication.encryptedString
                                     .decodeFromPemBase64String() ?: ByteArray(0)

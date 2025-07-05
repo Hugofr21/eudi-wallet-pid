@@ -19,7 +19,9 @@ package eu.europa.ec.businesslogic.controller.crypto
 import android.util.Base64
 import java.security.SecureRandom
 import javax.crypto.Cipher
+import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.PBEKeySpec
 
 
 interface CryptoController {
@@ -31,7 +33,7 @@ interface CryptoController {
      * [encrypt] should be set to true if the cipher should encrypt, false otherwise.
      * [ivBytes] is needed only for decryption to create the [GCMParameterSpec].
      */
-    fun getBiometricCipher(encrypt: Boolean = false, ivBytes: ByteArray? = null): Cipher?
+    fun getCipher(encrypt: Boolean = false, ivBytes: ByteArray? = null, userAuthenticationRequired: Boolean = true): Cipher?
 
     /**
      * Returns the [ByteArray] after the encryption/decryption from the given [Cipher].
@@ -39,9 +41,11 @@ interface CryptoController {
      * returned.
      * [byteArray] that needed to be encrypted or decrypted (Depending always on [Cipher] provided.
      */
-    fun encryptDecryptBiometric(cipher: Cipher?, byteArray: ByteArray): ByteArray
+    fun encryptDecrypt(cipher: Cipher?, byteArray: ByteArray): ByteArray
 
-    fun encryptPin(pin: String)
+    fun encryptPin(pin: String): Pair<String, String>
+
+    fun verifyPin( attempt: String, storedSaltB64: String, storedHashB64: String): Boolean
 }
 
 class CryptoControllerImpl(
@@ -50,10 +54,14 @@ class CryptoControllerImpl(
 
     companion object {
         private const val AES_EXTERNAL_TRANSFORMATION = "AES/GCM/NoPadding"
+        private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
         private const val GCM_TAG_SIZE_BITS = 128
         private const val CODE_VERIFIER_MIN = 43
         private const val CODE_VERIFIER_MAX = 128
         const val MAX_GUID_LENGTH = 64
+        private const val SALT_BITS = 16
+        private const val ITERATION_COUNT = 100_000
+        private const val KEY_LENGTH = 256
     }
 
 
@@ -65,18 +73,18 @@ class CryptoControllerImpl(
         return Base64.encodeToString(code, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
     }
 
-    override fun getBiometricCipher(encrypt: Boolean, ivBytes: ByteArray?): Cipher? =
+    override fun getCipher(encrypt: Boolean, ivBytes: ByteArray?, userAuthenticationRequired: Boolean): Cipher? =
         try {
             Cipher.getInstance(AES_EXTERNAL_TRANSFORMATION).apply {
                 if (encrypt) {
                     init(
                         Cipher.ENCRYPT_MODE,
-                        keystoreController.retrieveOrGenerateBiometricSecretKey()
+                        keystoreController.retrieveOrGenerateSecretKey()
                     )
                 } else {
                     init(
                         Cipher.DECRYPT_MODE,
-                        keystoreController.retrieveOrGenerateBiometricSecretKey(),
+                        keystoreController.retrieveOrGenerateSecretKey(),
                         GCMParameterSpec(GCM_TAG_SIZE_BITS, ivBytes)
                     )
                 }
@@ -86,12 +94,50 @@ class CryptoControllerImpl(
         }
 
     // PBKDF2 with HmacSHA256
-    override fun encryptPin(pin: String) {
+    override fun encryptPin(pin: String): Pair<String, String> {
+        val salt = generateSalt()
+        val key = deriveKey(pin, salt)
+
+        val saltBase64 = Base64.encodeToString(salt, Base64.DEFAULT)
+        val keyBase64 = Base64.encodeToString(key, Base64.DEFAULT)
+
+        return saltBase64 to keyBase64
 
     }
 
+    override fun verifyPin(
+        attempt: String,
+        storedSaltB64: String,
+        storedHashB64: String
+    ): Boolean {
+        val salt      = Base64.decode(storedSaltB64, Base64.NO_WRAP)
+        val storedHash = Base64.decode(storedHashB64, Base64.NO_WRAP)
+        val attemptHash = deriveKey(attempt, salt)
+        if (storedHash.size != attemptHash.size) return false
+        return storedHash.indices.all { storedHash[it] == attemptHash[it] }
+    }
 
-    override fun encryptDecryptBiometric(cipher: Cipher?, byteArray: ByteArray): ByteArray {
+
+    override fun encryptDecrypt(cipher: Cipher?, byteArray: ByteArray): ByteArray {
         return cipher?.doFinal(byteArray) ?: ByteArray(0)
+    }
+
+
+    private fun generateSalt():ByteArray{
+        val random = SecureRandom()
+        val salt = ByteArray(SALT_BITS)
+        random.nextBytes(salt)
+        return salt
+    }
+
+    private fun deriveKey(password: String, salt: ByteArray): ByteArray {
+        val spec = PBEKeySpec(
+            password.toCharArray(),
+            salt,
+            ITERATION_COUNT,
+            KEY_LENGTH
+        )
+        val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+        return factory.generateSecret(spec).encoded
     }
 }

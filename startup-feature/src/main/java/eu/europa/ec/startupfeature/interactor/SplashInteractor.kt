@@ -55,24 +55,13 @@ class SplashInteractorImpl(
         }
 
         false -> {
-            //
             getUserConsentRoute()
         }
 
     }
-//
-//    override fun getAfterSplashRoute(): String = getUserConsentRoute()
 
     private fun getUserConsentRoute(): String {
         return ConsentUserScreens.Welcome.screenRoute
-    }
-
-
-    private fun getQuickPinConfig(): String {
-        return generateComposableNavigationLink(
-            screen = CommonScreens.QuickPin,
-            arguments = generateComposableArguments(mapOf("pinFlow" to PinFlow.CREATE))
-        )
     }
 
     private fun getPinConfig(): String {

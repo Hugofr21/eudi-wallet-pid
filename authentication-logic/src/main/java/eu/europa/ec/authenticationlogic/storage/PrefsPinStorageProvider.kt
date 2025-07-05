@@ -16,6 +16,8 @@
 
 package eu.europa.ec.authenticationlogic.storage
 
+
+import android.util.Base64
 import eu.europa.ec.authenticationlogic.provider.PinStorageProvider
 import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import eu.europa.ec.businesslogic.controller.storage.PrefsController
@@ -25,15 +27,51 @@ class PrefsPinStorageProvider(
     private val cryptoController: CryptoController
 ) : PinStorageProvider {
 
-    override fun retrievePin(): String {
-        return prefsController.getString("DevicePin", "")
+    companion object {
+        private const val KEY_SALT = "DevicePinSalt"
+        private const val KEY_HASH         = "DevicePinHash"
+        private const val KEY_IV         = "DevicePinIv"
     }
 
     override fun setPin(pin: String) {
-        // encrypt the pin
-        prefsController.setString("DevicePin", pin)
-        cryptoController.encryptPin(pin)
+        val (saltB64, hashB64) = cryptoController.encryptPin(pin)
+        val cipher = cryptoController.getCipher(
+            encrypt = true,
+            ivBytes = null,
+            userAuthenticationRequired = false
+        )
+
+        val encryptedPin = cryptoController.encryptDecrypt(
+            cipher,
+            pin.toByteArray(Charsets.UTF_8)
+        )
+
+        val cipherText = cryptoController.encryptDecrypt(cipher,encryptedPin)
+        prefsController.setString(KEY_IV, Base64.encodeToString(cipherText, Base64.NO_WRAP))
+        prefsController.setString(KEY_SALT, saltB64)
+        prefsController.setString(KEY_HASH, hashB64)
     }
 
-    override fun isPinValid(pin: String): Boolean = retrievePin() == pin
+    override fun retrievePin(): String {
+        val salt = prefsController.getString(KEY_SALT, "")
+        val hash = prefsController.getString(KEY_HASH, "")
+        val iv = prefsController.getString(KEY_IV, "")
+        print("Salt: $salt")
+        print("hash: $hash")
+        if (salt.isEmpty()  || hash.isEmpty()) return ""
+        val saltDecode = Base64.decode(salt, Base64.NO_WRAP)
+        val ivDecode = Base64.decode(iv, Base64.NO_WRAP)
+        print("Salt decode: $saltDecode")
+        print("IV decode: $ivDecode")
+        return hash
+    }
+
+    override fun isPinValid(pin: String): Boolean {
+        val saltB64 = prefsController.getString(KEY_SALT, "")
+        val hashB64 = prefsController.getString(KEY_HASH, "")
+        if (saltB64.isEmpty() || hashB64.isEmpty()) return false
+        val verifyPin = cryptoController.verifyPin(pin, saltB64, hashB64)
+        print("Verify pin: $verifyPin")
+        return verifyPin
+    }
 }
