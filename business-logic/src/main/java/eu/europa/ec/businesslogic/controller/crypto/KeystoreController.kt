@@ -23,6 +23,7 @@ import android.util.Base64
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.controller.storage.PrefKeys
 import java.security.KeyStore
+import java.security.Provider
 import java.security.SecureRandom
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -72,13 +73,15 @@ class KeystoreControllerImpl(
     override fun retrieveOrGenerateSecretKey(userAuthenticationRequired:Boolean): SecretKey? {
         return androidKeyStore?.let {
             val alias = prefKeys.getAlias()
+            println("KeystoreControllerImpl.retrieveOrGenerateSecretKey: alias=$alias")
             if (alias.isEmpty()) {
                 val newAlias = createPublicKey()
+                println("KeystoreControllerImpl.retrieveOrGenerateSecretKey: newAlias=$newAlias")
                 generateBiometricSecretKey(newAlias)
                 prefKeys.setAlias(newAlias)
                 getBiometricSecretKey(it, newAlias)
             } else {
-                getBiometricSecretKey(it, alias)
+                 getBiometricSecretKey(it, alias)
             }
         }
     }
@@ -111,9 +114,14 @@ class KeystoreControllerImpl(
                 KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
             )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            builder.setIsStrongBoxBacked(true)
-        }
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+//            try {
+//                builder.setIsStrongBoxBacked(true)
+//                println("Keystore: tentando StrongBox")
+//            } catch (e: UnsupportedOperationException) {
+//                println("Keystore: não há StrongBox; fallback")
+//            }
+//        }
         return builder.build()
     }
 

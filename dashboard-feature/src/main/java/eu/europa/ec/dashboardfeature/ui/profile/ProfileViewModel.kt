@@ -18,6 +18,7 @@ package eu.europa.ec.dashboardfeature.ui.profile
 
 import eu.europa.ec.corelogic.model.FormatType
 import eu.europa.ec.dashboardfeature.interactor.PersonIdentificationDataInteractor
+import eu.europa.ec.dashboardfeature.model.ClaimsUI
 import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
@@ -31,13 +32,15 @@ data class State(
     val firstName: String,
     val lastName: String,
     val isLoading: Boolean = false,
-    val image: String? = null,
+    val imageBase64: String? = null,
+    val claimsUi: List<ClaimsUI> = emptyList(),
 ) : ViewState
 
 sealed class Event : ViewEvent {
     data object Init : Event()
     data object GetDocuments : Event()
     data object BackPressed : Event()
+    data object GoBack : Event()
 
 }
 
@@ -66,8 +69,9 @@ class ProfileViewModel(
 
 ) {
     override fun setInitialState(): State {
-       val (firstName, lastName) = personIdentificationDataInteractor.getUser()
+       val (firstName, lastName) = personIdentificationDataInteractor.getUserFristandLastName()
         personIdentificationDataInteractor.printAllDocumentDetails()
+        personIdentificationDataInteractor.getUserWithPortrait()
         return  State(
 
             documentsUi = personIdentificationDataInteractor.getPidDocuments(),
@@ -77,6 +81,13 @@ class ProfileViewModel(
     }
 
     override fun handleEvents(event: Event) {
-        TODO("Not yet implemented")
+       when (event) {
+           Event.BackPressed -> TODO()
+           Event.GetDocuments -> TODO()
+           Event.GoBack -> {
+               setEffect { Effect.Navigation.Pop }
+           }
+           Event.Init -> TODO()
+       }
     }
 }

@@ -73,25 +73,42 @@ class CryptoControllerImpl(
         return Base64.encodeToString(code, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
     }
 
-    override fun getCipher(encrypt: Boolean, ivBytes: ByteArray?, userAuthenticationRequired: Boolean): Cipher? =
-        try {
-            Cipher.getInstance(AES_EXTERNAL_TRANSFORMATION).apply {
-                if (encrypt) {
-                    init(
-                        Cipher.ENCRYPT_MODE,
-                        keystoreController.retrieveOrGenerateSecretKey()
-                    )
-                } else {
-                    init(
-                        Cipher.DECRYPT_MODE,
-                        keystoreController.retrieveOrGenerateSecretKey(),
-                        GCMParameterSpec(GCM_TAG_SIZE_BITS, ivBytes)
-                    )
-                }
+    override fun getCipher(encrypt: Boolean, ivBytes: ByteArray?, userAuthenticationRequired: Boolean): Cipher? {
+        println("getCipher → enter; encrypt=$encrypt, ivBytes=${ivBytes?.size}, userAuthRequired=$userAuthenticationRequired")
+        return try {
+            println("getCipher → Cipher.getInstance with transformation = $AES_EXTERNAL_TRANSFORMATION")
+            val cipher = Cipher.getInstance(AES_EXTERNAL_TRANSFORMATION)
+            if (encrypt) {
+                println("getCipher → init ENCRYPT_MODE")
+                val key = keystoreController.retrieveOrGenerateSecretKey()
+                println("getCipher → obtained secret key: $key")
+                cipher.init(Cipher.ENCRYPT_MODE, key)
+            } else {
+                println("getCipher → init DECRYPT_MODE with ivBytes")
+                val key = keystoreController.retrieveOrGenerateSecretKey()
+                println("getCipher → obtained secret key: $key")
+                println(
+                    "getCipher → GCMParameterSpec with tagSize=$GCM_TAG_SIZE_BITS, iv=${
+                        ivBytes?.joinToString(
+                            ","
+                        )
+                    }"
+                )
+                cipher.init(
+                    Cipher.DECRYPT_MODE,
+                    key,
+                    GCMParameterSpec(GCM_TAG_SIZE_BITS, ivBytes ?: ByteArray(0))
+                )
             }
+            println("getCipher → init completed successfully")
+            cipher
         } catch (e: Exception) {
+            println("getCipher → exception during cipher init: ${e.message}")
+            e.printStackTrace()
             null
         }
+    }
+
 
     // PBKDF2 with HmacSHA256
     override fun encryptPin(pin: String): Pair<String, String> {

@@ -24,7 +24,8 @@ import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
-import eu.europa.ec.uilogic.navigation.CommonScreens
+import eu.europa.ec.uilogic.navigation.DashboardScreens
+import eu.europa.ec.uilogic.navigation.IssuanceScreens
 import org.koin.android.annotation.KoinViewModel
 
 
@@ -37,7 +38,8 @@ sealed class Event : ViewEvent {
 data class State(
     val isLoading: Boolean = false,
     val isBiometricsAvailable: Boolean = false,
-    val enrolled: Boolean = false,
+    val hasFingerprint : Boolean = false,
+    val appPassword : Boolean = false,
     val biometricsError: String? = null
 ) : ViewState {
     val action: ScreenNavigateAction = ScreenNavigateAction.BACKABLE
@@ -54,9 +56,7 @@ class BiometricSetupViewModel(
     private val biometricInteractor: BiometricInteractor
 ) : MviViewModel<Event, State, Effect>() {
 
-    override fun setInitialState(): State {
-        return State()
-    }
+    override fun setInitialState(): State = State()
 
     override fun handleEvents(event: Event) {
         when (event) {
@@ -66,10 +66,14 @@ class BiometricSetupViewModel(
 
             is Event.NextButtonPressed -> {
                 clearError()
+                println("NextButtonPressed: pressed")
                 if (viewState.value.isBiometricsAvailable) {
-                    if (viewState.value.enrolled) {
+                    println("NextButtonPressed: isBiometricsAvailable")
+                    if (viewState.value.hasFingerprint) {
+                        println("NextButtonPressed: hasFingerprint")
                         authenticate(event.context)
                     } else {
+                        println("NextButtonPressed: launchBiometricSystemScreen")
                         biometricInteractor.launchBiometricSystemScreen()
                     }
                 }
@@ -96,36 +100,50 @@ class BiometricSetupViewModel(
     }
 
     private fun checkBiometricsAvailability() {
-        setState { copy(isLoading = true) }
+        println("checkBiometricsAvailability: START")
+        setState {
+            println("checkBiometricsAvailability: Setting isLoading = true")
+            copy(isLoading = true)
+        }
         biometricInteractor.getBiometricsAvailability { availability ->
+            println("checkBiometricsAvailability: availability = $availability")
             when (availability) {
                 is BiometricsAvailability.CanAuthenticate -> {
+                    println("checkBiometricsAvailability: CanAuthenticate dete" +
+                            "" +
+                            "cted")
                     setState {
+                        println("checkBiometricsAvailability: Setting isBiometricsAvailable = true")
                         copy(
                             isLoading = false,
                             isBiometricsAvailable = true,
-                            enrolled = true,
+                            hasFingerprint = true,
                             biometricsError = null
                         )
                     }
                 }
 
                 is BiometricsAvailability.NonEnrolled -> {
+                    println("checkBiometricsAvailability: NonEnrolled detected")
                     setState {
+                        println("checkBiometricsAvailability: Setting isBiometricsAvailable = true (but NonEnrolled)")
                         copy(
                             isLoading = false,
                             isBiometricsAvailable = true,
-                            enrolled = false,
+                            hasFingerprint = false,
                             biometricsError = null
                         )
                     }
                 }
 
                 is BiometricsAvailability.Failure -> {
+                    println("checkBiometricsAvailability: Failure detected - error: ${availability.errorMessage}")
                     setState {
+                        println("checkBiometricsAvailability: Setting isBiometricsAvailable = false")
                         copy(
                             isLoading = false,
                             isBiometricsAvailable = false,
+                            hasFingerprint = false,
                             biometricsError = availability.errorMessage
                         )
                     }
@@ -150,7 +168,7 @@ class BiometricSetupViewModel(
 
     private fun navigateToNextScreen() {
         setEffect {
-            Effect.Navigation.SwitchScreen(CommonScreens.Biometric.screenRoute)
+            Effect.Navigation.SwitchScreen(IssuanceScreens.AddDocument.screenRoute)
         }
     }
 }

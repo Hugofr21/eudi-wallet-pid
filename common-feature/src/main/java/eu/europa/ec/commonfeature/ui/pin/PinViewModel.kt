@@ -26,6 +26,7 @@ import eu.europa.ec.commonfeature.interactor.QuickPinInteractor
 import eu.europa.ec.commonfeature.interactor.QuickPinInteractorPinValidPartialState
 import eu.europa.ec.commonfeature.interactor.QuickPinInteractorSetPinPartialState
 import eu.europa.ec.commonfeature.model.PinFlow
+import eu.europa.ec.commonfeature.ui.biometric.BiometricScreen
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.uilogic.component.AppIcons
@@ -37,6 +38,7 @@ import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.CommonScreens
+import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.IssuanceScreens
 import eu.europa.ec.uilogic.navigation.ModuleRoute
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
@@ -352,14 +354,13 @@ class PinViewModel(
 
         val navigationAfterCreate = ConfigNavigation(
             navigationType = NavigationType.PushScreen(
-                screen = IssuanceScreens.AddDocument,
-                arguments = mapOf("flowType" to IssuanceFlowUiConfig.NO_DOCUMENT.name),
-                popUpToScreen = CommonScreens.QuickPin
-            ),
+                screen = CommonScreens.BiometricCreatedConfig,
+                arguments = emptyMap()
+            )
         )
 
         val navigationAfterUpdate = ConfigNavigation(
-            navigationType = NavigationType.PopTo(CommonScreens.Biometric),
+            navigationType = NavigationType.PopTo(DashboardScreens.Dashboard),
         )
 
         return generateComposableNavigationLink(

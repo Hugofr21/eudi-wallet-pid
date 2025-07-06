@@ -35,19 +35,23 @@ class PrefsPinStorageProvider(
 
     override fun setPin(pin: String) {
         val (saltB64, hashB64) = cryptoController.encryptPin(pin)
-        val cipher = cryptoController.getCipher(
-            encrypt = true,
-            ivBytes = null,
-            userAuthenticationRequired = false
-        )
-
-        val encryptedPin = cryptoController.encryptDecrypt(
-            cipher,
-            pin.toByteArray(Charsets.UTF_8)
-        )
-
-        val cipherText = cryptoController.encryptDecrypt(cipher,encryptedPin)
-        prefsController.setString(KEY_IV, Base64.encodeToString(cipherText, Base64.NO_WRAP))
+//        val cipher = cryptoController.getCipher(
+//            encrypt = true,
+//            ivBytes = null,
+//            userAuthenticationRequired = false
+//        )
+//
+//        val encryptedPin = cryptoController.encryptDecrypt(
+//            cipher,
+//            pin.toByteArray(Charsets.UTF_8)
+//        )
+//
+//        val cipherText = cryptoController.encryptDecrypt(cipher,encryptedPin)
+        println("Salt setPin: $saltB64")
+        println("Hash setPin: $hashB64")
+//        println("IV setPin: $cipherText")
+//
+//        prefsController.setString(KEY_IV, Base64.encodeToString(cipherText, Base64.NO_WRAP))
         prefsController.setString(KEY_SALT, saltB64)
         prefsController.setString(KEY_HASH, hashB64)
     }
@@ -71,7 +75,7 @@ class PrefsPinStorageProvider(
         val hashB64 = prefsController.getString(KEY_HASH, "")
         if (saltB64.isEmpty() || hashB64.isEmpty()) return false
         val verifyPin = cryptoController.verifyPin(pin, saltB64, hashB64)
-        print("Verify pin: $verifyPin")
+//        print("Verify pin: $verifyPin")
         return verifyPin
     }
 }

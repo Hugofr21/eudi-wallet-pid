@@ -19,10 +19,12 @@ package eu.europa.ec.consentuser.ui.verification
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,6 +45,7 @@ import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
 import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
+import eu.europa.ec.uilogic.component.utils.DEFAULT_ACTION_CARD_HEIGHT
 import eu.europa.ec.uilogic.component.utils.HSpacer
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.VSpacer
@@ -51,6 +55,7 @@ import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
 import eu.europa.ec.uilogic.component.wrap.StickyBottomType
 import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapIcon
+import eu.europa.ec.uilogic.component.wrap.WrapImage
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 import eu.europa.ec.uilogic.component.wrap.WrapText
 import kotlinx.coroutines.flow.Flow
@@ -142,12 +147,13 @@ private fun MainContent(
 
         VSpacer.ExtraLarge()
 
-        WrapIcon(
+        WrapImage(
             modifier = Modifier
-                .size(100.dp)
+                .wrapContentSize()
+                .defaultMinSize(minHeight = DEFAULT_ACTION_CARD_HEIGHT.dp)
                 .align(Alignment.CenterHorizontally),
             iconData = AppIcons.WalletSecured,
-            customTint = MaterialTheme.colorScheme.primary
+            contentScale = ContentScale.Fit
         )
 
         VSpacer.ExtraLarge()

@@ -16,28 +16,39 @@
 
 package eu.europa.ec.commonfeature.ui.biometricCofing
 
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import eu.europa.ec.resourceslogic.R
+import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
 import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
+import eu.europa.ec.uilogic.component.utils.DEFAULT_ACTION_CARD_HEIGHT
 import eu.europa.ec.uilogic.component.utils.LifecycleEffect
 import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.ButtonConfig
@@ -45,6 +56,8 @@ import eu.europa.ec.uilogic.component.wrap.ButtonType
 import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
 import eu.europa.ec.uilogic.component.wrap.StickyBottomType
 import eu.europa.ec.uilogic.component.wrap.TextConfig
+import eu.europa.ec.uilogic.component.wrap.WrapIcon
+import eu.europa.ec.uilogic.component.wrap.WrapImage
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 import eu.europa.ec.uilogic.component.wrap.WrapText
 import eu.europa.ec.uilogic.navigation.CommonScreens
@@ -55,16 +68,18 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 
 
+
 @Composable
 fun BiometricConfigScreen(navController: NavController, viewModel: BiometricSetupViewModel) {
     val state: State by viewModel.viewState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val title = stringResource(id = R.string.biometric_prompt_title)
+    val title = stringResource(id = R.string.biometric_setup_title)
     val appName = context.getString(R.string.landing_screen_title)
     val descriptionWithAppName = stringResource(
-        id = R.string.biometric_login_biometrics_enabled_subtitle,
+        id = R.string.biometric_setup_description,
         appName
     )
+
 
     ContentScreen(
         isLoading = state.isLoading,
@@ -85,12 +100,12 @@ fun BiometricConfigScreen(navController: NavController, viewModel: BiometricSetu
         )
     }
 
-    observeScreenResume(viewModel)
+    ObserveScreenResume(viewModel)
 }
 
 @Composable
 private fun ActionButtons(
-    viewModel: BiometricSetupViewModel,
+    viewModel: BiometricSetupViewModel?,
     paddingValues: PaddingValues,
     biometricsAvailable: Boolean
 ) {
@@ -98,11 +113,11 @@ private fun ActionButtons(
     val buttons = StickyBottomType.TwoButtons(
         primaryButtonConfig = ButtonConfig(
             type = ButtonType.SECONDARY,
-            onClick = { viewModel.setEvent(Event.SkipButtonPressed) }),
+            onClick = { viewModel?.setEvent(Event.SkipButtonPressed) }),
         secondaryButtonConfig = ButtonConfig(
             type = ButtonType.PRIMARY,
             enabled = biometricsAvailable,
-            onClick = { viewModel.setEvent(Event.NextButtonPressed(context)) })
+            onClick = { viewModel?.setEvent(Event.NextButtonPressed(context)) })
     )
     WrapStickyBottomContent(
         stickyBottomModifier = Modifier
@@ -110,12 +125,16 @@ private fun ActionButtons(
             .padding(paddingValues),
         stickyBottomConfig = StickyBottomConfig(type = buttons, showDivider = false)
     ) {
-
+        when (it?.type) {
+            ButtonType.PRIMARY -> Text(text = stringResource(id = R.string.biometric_setup_enable))
+            ButtonType.SECONDARY -> Text(text = stringResource(id = R.string.biometric_setup_skip))
+            else -> {}
+        }
     }
 }
 
 @Composable
-private fun observeScreenResume(viewModel: BiometricSetupViewModel) {
+private fun ObserveScreenResume(viewModel: BiometricSetupViewModel) {
     LifecycleEffect(
         lifecycleOwner = LocalLifecycleOwner.current,
         lifecycleEvent = Lifecycle.Event.ON_RESUME
@@ -140,8 +159,27 @@ private fun Content(
     ) {
 
         WrapText(
-            textConfig = TextConfig(style = MaterialTheme.typography.titleLarge, maxLines = 4),
+            modifier = Modifier.fillMaxWidth(),
+            textConfig = TextConfig(
+                style = MaterialTheme.typography.titleLarge
+                    .copy(fontWeight = FontWeight.Bold),
+                maxLines = 4,
+                textAlign = TextAlign.Center
+            ),
             text = title
+        )
+
+        VSpacer.Large()
+
+
+        WrapImage(
+            modifier = Modifier
+                .wrapContentSize()
+                .defaultMinSize(minHeight = DEFAULT_ACTION_CARD_HEIGHT.dp)
+                .align(Alignment.CenterHorizontally)
+                .size(80.dp),
+            iconData = AppIcons.Fingerprint,
+            contentScale = ContentScale.Fit
         )
 
         VSpacer.Large()
@@ -184,7 +222,7 @@ private fun handleNavigationEffect(
     when (navigationEffect) {
         is Effect.Navigation.SwitchScreen -> {
             navController.navigate(navigationEffect.screen) {
-                popUpTo(CommonScreens.Biometric.screenRoute) { inclusive = true }
+                popUpTo(CommonScreens.BiometricCreatedConfig.screenRoute) { inclusive = true }
             }
         }
     }
@@ -223,3 +261,14 @@ private fun BiometricSetupScreenErrorPreview() {
     }
 }
 
+@ThemeModePreviews
+@Composable
+private fun actionButtonsPreview(){
+    PreviewTheme {
+        ActionButtons(
+            viewModel = null,
+            paddingValues = PaddingValues(16.dp),
+            biometricsAvailable = true
+        )
+    }
+}

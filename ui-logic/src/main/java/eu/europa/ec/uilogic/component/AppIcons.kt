@@ -431,4 +431,10 @@ object AppIcons {
         imageVector = null
     )
 
+    val Fingerprint: IconDataUi = IconDataUi(
+        resourceId = R.drawable.ic_biometric,
+        contentDescriptionId = R.string.fingerprint_eid_description,
+        imageVector = null
+    )
+
 }

@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Label
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
@@ -57,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import eu.europa.ec.dashboardfeature.ui.transactions.list.DashboardEvent
+import eu.europa.ec.dashboardfeature.ui.transactions.list.OpenSideMenuEvent
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.IconDataUi
@@ -68,9 +69,14 @@ import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
+import eu.europa.ec.uilogic.component.wrap.ButtonConfig
+import eu.europa.ec.uilogic.component.wrap.ButtonType
+import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
+import eu.europa.ec.uilogic.component.wrap.StickyBottomType
 import eu.europa.ec.uilogic.component.wrap.WrapIconButton
 import eu.europa.ec.uilogic.component.wrap.WrapImage
 import eu.europa.ec.uilogic.component.wrap.WrapListItem
+import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 import eu.europa.ec.uilogic.extension.finish
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -94,11 +100,16 @@ fun ProfileScreen(
     val bottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false
     )
+    val buttonConfig = ButtonConfig(
+        type = ButtonType.PRIMARY,
+        onClick = { viewModel.setEvent(Event.GoBack) },
+        enabled = true
+    )
 
     ContentScreen(
         isLoading = state.isLoading,
         navigatableAction = ScreenNavigateAction.NONE,
-        onBack = { context.finish() },
+        onBack = { viewModel.setEvent(Event.GoBack) },
 
     ) { paddingValues ->
         Content(
@@ -120,6 +131,36 @@ fun ProfileScreen(
 
 }
 
+
+@Composable
+private fun TopBar(
+    onDashboardEventSent: (DashboardEvent) -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = SPACING_SMALL.dp,
+                vertical = SPACING_MEDIUM.dp
+            )
+    ) {
+        WrapIconButton(
+            modifier = Modifier.align(Alignment.CenterStart),
+            iconData = AppIcons.Menu,
+            customTint = MaterialTheme.colorScheme.onSurface,
+        ) {
+            onDashboardEventSent(OpenSideMenuEvent)
+        }
+
+        Text(
+            modifier = Modifier.align(Alignment.Center),
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.headlineMedium,
+            text = stringResource(R.string.profile_screen_title)
+        )
+    }
+}
 
 
 
@@ -166,6 +207,7 @@ private fun Content(
         }.collect()
     }
 }
+
 
 @Composable
 private fun CardItem(

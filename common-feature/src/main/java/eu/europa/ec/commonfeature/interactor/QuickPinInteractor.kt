@@ -40,20 +40,6 @@ interface QuickPinInteractor : FormValidator {
 }
 
 
-interface QuickBiometricInteractor : FormValidator {
-    fun setPin(newPin: String, initialPin: String): Flow<QuickBiometricInteractorSetPinPartialState>
-    fun changePin(
-        newPin: String
-    ): Flow<QuickBiometricInteractorSetPinPartialState>
-
-    fun isCurrentPinValid(pin: String): Flow<QuickBiometricInteractorPinValidPartialState>
-    fun isPinMatched(
-        currentPin: String,
-        newPin: String
-    ): Flow<QuickBiometricInteractorPinValidPartialState>
-
-    fun hasBiometric(): Boolean
-}
 
 class QuickPinInteractorImpl(
     private val formValidator: FormValidator,

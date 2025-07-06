@@ -14,7 +14,17 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.businesslogic.controller.backup
+package eu.europa.ec.dashboardfeature.model
 
-class BackupControllerImpl {
-}
+
+data class ClaimsUI(
+    val key: String,
+    val value: String,
+)
+
+data class UserData(
+    val firstName: String,
+    val lastName: String,
+    val claims: List<ClaimsUI>,
+    val portraitBase64: String?
+)

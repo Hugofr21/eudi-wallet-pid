@@ -71,6 +71,10 @@ enum class IssuanceMethod {
     OPENID4VCI
 }
 
+enum class PresentationMethod {
+    OPENID4VCP
+}
+
 sealed class IssueDocumentPartialState {
     data class Success(val documentId: String) : IssueDocumentPartialState()
     data class DeferredSuccess(val deferredDocuments: Map<String, String>) :

@@ -16,9 +16,13 @@
 
 package eu.europa.ec.dashboardfeature.interactor
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
 import eu.europa.ec.commonfeature.util.docNamespace
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.model.DocumentIdentifier
+import eu.europa.ec.dashboardfeature.model.ClaimsUI
 import eu.europa.ec.eudi.wallet.document.IssuedDocument
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -30,7 +34,9 @@ interface PersonIdentificationDataInteractor {
     fun printPidDocumentDetails()
     fun getAllIssuedDocuments(): List<IssuedDocument>
     fun printAllDocumentDetails()
-    fun getUser (): Pair<String, String>
+    fun getUserFristandLastName (): Pair<String, String>
+    fun getUserWithPortrait()
+    fun getListClaims(): List<ClaimsUI>
 }
 
 
@@ -74,7 +80,7 @@ class PersonIdentificationDataImpl(
     }
 
 
-    override fun getUser (): Pair<String, String> {
+    override fun getUserFristandLastName (): Pair<String, String> {
         val docs = getPidDocumentDetails()
 
         if (docs.isEmpty()) {
@@ -94,6 +100,44 @@ class PersonIdentificationDataImpl(
 
         return (extractedFirstName to extractedLastName) as Pair<String, String>
 
+    }
+
+    override fun getUserWithPortrait() {
+        val docs = getPidDocumentDetails()
+        if (docs.isEmpty()) {
+            println("No PID documents found.")
+            return
+        }
+
+        val portraitClaim = docs
+            .flatMap { it.data.claims }
+            .find { it.identifier.equals("portrait", ignoreCase = true) }
+
+        println("Portrait: ${portraitClaim?.value}")
+        val base64 = portraitClaim?.value ?: return
+
+    }
+
+    override fun getListClaims(): List<ClaimsUI> {
+        val docs = walletCoreDocumentsController.getAllIssuedDocuments()
+        val allClaims = docs
+            .flatMap { it.data.claims }
+            .filterNot { claim ->
+            when (claim.identifier.lowercase()) {
+                "portrait", "given_name", "family_name" -> true
+                else                                   -> false
+            }
+        }
+
+        val uniqueClaims = allClaims
+            .distinctBy { it.identifier.lowercase() }
+
+        return uniqueClaims.map { claim ->
+            ClaimsUI(
+                key   = claim.identifier,
+                value = claim.value.toString()
+            )
+        }
     }
 
 

@@ -42,6 +42,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import eu.europa.ec.businesslogic.extension.getParcelableArrayListExtra
+import eu.europa.ec.commonfeature.ui.qr_scan.QrScanScreen
+import eu.europa.ec.commonfeature.ui.qr_scan.QrScanViewModel
 import eu.europa.ec.corelogic.model.RevokedDocumentDataDomain
 import eu.europa.ec.corelogic.util.CoreActions
 import eu.europa.ec.dashboardfeature.ui.component.BottomNavigationBar
@@ -78,6 +80,7 @@ internal fun DashboardScreen(
     documentsViewModel: DocumentsViewModel,
     homeViewModel: HomeViewModel,
     transactionsViewModel: TransactionsViewModel,
+//    qrScanViewModel: QrScanViewModel,
 ) {
     val context = LocalContext.current
 
@@ -126,6 +129,13 @@ internal fun DashboardScreen(
                     }
                 )
             }
+
+//            composable(BottomNavigationItem.Qrscanner.route) {
+//                QrScanScreen(
+//                    hostNavController,
+//                    qrScanViewModel,
+//                )
+//            }
         }
 
         if (state.isBottomSheetOpen) {

@@ -21,12 +21,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -231,18 +234,23 @@ private fun MainContent(
             subtitle = state.subtitle
         )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp),
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(
-                top = SPACING_MEDIUM.dp,
-                bottom = paddingValues.calculateBottomPadding()
+                top = 16.dp,
+                bottom = paddingValues.calculateBottomPadding(),
+                start = 16.dp,
+                end = 16.dp
             ),
         ) {
             state.options.forEach { option ->
                 item {
                     WrapListItem(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f),
                         item = option.itemData,
                         mainContentVerticalPadding = SPACING_LARGE.dp,
                         mainContentTextStyle = MaterialTheme.typography.titleMedium,

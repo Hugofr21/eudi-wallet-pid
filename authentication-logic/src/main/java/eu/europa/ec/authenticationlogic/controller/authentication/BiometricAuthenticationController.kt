@@ -91,45 +91,60 @@ class BiometricAuthenticationControllerImpl(
         notifyOnAuthenticationFailure: Boolean,
         listener: (BiometricsAuthenticate) -> Unit
     ) {
-        (context as? FragmentActivity)?.let { activity ->
+        println("BiometricAuthenticationControllerImpl.authenticate ")
+        val activity = context as? FragmentActivity
+        if (activity == null) {
+           println("BiometricAuthenticationControllerImpl.authenticate: activity is null")
+            listener.invoke(BiometricsAuthenticate.Failed("Invalid context"))
+            return
+        }
 
-            activity.lifecycleScope.launch {
+        activity.lifecycleScope.launch {
+            println("BiometricAuth  lifecycleScope.launch started")
+            val (biometricData, cipher) = retrieveCrypto()
+            println("BiometricAuth Retrieved crypto: biometricData=$biometricData cipher=$cipher")
 
-                val storedCrypto = retrieveCrypto()
-                val biometricData = storedCrypto.first
-                val cipher = storedCrypto.second
-
-                if (cipher == null) {
-                    listener.invoke(
-                        BiometricsAuthenticate.Failed(context.getString(R.string.generic_error_description))
+            if (cipher == null) {
+                println("BiometricAuth Cipher is null; cannot authenticate")
+                listener.invoke(
+                    BiometricsAuthenticate.Failed(
+                        context.getString(R.string.generic_error_description)
                     )
-                    return@launch
-                }
-
-                val data = authenticate(
-                    activity = activity,
-                    biometryCrypto = BiometricCrypto(BiometricPrompt.CryptoObject(cipher)),
-                    promptInfo = BiometricPrompt.PromptInfo.Builder()
-                        .setTitle(activity.getString(R.string.biometric_prompt_title))
-                        .setSubtitle(activity.getString(R.string.biometric_prompt_subtitle))
-                        .setNegativeButtonText(activity.getString(R.string.generic_cancel))
-                        .build(),
-                    notifyOnAuthenticationFailure = notifyOnAuthenticationFailure
                 )
+                return@launch
+            }
 
-                if (data.authenticationResult != null) {
+            println("BiometricAuth: Calling inner authenticate() with promptInfo")
+            val data = authenticate(
+                activity = activity,
+                biometryCrypto = BiometricCrypto(BiometricPrompt.CryptoObject(cipher)),
+                promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle(activity.getString(R.string.biometric_prompt_title))
+                    .setSubtitle(activity.getString(R.string.biometric_prompt_subtitle))
+                    .setNegativeButtonText(activity.getString(R.string.generic_cancel))
+                    .build(),
+                notifyOnAuthenticationFailure = notifyOnAuthenticationFailure
+            )
+            println("BiometricAuth Returned from inner authenticate(): data=$data")
+
+            when {
+                data.authenticationResult != null -> {
+                    println("BiometricAuth Authentication succeeded; verifying crypto")
                     val state = verifyCrypto(
                         context = context,
                         result = data.authenticationResult,
                         biometricAuthentication = biometricData
                     )
+                    println("BiometricAuth verifyCrypto returned state=$state")
                     listener.invoke(state)
-                } else if (
-                    data.errorCode != BiometricsAuthError.Cancel.code &&
-                    data.errorCode != BiometricsAuthError.CancelByUser.code
-                ) {
+                }
+                data.errorCode != BiometricsAuthError.Cancel.code &&
+                        data.errorCode != BiometricsAuthError.CancelByUser.code -> {
+                    println("BiometricAuth Authentication failed with recoverable error (${data.errorCode}); retrying")
                     authenticate(context, notifyOnAuthenticationFailure, listener)
-                } else {
+                }
+                else -> {
+                    println("BiometricAuth Authentication cancelled by user or errorCode=${data.errorCode}")
                     listener.invoke(BiometricsAuthenticate.Cancelled)
                 }
             }
@@ -189,10 +204,12 @@ class BiometricAuthenticationControllerImpl(
     private suspend fun retrieveCrypto(): Pair<BiometricAuthentication?, Cipher?> =
         withContext(dispatcher) {
             val biometricData = biometryStorageController.getBiometricAuthentication()
+            println("BiometricAuthenticationControllerImpl.retrieveCrypto: biometricData=$biometricData")
             val cipher = cryptoController.getCipher(
                 encrypt = biometricData == null,
                 ivBytes = biometricData?.ivString?.decodeFromPemBase64String() ?: ByteArray(0)
             )
+            println("BiometricAuthenticationControllerImpl.retrieveCrypto: cipher=$cipher")
             Pair(biometricData, cipher)
         }
 
