@@ -30,6 +30,7 @@ enum class IssuanceFlowUiConfig {
 
         fun fromString(value: String): IssuanceFlowUiConfig {
             return try {
+//                println("value from string : $value")
                 IssuanceFlowUiConfig.valueOf(value)
             } catch (e: Exception) {
                 throw RuntimeException("Wrong IssuanceFlowUiConfig")

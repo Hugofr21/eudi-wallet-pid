@@ -196,6 +196,15 @@ interface WalletCoreConfig {
                     policy = CredentialPolicy.OneTimeUse,
                     numberOfCredentials = 10
                 ),
+                DocumentIdentifier.AgeOver18Pid to DocumentIssuanceRule(
+                    policy = CredentialPolicy.OneTimeUse,
+                    numberOfCredentials = 10
+                ),
+                DocumentIdentifier.MdocAgeOver18ProofPseudonym to DocumentIssuanceRule(
+                    policy = CredentialPolicy.OneTimeUse,
+                    numberOfCredentials = 10
+                )
+
             )
         )
 }

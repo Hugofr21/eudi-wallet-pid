@@ -31,6 +31,10 @@ moduleConfig {
     module = LibraryModule.DashboardFeature
 }
 
+dependencies {
+    implementation(project(LibraryModule.BackupLogic.path))
+}
+
 excludeFromKoverReport(
     excludedClasses = KoverExclusionRules.DashboardFeature.classes,
     excludedPackages = KoverExclusionRules.DashboardFeature.packages,

@@ -21,6 +21,6 @@ dependencies {
 
 // Current Module Kover Report
 excludeFromKoverReport(
-    excludedClasses = KoverExclusionRules.AssemblyLogic.classes,
-    excludedPackages = KoverExclusionRules.AssemblyLogic.packages,
+    excludedClasses = KoverExclusionRules.BackupLogic.classes,
+    excludedPackages = KoverExclusionRules.BackupLogic.packages,
 )

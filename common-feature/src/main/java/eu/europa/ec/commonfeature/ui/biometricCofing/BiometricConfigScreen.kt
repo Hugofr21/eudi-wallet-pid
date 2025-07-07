@@ -221,8 +221,12 @@ private fun handleNavigationEffect(
 ) {
     when (navigationEffect) {
         is Effect.Navigation.SwitchScreen -> {
-            navController.navigate(navigationEffect.screen) {
-                popUpTo(CommonScreens.BiometricCreatedConfig.screenRoute) { inclusive = true }
+            navController.navigate(navigationEffect.screenRoute) {
+                navigationEffect.argument?.let { popUpToRoute ->
+                    popUpTo(popUpToRoute) {
+                        inclusive = navigationEffect.inclusive
+                    }
+                }
             }
         }
     }

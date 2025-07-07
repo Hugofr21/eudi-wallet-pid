@@ -39,6 +39,7 @@ import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
+import eu.europa.ec.uilogic.navigation.BackupScreens
 import eu.europa.ec.uilogic.navigation.CommonScreens
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.helper.DeepLinkType
@@ -259,7 +260,8 @@ class DashboardViewModel(
             }
 
             SideMenuTypeUi.BACKUP -> {
-                //  TODO: BACKUP ACTION SLIDER MENU
+                hideSideMenu()
+                setEffect { Effect.Navigation.SwitchScreen(screenRoute = BackupScreens.Backup.screenRoute) }
             }
             SideMenuTypeUi.LOGS -> {
                 hideSideMenu()

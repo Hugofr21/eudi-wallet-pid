@@ -99,6 +99,7 @@ fun BiometricScreen(
             onNavigationRequested = { navigationEffect ->
                 when (navigationEffect) {
                     is Effect.Navigation.SwitchScreen -> {
+                        println("SwitchScreen ${navigationEffect.screen}")
                         navController.navigate(navigationEffect.screen) {
                             popUpTo(CommonScreens.Biometric.screenRoute) { inclusive = true }
                         }

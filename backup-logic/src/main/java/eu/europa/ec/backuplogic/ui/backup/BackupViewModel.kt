@@ -16,3 +16,40 @@
 
 package eu.europa.ec.backuplogic.ui.backup
 
+import eu.europa.ec.uilogic.mvi.MviViewModel
+import eu.europa.ec.uilogic.mvi.ViewEvent
+import eu.europa.ec.uilogic.mvi.ViewSideEffect
+import eu.europa.ec.uilogic.mvi.ViewState
+import org.koin.android.annotation.KoinViewModel
+
+
+data class State(
+    val tosAccepted: Boolean = false,
+) : ViewState
+
+sealed class Event : ViewEvent {
+    object GoNext : Event()
+    object GoBack : Event()
+}
+
+sealed class Effect : ViewSideEffect {
+    sealed class Navigation : Effect() {
+        data class SwitchScreen(val screenRoute: String) : Navigation()
+        object Pop : Navigation()
+    }
+}
+
+@KoinViewModel
+class BackupViewModel : MviViewModel<Event, State, Effect>() {
+    override fun setInitialState(): State = State()
+
+    override fun handleEvents(event: Event) {
+        when (event) {
+            Event.GoBack ->{
+                setEffect { Effect.Navigation.Pop }
+            }
+            Event.GoNext -> TODO()
+        }
+    }
+
+}

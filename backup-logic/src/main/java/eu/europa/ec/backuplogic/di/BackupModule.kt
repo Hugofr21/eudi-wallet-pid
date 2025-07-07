@@ -16,9 +16,26 @@
 
 package eu.europa.ec.backuplogic.di
 
+import eu.europa.ec.backuplogic.interactor.BackupInteractor
+import eu.europa.ec.backuplogic.interactor.BackupInteractorIml
 import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
+import eu.europa.ec.resourceslogic.provider.ResourceProvider
+import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
+import eu.europa.ec.uilogic.serializer.UiSerializer
 
 @Module
 @ComponentScan("eu.europa.ec.backuplogic")
 class LogicBackupModule
+
+@Factory
+fun provideBackupInteractor(
+    uiSerializer: UiSerializer,
+    resourceProvider: ResourceProvider,
+    walletCoreDocumentsController: WalletCoreDocumentsController
+): BackupInteractor = BackupInteractorIml(
+    uiSerializer,
+    resourceProvider,
+    walletCoreDocumentsController
+)

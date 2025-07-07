@@ -55,7 +55,6 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 documentsViewModel = koinViewModel(),
                 homeViewModel = koinViewModel(),
                 transactionsViewModel = koinViewModel(),
-//                qrScanViewModel = koinViewModel()
             )
         }
 
@@ -132,7 +131,8 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
             )
         }
         composable(route = DashboardScreens.Profile.screenRoute ){
-            ProfileScreen(navController, koinViewModel())
+            ProfileScreen(
+                navController, koinViewModel())
         }
     }
 }

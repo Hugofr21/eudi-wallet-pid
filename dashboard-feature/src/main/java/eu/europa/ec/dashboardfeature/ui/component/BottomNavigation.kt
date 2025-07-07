@@ -97,7 +97,7 @@ fun BottomNavigationBar(navController: NavController) {
                     selectedTextColor = DeepBlue,
                     indicatorColor = DeepBlue,
                     unselectedIconColor = DeepBlue.copy(alpha = 0.3f),
-                    unselectedTextColor = DeepBlue.copy(alpha = 0.3f)
+                    unselectedTextColor = DeepBlue.copy(alpha = 0.9f)
                 )
             } else {
                 NavigationBarItemDefaults.colors()

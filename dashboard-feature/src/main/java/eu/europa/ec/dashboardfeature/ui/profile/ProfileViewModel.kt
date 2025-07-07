@@ -69,14 +69,18 @@ class ProfileViewModel(
 
 ) {
     override fun setInitialState(): State {
-       val (firstName, lastName) = personIdentificationDataInteractor.getUserFristandLastName()
+       val (firstName, lastName) = personIdentificationDataInteractor.getUserFirstAndLastName()
         personIdentificationDataInteractor.printAllDocumentDetails()
         personIdentificationDataInteractor.getUserWithPortrait()
+
         return  State(
 
             documentsUi = personIdentificationDataInteractor.getPidDocuments(),
             firstName = firstName,
             lastName = lastName,
+            isLoading = false,
+            imageBase64 = personIdentificationDataInteractor.getUserWithPortrait(),
+            claimsUi = personIdentificationDataInteractor.getListClaims()
         )
     }
 

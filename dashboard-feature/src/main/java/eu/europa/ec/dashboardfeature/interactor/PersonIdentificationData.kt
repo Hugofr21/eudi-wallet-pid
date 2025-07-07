@@ -34,8 +34,8 @@ interface PersonIdentificationDataInteractor {
     fun printPidDocumentDetails()
     fun getAllIssuedDocuments(): List<IssuedDocument>
     fun printAllDocumentDetails()
-    fun getUserFristandLastName (): Pair<String, String>
-    fun getUserWithPortrait()
+    fun getUserFirstAndLastName (): Pair<String, String>
+    fun getUserWithPortrait(): String
     fun getListClaims(): List<ClaimsUI>
 }
 
@@ -80,7 +80,7 @@ class PersonIdentificationDataImpl(
     }
 
 
-    override fun getUserFristandLastName (): Pair<String, String> {
+    override fun getUserFirstAndLastName (): Pair<String, String> {
         val docs = getPidDocumentDetails()
 
         if (docs.isEmpty()) {
@@ -102,20 +102,21 @@ class PersonIdentificationDataImpl(
 
     }
 
-    override fun getUserWithPortrait() {
+    override fun getUserWithPortrait(): String {
         val docs = getPidDocumentDetails()
         if (docs.isEmpty()) {
             println("No PID documents found.")
-            return
+            return ""
         }
 
         val portraitClaim = docs
             .flatMap { it.data.claims }
-            .find { it.identifier.equals("portrait", ignoreCase = true) }
+            .firstOrNull { it.identifier.equals("portrait", ignoreCase = true) }
 
-        println("Portrait: ${portraitClaim?.value}")
-        val base64 = portraitClaim?.value ?: return
+        val base64 = portraitClaim?.value?.toString()
+        println("Portrait: $base64")
 
+        return base64 ?: ""
     }
 
     override fun getListClaims(): List<ClaimsUI> {
@@ -132,12 +133,19 @@ class PersonIdentificationDataImpl(
         val uniqueClaims = allClaims
             .distinctBy { it.identifier.lowercase() }
 
-        return uniqueClaims.map { claim ->
+        val  claims =  uniqueClaims.map { claim ->
             ClaimsUI(
                 key   = claim.identifier,
                 value = claim.value.toString()
             )
         }
+
+        claims.forEach {
+            println("Key: ${it.key}, Value: ${it.value}")
+        }
+
+        return claims
+
     }
 
 

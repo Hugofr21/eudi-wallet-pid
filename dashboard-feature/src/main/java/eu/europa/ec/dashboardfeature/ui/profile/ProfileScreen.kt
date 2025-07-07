@@ -18,23 +18,27 @@ package eu.europa.ec.dashboardfeature.ui.profile
 
 
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -50,17 +54,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import eu.europa.ec.dashboardfeature.model.ClaimsUI
 import eu.europa.ec.dashboardfeature.ui.transactions.list.DashboardEvent
 import eu.europa.ec.dashboardfeature.ui.transactions.list.OpenSideMenuEvent
 import eu.europa.ec.resourceslogic.R
+import eu.europa.ec.uilogic.component.AppIconAndText
+import eu.europa.ec.uilogic.component.AppIconAndTextDataUi
 import eu.europa.ec.uilogic.component.AppIcons
-import eu.europa.ec.uilogic.component.IconDataUi
 import eu.europa.ec.uilogic.component.ListItemDataUi
 import eu.europa.ec.uilogic.component.ListItemMainContentDataUi
 import eu.europa.ec.uilogic.component.content.ContentScreen
@@ -69,14 +74,14 @@ import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
+import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.ButtonConfig
 import eu.europa.ec.uilogic.component.wrap.ButtonType
-import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
-import eu.europa.ec.uilogic.component.wrap.StickyBottomType
+import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapIconButton
 import eu.europa.ec.uilogic.component.wrap.WrapImage
 import eu.europa.ec.uilogic.component.wrap.WrapListItem
-import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
+import eu.europa.ec.uilogic.component.wrap.WrapText
 import eu.europa.ec.uilogic.extension.finish
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -84,9 +89,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.asImageBitmap
+import eu.europa.ec.uilogic.component.IconDataUi
 
 typealias DashboardEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event
+typealias OpenSideMenuEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event.SideMenu.Open
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,41 +111,29 @@ fun ProfileScreen(
     val bottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false
     )
-    val buttonConfig = ButtonConfig(
-        type = ButtonType.PRIMARY,
-        onClick = { viewModel.setEvent(Event.GoBack) },
-        enabled = true
-    )
 
     ContentScreen(
         isLoading = state.isLoading,
         navigatableAction = ScreenNavigateAction.NONE,
-        onBack = { viewModel.setEvent(Event.GoBack) },
+        onBack = { viewModel.setEvent(Event.GoBack)},
 
     ) { paddingValues ->
         Content(
             state = state,
             effectFlow = viewModel.effect,
-            onEventSent = { event ->
-                viewModel.setEvent(event)
+            onNavigationRequested = { navigationEffect ->
+                handleNavigationEffect(navigationEffect, navHostController, context)
             },
-            onNavigationRequested = {
-
-            },
-            coroutineScope = scope,
-            modalBottomSheetState = bottomSheetState,
             paddingValues = paddingValues
         )
     }
-
-
 
 }
 
 
 @Composable
 private fun TopBar(
-    onDashboardEventSent: (DashboardEvent) -> Unit,
+    onEventSent: (DashboardEvent) -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -144,23 +143,42 @@ private fun TopBar(
                 vertical = SPACING_MEDIUM.dp
             )
     ) {
+        // home menu icon
         WrapIconButton(
             modifier = Modifier.align(Alignment.CenterStart),
             iconData = AppIcons.Menu,
             customTint = MaterialTheme.colorScheme.onSurface,
         ) {
-            onDashboardEventSent(OpenSideMenuEvent)
+            onEventSent(OpenSideMenuEvent)
         }
 
-        Text(
+        // wallet logo
+        AppIconAndText(
             modifier = Modifier.align(Alignment.Center),
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.headlineMedium,
-            text = stringResource(R.string.profile_screen_title)
+            appIconAndTextData = AppIconAndTextDataUi()
         )
     }
 }
+
+private fun handleNavigationEffect(
+    navigationEffect: Effect.Navigation,
+    navController: NavController,
+    context: Context,
+) {
+    when (navigationEffect) {
+        is Effect.Navigation.Pop -> context.finish()
+        is Effect.Navigation.SwitchScreen -> {
+            navController.navigate(navigationEffect.screenRoute) {
+                popUpTo(navigationEffect.popUpToScreenRoute) {
+                    inclusive = navigationEffect.inclusive
+                }
+            }
+        }
+    }
+}
+
+
+
 
 
 
@@ -169,10 +187,7 @@ private fun TopBar(
 private fun Content(
     state: State,
     effectFlow: Flow<Effect>,
-    onEventSent: ((event: Event) -> Unit),
     onNavigationRequested: (navigationEffect: Effect.Navigation) -> Unit,
-    coroutineScope: CoroutineScope,
-    modalBottomSheetState: SheetState,
     paddingValues: PaddingValues
 ) {
     val scrollState = rememberScrollState()
@@ -191,8 +206,10 @@ private fun Content(
             .padding(vertical = SPACING_MEDIUM.dp),
         verticalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
     ) {
+        VSpacer.ExtraLarge()
         CardItem(state)
-        ListItem(state)
+        ListItemFirstNameAndLastName(state)
+        ListItemOther(state)
 
     }
 
@@ -213,6 +230,8 @@ private fun Content(
 private fun CardItem(
     state: State,
 ) {
+    val imageBase64 = state.imageBase64
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -223,13 +242,8 @@ private fun CardItem(
             )
             .clip(MaterialTheme.shapes.medium)
     ) {
-        WrapImage(
-            iconData = AppIcons.User,
-            modifier = Modifier
-                .fillMaxSize(),
-            colorFilter = null,
-            contentScale = ContentScale.Crop,
-        )
+
+        ProfileImage(imageBase64)
 
         Box(
             modifier = Modifier
@@ -254,31 +268,161 @@ private fun CardItem(
 }
 
 @Composable
-private fun ListItem(
+private fun ProfileImage(
+    imageBase64: String?,
+){
+    LaunchedEffect(imageBase64) {
+        println("ProfileImage – imageBase64: $imageBase64")
+    }
+
+    if (imageBase64 != null) {
+        val decodedBitmap: Bitmap? = remember(imageBase64) {
+            imageBase64
+                ?.substringAfter("base64,")
+                ?.let { Base64.decode(it, Base64.DEFAULT) }
+                ?.let { bytes ->
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                }
+        }
+
+        LaunchedEffect(decodedBitmap) {
+            println("ProfileImage – decodedBitmap: $decodedBitmap")
+        }
+
+        if (decodedBitmap != null) {
+            Image(
+                bitmap = decodedBitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            WrapImage(
+                iconData = AppIcons.User as IconDataUi,
+                modifier = Modifier.fillMaxSize(),
+                colorFilter = null,
+                contentScale = ContentScale.Crop
+            )
+        }
+    } else {
+        WrapImage(
+            iconData = AppIcons.User,
+            modifier = Modifier.fillMaxSize(),
+            colorFilter = null,
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+@Composable
+private fun ListItemFirstNameAndLastName(
     state: State,
 ){
     Row(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .padding(horizontal = SPACING_MEDIUM.dp),
         horizontalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
     ) {
-        Text (
-            text = state.firstName,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                color = MaterialTheme.colorScheme.onSurface
+        Column(
+            modifier = Modifier
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
+        ) {
+            Text(
+                text = "First Name",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
-        )
-        Text(
-            text = state.lastName,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                color = MaterialTheme.colorScheme.onSurface
+            WrapText(
+                text = state.firstName,
+                modifier = Modifier.fillMaxWidth(),
+                textConfig = TextConfig(
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                )
             )
-        )
-    }
+        }
 
+        Column(
+            modifier = Modifier
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
+        ) {
+            Text(
+                text = "Last Name",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+            WrapText(
+                text = state.lastName,
+                modifier = Modifier.fillMaxWidth(),
+                textConfig = TextConfig(
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            )
+        }
+
+    }
 }
 
 
+
+@Composable
+fun ListItemOther(
+    state: State,
+) {
+
+    val rows = state.claimsUi.chunked(2)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = SPACING_MEDIUM.dp),
+        verticalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
+    ) {
+        rows.forEach { pair ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
+            ) {
+
+                pair.forEach { claim ->
+                    Column(
+                        modifier = Modifier
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
+                    ) {
+                        Text(
+                            text = claim.key,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                        WrapText(
+                            text = claim.value,
+                            modifier = Modifier.fillMaxWidth(),
+                            textConfig = TextConfig(
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        )
+                    }
+                }
+
+                if (pair.size == 1) {
+                   VSpacer.Small()
+                }
+            }
+        }
+    }
+}
 
 
 @Composable
@@ -306,19 +450,49 @@ private fun NoResults(
 @Composable
 private fun HomeScreenContentPreview() {
     PreviewTheme {
-        Content(
-            state = State(
-                documentsUi = emptyList(),
-                firstName = "John",
-                lastName = "Doe",
-                isLoading = false,
-            ),
-            effectFlow = Channel<Effect>().receiveAsFlow(),
-            onEventSent = {},
-            onNavigationRequested = {},
-            coroutineScope = rememberCoroutineScope(),
-            modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false),
-            paddingValues = PaddingValues(0.dp)
-        )
+
+
+
+        ContentScreen(
+            isLoading = false,
+            navigatableAction = ScreenNavigateAction.NONE,
+            onBack = {
+
+            },
+//            topBar = {
+//                TopBar(
+//                    onEventSent = {}
+//                )
+//            },
+            stickyBottom = {
+
+            }
+        ) { paddingValues ->
+            Content(
+                state = State(
+                    documentsUi = emptyList(),
+                    firstName = "John",
+                    lastName = "Doe",
+                    isLoading = false,
+                    imageBase64 = null,
+                    claimsUi = listOf(
+                        ClaimsUI("Claim 1", "Value 1"),
+                        ClaimsUI("Claim 2", "Value 2"),
+                        ClaimsUI("Claim 3", "Value 3"),
+                        ClaimsUI("Claim 4", "Value 4"),
+                        ClaimsUI("Claim 5", "Value 5"),
+                        ClaimsUI("Claim 6", "Value 6"),
+                        ClaimsUI("Claim 7", "Value 7"),
+                        ClaimsUI("Claim 8", "Value 8"),
+                        ClaimsUI("Claim 9", "Value 9"),
+                        ClaimsUI("Claim 10", "Value 10"),
+                    )
+                ),
+                effectFlow = Channel<Effect>().receiveAsFlow(),
+                onNavigationRequested = {},
+                paddingValues = PaddingValues(0.dp)
+            )
+        }
     }
 }
+

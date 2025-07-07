@@ -437,4 +437,9 @@ object AppIcons {
         imageVector = null
     )
 
+    val Shield: IconDataUi = IconDataUi(
+        resourceId = R.drawable.ic_shield,
+        contentDescriptionId = R.string.shield_eid_description,
+        imageVector = null
+    )
 }

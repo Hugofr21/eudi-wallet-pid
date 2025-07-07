@@ -76,8 +76,11 @@ sealed class DashboardScreens {
 
     data object Logs : Screen(name = "LISTOFLOGS")
 
-    data object Backup : Screen(name = "BACKUP")
 
+}
+
+sealed class BackupScreens {
+    data object Backup : Screen(name = "BACKUP")
 }
 
 sealed class PresentationScreens {
@@ -138,4 +141,6 @@ sealed class ModuleRoute(val route: String) : NavigatableItem {
     data object ProximityModule : ModuleRoute("PROXIMITY_MODULE")
     data object IssuanceModule : ModuleRoute("ISSUANCE_MODULE")
     data object ConsentUserModule : ModuleRoute("USER_CONSENT_MODULE")
+    data object BackupModule : ModuleRoute("BACKUP_MODULE")
+
 }

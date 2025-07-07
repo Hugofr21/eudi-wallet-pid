@@ -55,7 +55,9 @@ internal class WalletCoreConfigImpl(
                         withEncryptionMethods(
                             listOf(
                                 EncryptionMethod.A128CBC_HS256,
-                                EncryptionMethod.A256GCM
+                                EncryptionMethod.A256GCM,
+                                EncryptionMethod.A256CBC_HS512,
+                                EncryptionMethod.A192CBC_HS384
                             )
                         )
 
@@ -66,11 +68,11 @@ internal class WalletCoreConfigImpl(
                             listOf(
                                 BuildConfig.OPENID4VP_SCHEME,
                                 BuildConfig.EUDI_OPENID4VP_SCHEME,
-                                BuildConfig.MDOC_OPENID4VP_SCHEME
+                                BuildConfig.MDOC_OPENID4VP_SCHEME,
                             )
                         )
                         withFormats(
-                            Format.MsoMdoc, Format.SdJwtVc.ES256
+                            Format.MsoMdoc, Format.SdJwtVc.ES256,
                         )
                     }
 

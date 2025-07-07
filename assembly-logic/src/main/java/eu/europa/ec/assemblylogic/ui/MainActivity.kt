@@ -18,6 +18,7 @@ package eu.europa.ec.assemblylogic.ui
 
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import eu.europa.ec.backuplogic.router.featureBackupGraph
 import eu.europa.ec.commonfeature.router.featureCommonGraph
 import eu.europa.ec.dashboardfeature.router.featureDashboardGraph
 import eu.europa.ec.consentuser.router.featureConsentUserGraph
@@ -40,6 +41,8 @@ class MainActivity : EudiComponentActivity() {
                 presentationGraph(it)
                 featureProximityGraph(it)
                 featureIssuanceGraph(it)
+                // added backup module
+                featureBackupGraph(it)
             }
         }
     }

@@ -80,6 +80,7 @@ class DocumentIssuanceSuccessViewModel(
             model = IssuanceSuccessUiConfig::class.java,
             parser = IssuanceSuccessUiConfig.Parser
         ) ?: throw RuntimeException("IssuanceSuccessUiConfig:: is Missing or invalid")
+        println("deserializedIssuanceSuccessUiConfig: $deserializedIssuanceSuccessUiConfig")
         return deserializedIssuanceSuccessUiConfig
     }
 }

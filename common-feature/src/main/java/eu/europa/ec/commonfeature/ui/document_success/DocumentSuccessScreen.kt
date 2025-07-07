@@ -105,7 +105,9 @@ fun DocumentSuccessScreen(
             onEventSend = { event -> viewModel.setEvent(event) },
             onNavigationRequested = { navigationEffect ->
                 when (navigationEffect) {
+
                     is Effect.Navigation.SwitchScreen -> {
+                        println("SwitchScreen = ${navigationEffect.screenRoute}")
                         navController.navigate(navigationEffect.screenRoute) {
                             navigationEffect.popUpRoute?.let { popUpToRoute ->
                                 popUpTo(popUpToRoute) {
