@@ -19,8 +19,14 @@ package eu.europa.ec.dashboardfeature.model
 
 data class ClaimsUI(
     val key: String,
-    val value: String,
+    val value: Any?
 )
+
+sealed class ClaimValue {
+    data class Simple(val text: String): ClaimValue()
+    data class Obj(val entries: Map<String,Any?>): ClaimValue()
+    data class Arr(val items: List<Any?>): ClaimValue()
+}
 
 data class UserData(
     val firstName: String,

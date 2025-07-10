@@ -75,15 +75,12 @@ import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
 import eu.europa.ec.uilogic.component.utils.VSpacer
-import eu.europa.ec.uilogic.component.wrap.ButtonConfig
-import eu.europa.ec.uilogic.component.wrap.ButtonType
 import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapIconButton
 import eu.europa.ec.uilogic.component.wrap.WrapImage
 import eu.europa.ec.uilogic.component.wrap.WrapListItem
 import eu.europa.ec.uilogic.component.wrap.WrapText
 import eu.europa.ec.uilogic.extension.finish
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
@@ -94,6 +91,7 @@ import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.asImageBitmap
+import eu.europa.ec.dashboardfeature.model.ClaimValue
 import eu.europa.ec.uilogic.component.IconDataUi
 
 typealias DashboardEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event
@@ -107,14 +105,11 @@ fun ProfileScreen(
 ) {
     val context = LocalContext.current
     val state: State by viewModel.viewState.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
-    val bottomSheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = false
-    )
+    val effects = viewModel.effect
 
     ContentScreen(
         isLoading = state.isLoading,
-        navigatableAction = ScreenNavigateAction.NONE,
+        navigatableAction = ScreenNavigateAction.BACKABLE,
         onBack = { viewModel.setEvent(Event.GoBack)},
 
     ) { paddingValues ->
@@ -127,38 +122,29 @@ fun ProfileScreen(
             paddingValues = paddingValues
         )
     }
+    LaunchedEffect(effects) {
+        effects.collect { effect ->
+            when (effect) {
+                is Effect.Navigation.Pop -> {
+                    navHostController.popBackStack()
+                }
+                is Effect.Navigation.SwitchScreen -> {
+                    navHostController.navigate(effect.screenRoute) {
+                        popUpTo(effect.popUpToScreenRoute) { inclusive = effect.inclusive }
+                    }
+                }
+                else -> {
 
-}
-
-
-@Composable
-private fun TopBar(
-    onEventSent: (DashboardEvent) -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = SPACING_SMALL.dp,
-                vertical = SPACING_MEDIUM.dp
-            )
-    ) {
-        // home menu icon
-        WrapIconButton(
-            modifier = Modifier.align(Alignment.CenterStart),
-            iconData = AppIcons.Menu,
-            customTint = MaterialTheme.colorScheme.onSurface,
-        ) {
-            onEventSent(OpenSideMenuEvent)
+                }
+            }
         }
-
-        // wallet logo
-        AppIconAndText(
-            modifier = Modifier.align(Alignment.Center),
-            appIconAndTextData = AppIconAndTextDataUi()
-        )
     }
+
+
+
 }
+
+
 
 private fun handleNavigationEffect(
     navigationEffect: Effect.Navigation,
@@ -269,44 +255,39 @@ private fun CardItem(
 
 @Composable
 private fun ProfileImage(
-    imageBase64: String?,
-){
-    LaunchedEffect(imageBase64) {
-        println("ProfileImage – imageBase64: $imageBase64")
+    imageBase64: String?
+) {
+    val imageBytes: ByteArray? = remember(imageBase64) {
+        imageBase64
+            ?.substringAfter(",", missingDelimiterValue = imageBase64)
+            ?.replace('_', '/')
+            ?.replace('-', '+')
+            ?.replace("\\s".toRegex(), "")
+            ?.let {
+                try {
+                    Base64.decode(it, Base64.DEFAULT or Base64.NO_WRAP)
+                } catch (e: IllegalArgumentException) {
+                    null
+                }
+            }
+    }
+    
+    val decodedBitmap: Bitmap? = remember(imageBytes) {
+        imageBytes
+            ?.let { bytes -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
     }
 
-    if (imageBase64 != null) {
-        val decodedBitmap: Bitmap? = remember(imageBase64) {
-            imageBase64
-                ?.substringAfter("base64,")
-                ?.let { Base64.decode(it, Base64.DEFAULT) }
-                ?.let { bytes ->
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                }
-        }
-
-        LaunchedEffect(decodedBitmap) {
-            println("ProfileImage – decodedBitmap: $decodedBitmap")
-        }
-
-        if (decodedBitmap != null) {
-            Image(
-                bitmap = decodedBitmap.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            WrapImage(
-                iconData = AppIcons.User as IconDataUi,
-                modifier = Modifier.fillMaxSize(),
-                colorFilter = null,
-                contentScale = ContentScale.Crop
-            )
-        }
+    if (decodedBitmap != null) {
+        Image(
+            bitmap = decodedBitmap.asImageBitmap(),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
     } else {
+
         WrapImage(
-            iconData = AppIcons.User,
+            iconData = AppIcons.User as IconDataUi,
             modifier = Modifier.fillMaxSize(),
             colorFilter = null,
             contentScale = ContentScale.Crop
@@ -377,7 +358,6 @@ private fun ListItemFirstNameAndLastName(
 fun ListItemOther(
     state: State,
 ) {
-
     val rows = state.claimsUi.chunked(2)
 
     Column(
@@ -391,11 +371,9 @@ fun ListItemOther(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
             ) {
-
                 pair.forEach { claim ->
                     Column(
-                        modifier = Modifier
-                            .weight(1f),
+                        modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
                     ) {
                         Text(
@@ -404,22 +382,51 @@ fun ListItemOther(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
-                        WrapText(
-                            text = claim.value,
-                            modifier = Modifier.fillMaxWidth(),
-                            textConfig = TextConfig(
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            )
-                        )
+
+                        ClaimValueView(claim.value as ClaimValue)
                     }
                 }
 
-                if (pair.size == 1) {
-                   VSpacer.Small()
-                }
+                if (pair.size == 1) VSpacer.Small()
             }
+        }
+    }
+}
+
+
+@Composable
+private fun ClaimValueView(value: ClaimValue) {
+    when (val v = value) {
+        is ClaimValue.Obj -> {
+            v.entries.forEach { (subKey, subValue) ->
+                Text(
+                    text = "$subKey = $subValue",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            }
+        }
+
+        is ClaimValue.Arr -> {
+            Text(
+                text = v.items.joinToString(", ") { it.toString() },
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        }
+
+        is ClaimValue.Simple -> {
+            WrapText(
+                text = v.text,
+                modifier = Modifier.fillMaxWidth(),
+                textConfig = TextConfig(
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            )
         }
     }
 }
@@ -451,19 +458,12 @@ private fun NoResults(
 private fun HomeScreenContentPreview() {
     PreviewTheme {
 
-
-
         ContentScreen(
             isLoading = false,
-            navigatableAction = ScreenNavigateAction.NONE,
+            navigatableAction = ScreenNavigateAction.BACKABLE,
             onBack = {
 
             },
-//            topBar = {
-//                TopBar(
-//                    onEventSent = {}
-//                )
-//            },
             stickyBottom = {
 
             }

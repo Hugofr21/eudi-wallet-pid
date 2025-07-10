@@ -16,7 +16,9 @@
 
 package eu.europa.ec.backuplogic.ui.backup
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -47,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,7 +72,6 @@ import eu.europa.ec.uilogic.component.wrap.ButtonType
 import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
 import eu.europa.ec.uilogic.component.wrap.StickyBottomType
 import eu.europa.ec.uilogic.component.wrap.TextConfig
-import eu.europa.ec.uilogic.component.wrap.WrapIcon
 import eu.europa.ec.uilogic.component.wrap.WrapImage
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 import eu.europa.ec.uilogic.component.wrap.WrapText
@@ -208,27 +211,24 @@ private fun MainContent(
         }
     }
 }
-
 @Composable
 private fun VerificationGrid() {
-    Row(
+    Column (
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(24.dp)
+            .padding(16.dp)
     ) {
         VerificationItem(
             icon = Icons.Default.Create,
-            description = stringResource(R.string.backup_note)
+            description = stringResource(R.string.backup_note),
         )
         VerificationItem(
             icon = Icons.Default.Refresh,
-            description = stringResource(R.string.backup_created)
+            description = stringResource(R.string.backup_created),
         )
         VerificationItem(
             icon = Icons.Default.Info,
-            description = stringResource(R.string.backup_local)
+            description = stringResource(R.string.backup_local),
         )
     }
 }
@@ -236,21 +236,25 @@ private fun VerificationGrid() {
 @Composable
 private fun VerificationItem(
     icon: ImageVector,
-    description: String
+    description: String,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Row (
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = description,
+            contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier
+                .size(40.dp)
+                .padding(8.dp)
         )
         Text(
             text = description,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 6.dp)
         )
     }
 }

@@ -22,6 +22,7 @@ import android.util.Base64
 import eu.europa.ec.commonfeature.util.docNamespace
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.model.DocumentIdentifier
+import eu.europa.ec.dashboardfeature.model.ClaimValue
 import eu.europa.ec.dashboardfeature.model.ClaimsUI
 import eu.europa.ec.eudi.wallet.document.IssuedDocument
 import java.time.ZoneId
@@ -133,16 +134,23 @@ class PersonIdentificationDataImpl(
         val uniqueClaims = allClaims
             .distinctBy { it.identifier.lowercase() }
 
-        val  claims =  uniqueClaims.map { claim ->
+        val claims = uniqueClaims.map { claim ->
+            val normalizedKey = claim.identifier.replace("_"," ").lowercase()
+
+            val v: Any? = claim.value   // o claim.value original
+            val cv = when (v) {
+                is Map<*,*>        -> ClaimValue.Obj(v.mapKeys { it.key.toString().replace("_"," ").lowercase() })
+                is Collection<*>   -> ClaimValue.Arr(v.toList())
+                else               -> ClaimValue.Simple(v.toString())
+            }
+
             ClaimsUI(
-                key   = claim.identifier,
-                value = claim.value.toString()
+                key   = normalizedKey,
+                value = cv
             )
         }
 
-        claims.forEach {
-            println("Key: ${it.key}, Value: ${it.value}")
-        }
+
 
         return claims
 
