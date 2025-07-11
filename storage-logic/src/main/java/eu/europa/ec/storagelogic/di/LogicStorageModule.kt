@@ -59,7 +59,7 @@ fun provideAppDatabase(
     val factory    = SupportFactory(keyBytes)
     return Room.databaseBuilder(ctx, DatabaseService::class.java, "eudi.app.wallet.storage")
         .openHelperFactory(factory)
-        .fallbackToDestructiveMigration(true)
+//        .fallbackToDestructiveMigration(true)
         .build()
 }
 
