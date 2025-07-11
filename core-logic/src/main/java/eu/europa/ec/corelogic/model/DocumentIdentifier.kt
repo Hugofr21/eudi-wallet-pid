@@ -37,7 +37,7 @@ sealed interface DocumentIdentifier {
 
     data object MdocAgeOver18ProofPseudonym : DocumentIdentifier {
         override val formatType: FormatType
-            get() = "eu.europa.ec.eudi.pseudonym.age_over_18.1"
+            get() = "urn:eu.europa.ec.eudi:pid:1"
     }
 
     data object AgeOver18Pid : DocumentIdentifier {

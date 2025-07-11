@@ -17,6 +17,7 @@ moduleConfig {
 
 dependencies {
     implementation(project(LibraryModule.BusinessLogic.path))
+    implementation(project(LibraryModule.StorageLogic.path))
 }
 
 // Current Module Kover Report

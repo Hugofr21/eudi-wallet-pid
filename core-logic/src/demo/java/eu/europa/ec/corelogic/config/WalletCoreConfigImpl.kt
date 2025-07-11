@@ -34,7 +34,8 @@ internal class WalletCoreConfigImpl(
         const val VCI_ISSUER_URL = "https://issuer.eudiw.dev"
         const val VCI_CLIENT_ID = "wallet-dev"
         const val AUTHENTICATION_REQUIRED = false
-
+        // verifier
+        const val VERIFIER_URL = "https://verifier.eudiw.dev/home"
         // Proof age verification
         const val VCI_ISSUER_URL_PROOF_AGE = "https://issuer.ageverification.dev/"
     }

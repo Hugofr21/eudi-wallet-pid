@@ -16,6 +16,7 @@
 
 package eu.europa.ec.backuplogic.interactor
 
+import eu.europa.ec.backuplogic.controller.ListWordsControllerImpl
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.uilogic.serializer.UiSerializer
@@ -25,12 +26,15 @@ interface BackupInteractor {
     suspend fun restoreWallet(backupData: String): Boolean
     suspend fun deleteWallet(): Boolean
 
+    fun getListWords(): List<String>
+
 }
 
 class BackupInteractorIml (
     private val uiSerializer: UiSerializer,
     private val resourceProvider: ResourceProvider,
-    private val walletCoreDocumentsController: WalletCoreDocumentsController
+    private val walletCoreDocumentsController: WalletCoreDocumentsController,
+    private val listWordsController: ListWordsControllerImpl
 ): BackupInteractor {
 
     override suspend fun backupWallet(): String {
@@ -43,6 +47,10 @@ class BackupInteractorIml (
 
     override suspend fun deleteWallet(): Boolean {
         TODO("Not yet implemented")
+    }
+
+    override fun getListWords(): List<String> {
+        return listWordsController.generateOrderByListWords()
     }
 
 }

@@ -65,7 +65,7 @@ class PresentationLoadingInteractorImpl(
         walletCorePresentationController.observeSentDocumentsRequest().mapNotNull { response ->
             when (response) {
                 is WalletCorePartialState.Failure -> PresentationLoadingObserveResponsePartialState.Failure(
-                    error = response.error
+                    error = response.error,
                 )
 
                 is WalletCorePartialState.Redirect -> PresentationLoadingObserveResponsePartialState.Redirect(

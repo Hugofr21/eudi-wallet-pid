@@ -493,6 +493,8 @@
     <string name="consent_backup_content_subtitle">Backup your in steps</string>
     <string name="error_invalid_pin">Unable to use this database</string>
     <string name="error_no_sqlcipher_key">Error authenticating to database</string>
+    <string name="recovery_backup_content_title">Mnemonic Phrase</string>
+    <string name="recovery_backup_content_description">Sequence of 10 words that serves as the master key to generate all other cryptographic keys.</string>
 
     <!-- Logs Screen -->
 </resources>
