@@ -43,13 +43,13 @@ class PrefsPinStorageProvider(
         val salt = prefsController.getString(KEY_SALT, "")
         val hash = prefsController.getString(KEY_HASH, "")
         val iv = prefsController.getString(KEY_IV, "")
-        print("Salt: $salt")
-        print("hash: $hash")
+//        print("Salt: $salt")
+//        print("hash: $hash")
         if (salt.isEmpty()  || hash.isEmpty()) return ""
         val saltDecode = Base64.decode(salt, Base64.NO_WRAP)
         val ivDecode = Base64.decode(iv, Base64.NO_WRAP)
-        print("Salt decode: $saltDecode")
-        print("IV decode: $ivDecode")
+//        print("Salt decode: $saltDecode")
+//        print("IV decode: $ivDecode")
         return hash
     }
 

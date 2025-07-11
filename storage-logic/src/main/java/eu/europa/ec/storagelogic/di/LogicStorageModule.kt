@@ -17,26 +17,52 @@
 package eu.europa.ec.storagelogic.di
 
 import android.content.Context
+import android.util.Base64
 import androidx.room.Room
+import eu.europa.ec.authenticationlogic.controller.authentication.SQLCipherAuthenticationController
 import eu.europa.ec.storagelogic.dao.BookmarkDao
 import eu.europa.ec.storagelogic.dao.RevokedDocumentDao
 import eu.europa.ec.storagelogic.dao.TransactionLogDao
 import eu.europa.ec.storagelogic.service.DatabaseService
+import net.sqlcipher.database.SQLiteDatabase
+import net.sqlcipher.database.SupportFactory
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
+import org.koin.core.annotation.Singleton
+import com.google.inject.Provides;
+import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherStorageController
+import java.security.SecureRandom
 
 @Module
 @ComponentScan("eu.europa.ec.storagelogic")
 class LogicStorageModule
 
-@Single
-fun provideAppDatabase(context: Context): DatabaseService =
-    Room.databaseBuilder(
-        context,
-        DatabaseService::class.java,
-        "eudi.app.wallet.storage"
-    ).fallbackToDestructiveMigration(true).build()
+
+@Provides
+@Singleton
+fun provideAppDatabase(
+    ctx: Context,
+    storage: SQLCipherStorageController
+): DatabaseService {
+    if (!storage.hasSQLCipherKey()) {
+        val randomBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val randomValue = Base64.encodeToString(randomBytes, Base64.NO_WRAP)
+        println("MyApp: SQLCipher passphrase not found, generating...")
+        println("Random bytes: (length=${randomValue.length})")
+        println("Random passphrase: (length=${randomValue.length})")
+        storage.setSQLCipherKey(randomValue)
+    }
+
+    val passphrase = storage.retrieveSQLCipherKey()
+    val keyBytes   = SQLiteDatabase.getBytes(passphrase.toCharArray())
+    val factory    = SupportFactory(keyBytes)
+    return Room.databaseBuilder(ctx, DatabaseService::class.java, "eudi.app.wallet.storage")
+        .openHelperFactory(factory)
+        .fallbackToDestructiveMigration(true)
+        .build()
+}
+
 
 @Single
 fun provideBookmarkDao(service: DatabaseService): BookmarkDao = service.bookmarkDao()

@@ -16,18 +16,24 @@
 
 package eu.europa.ec.authenticationlogic.di
 
+import android.content.Context
 import eu.europa.ec.authenticationlogic.config.StorageConfig
 import eu.europa.ec.authenticationlogic.config.StorageConfigImpl
 import eu.europa.ec.authenticationlogic.controller.authentication.BiometricAuthenticationController
 import eu.europa.ec.authenticationlogic.controller.authentication.BiometricAuthenticationControllerImpl
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationController
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationControllerImpl
+import eu.europa.ec.authenticationlogic.controller.authentication.SQLCipherAuthenticationController
+import eu.europa.ec.authenticationlogic.controller.authentication.SQLCipherAuthenticationControllerImpl
 import eu.europa.ec.authenticationlogic.controller.storage.BiometryStorageController
 import eu.europa.ec.authenticationlogic.controller.storage.BiometryStorageControllerImpl
 import eu.europa.ec.authenticationlogic.controller.storage.PinStorageController
 import eu.europa.ec.authenticationlogic.controller.storage.PinStorageControllerImpl
+import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherControllerImpl
+import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherStorageController
 import eu.europa.ec.authenticationlogic.storage.PrefsBiometryStorageProvider
 import eu.europa.ec.authenticationlogic.storage.PrefsPinStorageProvider
+import eu.europa.ec.authenticationlogic.storage.PrefsSQLCipherStorageProvider
 import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import eu.europa.ec.businesslogic.controller.storage.PrefsController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
@@ -46,7 +52,8 @@ fun provideStorageConfig(
     cryptoController: CryptoController
 ): StorageConfig = StorageConfigImpl(
     pinImpl = PrefsPinStorageProvider(prefsController, cryptoController),
-    biometryImpl = PrefsBiometryStorageProvider(prefsController)
+    biometryImpl = PrefsBiometryStorageProvider(prefsController),
+    sqlCipherImpl = PrefsSQLCipherStorageProvider(prefsController, cryptoController)
 )
 
 @Factory
@@ -71,6 +78,18 @@ fun provideDeviceAuthenticationController(
         biometricAuthenticationController
     )
 
+
+@Factory
+fun provideSQLCipherAuthenticationController(
+    context: Context,
+    sqlCipherStorageController: SQLCipherStorageController,
+): SQLCipherAuthenticationController =
+    SQLCipherAuthenticationControllerImpl(
+        context,
+        sqlCipherStorageController
+    )
+
+
 @Factory
 fun providePinStorageController(
     storageConfig: StorageConfig
@@ -80,3 +99,8 @@ fun providePinStorageController(
 fun provideBiometryStorageController(
     storageConfig: StorageConfig
 ): BiometryStorageController = BiometryStorageControllerImpl(storageConfig)
+
+@Factory
+fun provideSQLCipherStorageController(
+    storageConfig: StorageConfig
+): SQLCipherStorageController = SQLCipherControllerImpl(storageConfig)

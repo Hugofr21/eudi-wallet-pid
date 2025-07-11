@@ -83,6 +83,7 @@ import kotlinx.coroutines.flow.onEach
 @Composable
 fun BackupScreen(navController: NavController, viewModel: BackupViewModel) {
     val state = viewModel.viewState.collectAsStateWithLifecycle()
+    val effectFlow = viewModel.effect
 
 
     ContentScreen(
@@ -94,7 +95,7 @@ fun BackupScreen(navController: NavController, viewModel: BackupViewModel) {
         }) { paddingValues ->
         NavigationSlider(
             paddingValues = paddingValues,
-            effectFlow = viewModel.effect,
+            effectFlow = effectFlow,
             onNavigationRequested = { navigationEffect ->
                 handleNavigationEffect(navigationEffect, navController)
             })

@@ -64,7 +64,9 @@ class LogControllerImpl(
 ) : LogController {
 
     companion object {
-        private const val LOG_FILE_NAME = "eudi-android-wallet-logs%g.txt"
+        private const val LOG_FILE_NAME_TXT = "eudi-android-wallet-logs%g.txt"
+        private const val LOG_FILE_NAME_JSON = "eudi-android-wallet-logs%g.json"
+        private const val LOG_FILE_NAME_XML = "eudi-android-wallet-logs%g.xml"
         private const val FILE_SIZE_LIMIT = 5242880
         private const val FILE_LIMIT = 10
     }
@@ -72,7 +74,7 @@ class LogControllerImpl(
     private val logsDir = File(context.filesDir.absolutePath + "/logs")
 
     private val fileLoggerTree: FileLoggerTree = FileLoggerTree.Builder()
-        .withFileName(LOG_FILE_NAME)
+        .withFileName(LOG_FILE_NAME_TXT)
         .withDir(logsDir)
         .withSizeLimit(FILE_SIZE_LIMIT)
         .withFileLimit(FILE_LIMIT)

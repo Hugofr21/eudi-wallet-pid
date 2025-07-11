@@ -23,15 +23,14 @@ import android.util.Base64
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.controller.storage.PrefKeys
 import java.security.KeyStore
-import java.security.Provider
 import java.security.SecureRandom
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
 interface KeystoreController {
-    fun retrieveOrGenerateSecretKey( UserAuthenticationRequired:Boolean = true): SecretKey?
+    fun retrieveOrGenerateSecretKey( userAuthenticationRequired:Boolean): SecretKey?
     fun deleteKey(alias: String)
-    fun rotateKey(oldAlias: String): String?
+    fun rotateKey(oldAlias: String, userAuthenticationRequired: Boolean): String?
 }
 
 class KeystoreControllerImpl(
@@ -73,11 +72,9 @@ class KeystoreControllerImpl(
     override fun retrieveOrGenerateSecretKey(userAuthenticationRequired:Boolean): SecretKey? {
         return androidKeyStore?.let {
             val alias = prefKeys.getAlias()
-            println("KeystoreControllerImpl.retrieveOrGenerateSecretKey: alias=$alias")
             if (alias.isEmpty()) {
                 val newAlias = createPublicKey()
-                println("KeystoreControllerImpl.retrieveOrGenerateSecretKey: newAlias=$newAlias")
-                generateBiometricSecretKey(newAlias)
+                generateBiometricSecretKey(newAlias, userAuthenticationRequired)
                 prefKeys.setAlias(newAlias)
                 getBiometricSecretKey(it, newAlias)
             } else {
@@ -87,42 +84,48 @@ class KeystoreControllerImpl(
     }
 
     @Suppress("DEPRECATION")
-    private fun generateBiometricSecretKey(alias: String) {
+    private fun generateBiometricSecretKey(alias: String, userAuthenticationRequired: Boolean) {
         val keyGenerator = KeyGenerator.getInstance(
             KEY__ALGORITHM,
             STORE_TYPE
         )
 
-        keyGenerator.init(createdKeyGenParameterSpec(alias))
+        keyGenerator.init(createdKeyGenParameterSpec(alias, userAuthenticationRequired))
         keyGenerator.generateKey()
     }
 
 
-    private fun createdKeyGenParameterSpec(alias: String): KeyGenParameterSpec {
-        val builder = KeyGenParameterSpec.Builder(
+    private fun createdKeyGenParameterSpec(alias: String, userAuthenticationRequired: Boolean): KeyGenParameterSpec {
+        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
             alias,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         )
             .setBlockModes(BLOCK_MODE)
             .setEncryptionPaddings(PADDING)
             .setKeySize(KEY_SIZE)
-            .setUserAuthenticationRequired(true)
-            .setInvalidatedByBiometricEnrollment(true)
-            .setUserAuthenticationValidityDurationSeconds(-1)
-            .setUserAuthenticationParameters(
-                0,
-                KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
-            )
+
+        if (userAuthenticationRequired) {
+            keyGenParameterSpec.setUserAuthenticationRequired(true)
+            keyGenParameterSpec.setInvalidatedByBiometricEnrollment(true)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                keyGenParameterSpec.setUserAuthenticationParameters(
+                    0,
+                    KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
+                )
+            } else {
+                keyGenParameterSpec.setUserAuthenticationValidityDurationSeconds(-1)
+            }
+        }
 
 //        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 //            try {
-//                builder.setIsStrongBoxBacked(true)
+//                keyGenParameterSpec.setIsStrongBoxBacked(true)
 //                println("Keystore: tentando StrongBox")
 //            } catch (e: UnsupportedOperationException) {
 //                println("Keystore: não há StrongBox; fallback")
 //            }
 //        }
-        return builder.build()
+        return keyGenParameterSpec.build()
     }
 
 
@@ -154,10 +157,10 @@ class KeystoreControllerImpl(
         }
     }
 
-    override fun rotateKey(oldAlias: String): String? {
+    override fun rotateKey(oldAlias: String, userAuthenticationRequired: Boolean): String? {
         val newAlias = createPublicKey()
         androidKeyStore?.deleteEntry(oldAlias)
-        generateBiometricSecretKey(newAlias)
+        generateBiometricSecretKey(newAlias, userAuthenticationRequired)
         prefKeys.setAlias(newAlias)
         return  newAlias
     }

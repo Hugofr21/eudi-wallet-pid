@@ -149,13 +149,13 @@ class PrefsControllerImpl(
      * Retrieves the SharedPreferences instance for the application.
      *
      * This function provides access to the SharedPreferences object used by the application
-     * for persistent storage of key-value pairs. The SharedPreferences are named "eudi-wallet"
+     * for persistent storage of key-value pairs. The SharedPreferences are named "eudi-wallet-secure-prefs"
      * and are accessed with private mode, meaning only this application can read or write to them.
      *
      * @return The SharedPreferences instance.
      */
     private fun getSharedPrefs(): SharedPreferences {
-        return resourceProvider.provideContext().getSharedPreferences("eudi-wallet", MODE_PRIVATE)
+        return resourceProvider.provideContext().getSharedPreferences("eudi-wallet-secure-prefs", MODE_PRIVATE)
     }
 
     /**

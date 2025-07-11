@@ -491,6 +491,8 @@
     <string name="backup_created">Backup file will be created</string>
     <string name="backup_note">Note down your recovery phrase</string>
     <string name="consent_backup_content_subtitle">Backup your in steps</string>
+    <string name="error_invalid_pin">Unable to use this database</string>
+    <string name="error_no_sqlcipher_key">Error authenticating to database</string>
 
     <!-- Logs Screen -->
 </resources>

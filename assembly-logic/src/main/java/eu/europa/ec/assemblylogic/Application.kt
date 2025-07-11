@@ -17,21 +17,25 @@
 package eu.europa.ec.assemblylogic
 
 import android.app.Application
+import android.util.Base64
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import eu.europa.ec.analyticslogic.controller.AnalyticsController
 import eu.europa.ec.assemblylogic.di.setupKoin
+import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherStorageController
 import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.worker.RevocationWorkManager
 import eu.europa.ec.eudi.rqesui.infrastructure.EudiRQESUi
 import org.koin.android.ext.android.inject
 import org.koin.core.KoinApplication
+import java.security.SecureRandom
 
 class Application : Application() {
 
     private val analyticsController: AnalyticsController by inject()
+    private val storageController: SQLCipherStorageController by inject()
     private val configLogic: ConfigLogic by inject()
     private val walletCoreConfig: WalletCoreConfig by inject()
 
@@ -40,6 +44,7 @@ class Application : Application() {
         initializeKoin().initializeRqes()
         initializeReporting()
         initializeRevocationWorkManager()
+//        initializeSQLCipher()
     }
 
     private fun KoinApplication.initializeRqes() {
@@ -57,6 +62,17 @@ class Application : Application() {
     private fun initializeReporting() {
         analyticsController.initialize(this)
     }
+
+    private fun initializeSQLCipher() {
+        if (!storageController.hasSQLCipherKey()) {
+            val randomBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
+            val randomValue = Base64.encodeToString(randomBytes, Base64.NO_WRAP)
+            storageController.setSQLCipherKey(randomValue)
+        }
+        val pass = storageController.retrieveSQLCipherKey()
+        println("MyApp: SQLCipher passphrase ready (length=${pass.length})")
+    }
+
 
     private fun initializeRevocationWorkManager() {
 
