@@ -16,8 +16,9 @@
 
 package eu.europa.ec.businesslogic.controller.storage
 
-import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import androidx.core.content.edit
 import eu.europa.ec.businesslogic.extension.shuffle
 import eu.europa.ec.businesslogic.extension.unShuffle
@@ -155,7 +156,19 @@ class PrefsControllerImpl(
      * @return The SharedPreferences instance.
      */
     private fun getSharedPrefs(): SharedPreferences {
-        return resourceProvider.provideContext().getSharedPreferences("eudi-wallet-secure-prefs", MODE_PRIVATE)
+        val context = resourceProvider.provideContext()
+
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        return EncryptedSharedPreferences.create(
+            context,
+            "eudi-wallet-secure-prefs",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
     }
 
     /**

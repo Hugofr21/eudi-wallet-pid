@@ -2,7 +2,7 @@
 accompanist = "0.36.0"
 androidDatabaseSqlcipher = "4.5.4"
 androidDesugarJdkLibs = "2.1.5"
-androidGradlePlugin = "8.9.1"
+androidGradlePlugin = "8.9.2"
 androidxActivity = "1.10.1"
 androidxAppCompat = "1.7.1"
 androidxBrowser = "1.8.0"
@@ -45,6 +45,7 @@ protobufPlugin = "0.9.4"
 retrofit = "3.0.0"
 robolectric = "4.14.1"
 secrets = "2.0.1"
+securityCrypto = "1.0.0"
 turbine = "1.2.0"
 koin = "4.0.4"
 koinAnnotations = "2.0.1-RC1"
@@ -102,6 +103,7 @@ androidx-appAuth = { group = "androidx.security", name = "security-app-authentic
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNavigation" }
 androidx-navigation-testing = { group = "androidx.navigation", name = "navigation-testing", version.ref = "androidxNavigation" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "androidxProfileinstaller" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "androidxEspresso" }
 androidx-test-ext = { group = "androidx.test.ext", name = "junit-ktx", version.ref = "androidxTestExt" }

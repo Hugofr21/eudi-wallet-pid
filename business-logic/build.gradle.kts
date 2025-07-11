@@ -38,6 +38,7 @@ dependencies {
     implementation(libs.google.phonenumber)
     implementation(libs.timber)
     implementation(libs.treessence)
+    implementation(libs.androidx.security.crypto)
 
     testImplementation(project(LibraryModule.TestLogic.path))
     androidTestImplementation(project(LibraryModule.TestLogic.path))
