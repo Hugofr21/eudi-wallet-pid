@@ -87,37 +87,48 @@ class AddDocumentInteractorImpl(
 
     override fun getAddDocumentOption(flowType: IssuanceFlowUiConfig): Flow<AddDocumentInteractorPartialState> =
         flow {
+            println("[getAddDocumentOption] flowType: $flowType")
             when (val state =
                 walletCoreDocumentsController.getScopedDocuments(resourceProvider.getLocale())) {
-                is FetchScopedDocumentsPartialState.Failure -> emit(
-                    AddDocumentInteractorPartialState.Failure(
-                        error = state.errorMessage
+                is FetchScopedDocumentsPartialState.Failure -> {
+                    println("[getAddDocumentOption] FetchScopedDocumentsPartialState.Failure: ${state.errorMessage}")
+                    emit(
+                        AddDocumentInteractorPartialState.Failure(
+                            error = state.errorMessage
+                        )
                     )
-                )
+                }
 
-                is FetchScopedDocumentsPartialState.Success -> emit(
-                    AddDocumentInteractorPartialState.Success(
-                        options = state.documents
-                            .sortedBy { it.name.lowercase() }
-                            .mapNotNull {
-                                if (flowType != IssuanceFlowUiConfig.NO_DOCUMENT || it.isPid) {
-                                    AddDocumentUi(
-                                        itemData = ListItemDataUi(
-                                            itemId = it.configurationId,
-                                            mainContentData = ListItemMainContentDataUi.Text(text = it.name),
-                                            trailingContentData = ListItemTrailingContentDataUi.Icon(
-                                                iconData = AppIcons.Add
-                                            )
+                is FetchScopedDocumentsPartialState.Success -> {
+                    println("[getAddDocumentOption] FetchScopedDocumentsPartialState.Success: documents count = ${state.documents.size}")
+                    val options = state.documents
+                        .sortedBy { it.name.lowercase() }
+                        .mapNotNull {
+                            if (flowType != IssuanceFlowUiConfig.NO_DOCUMENT || it.isPid || it.ageProof) {
+                                println("[getAddDocumentOption] Adding document option: id=${it.configurationId}, name=${it.name}")
+                                AddDocumentUi(
+                                    itemData = ListItemDataUi(
+                                        itemId = it.configurationId,
+                                        mainContentData = ListItemMainContentDataUi.Text(text = it.name),
+                                        trailingContentData = ListItemTrailingContentDataUi.Icon(
+                                            iconData = AppIcons.Add
                                         )
                                     )
-                                } else {
-                                    null
-                                }
+                                )
+                            } else {
+                                println("[getAddDocumentOption] Skipping document: id=${it.configurationId}, name=${it.name}")
+                                null
                             }
+                        }
+                    emit(
+                        AddDocumentInteractorPartialState.Success(
+                            options = options
+                        )
                     )
-                )
+                }
             }
         }.safeAsync {
+            println("[getAddDocumentOption] safeAsync caught exception: ${it.localizedMessage}")
             AddDocumentInteractorPartialState.Failure(
                 error = it.localizedMessage ?: genericErrorMsg
             )

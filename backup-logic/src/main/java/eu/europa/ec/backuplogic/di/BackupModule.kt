@@ -16,6 +16,7 @@
 
 package eu.europa.ec.backuplogic.di
 
+import eu.europa.ec.backuplogic.controller.ListWordsControllerImpl
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
 import eu.europa.ec.backuplogic.interactor.BackupInteractorIml
 import org.koin.core.annotation.ComponentScan
@@ -33,9 +34,11 @@ class LogicBackupModule
 fun provideBackupInteractor(
     uiSerializer: UiSerializer,
     resourceProvider: ResourceProvider,
-    walletCoreDocumentsController: WalletCoreDocumentsController
+    walletCoreDocumentsController: WalletCoreDocumentsController,
+    listWordsController: ListWordsControllerImpl
 ): BackupInteractor = BackupInteractorIml(
     uiSerializer,
     resourceProvider,
-    walletCoreDocumentsController
+    walletCoreDocumentsController,
+    listWordsController
 )

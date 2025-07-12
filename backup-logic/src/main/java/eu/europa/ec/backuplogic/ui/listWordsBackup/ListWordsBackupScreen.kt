@@ -49,20 +49,20 @@ fun ListWordsBackupScreen(navController: NavController, viewModel: ListWordsBack
     val state = viewModel.viewState.collectAsStateWithLifecycle()
     val effectFlow = viewModel.effect
 
-    ContentScreen(
-        isLoading = false,
-        navigatableAction = ScreenNavigateAction.NONE,
-        onBack = { viewModel.setEvent(Event.GoBack) },
-
-        stickyBottom = { paddingValues ->
-        }) { paddingValues ->
-        NavigationSlider(
-            paddingValues = paddingValues,
-            effectFlow = effectFlow,
-            onNavigationRequested = { navigationEffect ->
-                handleNavigationEffect(navigationEffect, navController)
-            })
-    }
+//    ContentScreen(
+//        isLoading = false,
+//        navigatableAction = ScreenNavigateAction.NONE,
+//        onBack = { viewModel.setEvent(Event.GoBack) },
+//
+//        stickyBottom = { paddingValues ->
+//        }) { paddingValues ->
+//        NavigationSlider(
+//            paddingValues = paddingValues,
+//            effectFlow = effectFlow,
+//            onNavigationRequested = { navigationEffect ->
+//                handleNavigationEffect(navigationEffect, navController)
+//            })
+//    }
 
 }
 

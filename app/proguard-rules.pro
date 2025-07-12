@@ -91,6 +91,7 @@
 -dontwarn org.koin.androidx.viewmodel.GetViewModelKt
 -dontwarn org.koin.compose.stable.StableHoldersKt
 -dontwarn org.koin.compose.stable.StableParametersDefinition
+-dontwarn okhttp3.internal.Util # Mantém a classe necessária
 
 # Retrofit
 -keep,allowobfuscation,allowshrinking interface retrofit2.Call
@@ -119,3 +120,6 @@
 # Core Libs
 -keep class com.nimbusds.jwt.**{ *; }
 -keep class com.nimbusds.jose.**{ *; }
+
+# Crypto
+-keep class androidx.security.crypto.** { *; }

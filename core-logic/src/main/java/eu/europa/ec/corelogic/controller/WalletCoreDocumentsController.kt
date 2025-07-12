@@ -251,10 +251,19 @@ class WalletCoreDocumentsControllerImpl(
                             else -> false
                         }
 
+                        val isAgeVerification: Boolean = when (config) {
+                            is MsoMdocCredential -> config.docType.toDocumentIdentifier() == DocumentIdentifier.MdocEUDIAgeOver18 ||
+                                    config.docType.toDocumentIdentifier() == DocumentIdentifier.AgeOver18Pid
+
+                            is SdJwtVcCredential -> config.type.toDocumentIdentifier() == DocumentIdentifier.AgeOver18Pid
+                            else -> false
+                        }
+
                         ScopedDocumentDomain(
                             name = name,
                             configurationId = id.value,
-                            isPid = isPid
+                            isPid = isPid,
+                            ageProof = isAgeVerification
                         )
                     }
                 if (documents.isNotEmpty()) {

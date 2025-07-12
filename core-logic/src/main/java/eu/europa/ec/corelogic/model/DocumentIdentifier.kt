@@ -36,9 +36,15 @@ sealed interface DocumentIdentifier {
     }
 
     data object MdocAgeOver18ProofPseudonym : DocumentIdentifier {
-        override val formatType: FormatType
-            get() = "urn:eu.europa.ec.eudi:pid:1"
+        val pidFormat: String get() = "urn:eu.europa.ec.eudi:pid:1"
+        override val formatType: String get() = pidFormat
     }
+
+    data object MdocEUDIAgeOver18 : DocumentIdentifier {
+        override val formatType: FormatType
+            get() = "eu.europa.ec.eudi.pseudonym.age_over_18.1"
+    }
+
 
     data object AgeOver18Pid : DocumentIdentifier {
         override val formatType: FormatType
@@ -58,6 +64,7 @@ fun FormatType.toDocumentIdentifier(): DocumentIdentifier = when (this.lowercase
     DocumentIdentifier.SdJwtPid.formatType.lowercase() -> DocumentIdentifier.SdJwtPid
     DocumentIdentifier.MdocAgeOver18ProofPseudonym.formatType.lowercase() -> DocumentIdentifier.MdocAgeOver18ProofPseudonym
     DocumentIdentifier.AgeOver18Pid.formatType.lowercase() -> DocumentIdentifier.AgeOver18Pid
+    DocumentIdentifier.MdocEUDIAgeOver18.formatType.lowercase() -> DocumentIdentifier.MdocEUDIAgeOver18
     else -> DocumentIdentifier.OTHER(formatType = this)
 }
 
@@ -77,6 +84,7 @@ private fun createDocumentIdentifier(
         DocumentIdentifier.SdJwtPid.formatType.lowercase() -> DocumentIdentifier.SdJwtPid
         DocumentIdentifier.MdocAgeOver18ProofPseudonym.formatType.lowercase() -> DocumentIdentifier.MdocAgeOver18ProofPseudonym
         DocumentIdentifier.AgeOver18Pid.formatType.lowercase() -> DocumentIdentifier.AgeOver18Pid
+        DocumentIdentifier.MdocEUDIAgeOver18.formatType.lowercase() -> DocumentIdentifier.MdocEUDIAgeOver18
         else -> DocumentIdentifier.OTHER(formatType = formatType)
     }
 }
