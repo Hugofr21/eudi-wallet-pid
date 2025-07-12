@@ -197,6 +197,7 @@ class AddDocumentViewModel(
 
         viewModelScope.launch {
             addDocumentInteractor.getAddDocumentOption(flowType).collect { response ->
+                println("AddDocument getAddDocumentOption $response")
                 when (response) {
                     is AddDocumentInteractorPartialState.Success -> {
                         setState {

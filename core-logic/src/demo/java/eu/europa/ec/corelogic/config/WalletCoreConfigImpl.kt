@@ -18,6 +18,7 @@ package eu.europa.ec.corelogic.config
 
 import android.content.Context
 import eu.europa.ec.corelogic.BuildConfig
+import eu.europa.ec.eudi.wallet.EudiWallet
 import eu.europa.ec.eudi.wallet.EudiWalletConfig
 import eu.europa.ec.eudi.wallet.issue.openid4vci.OpenId4VciManager
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.ClientIdScheme
@@ -31,15 +32,12 @@ internal class WalletCoreConfigImpl(
 ) : WalletCoreConfig {
 
     private companion object {
-        // issuer age proof
-        const val VCI_ISSUER_URL_PROOF_AGE = "https://issuer.ageverification.dev/"
-        // issuer other namespaces and formats
-        const val VCI_ISSUER_URL = "https://issuer.eudiw.dev"
-        const val VCI_CLIENT_ID = "wallet-dev"
         const val AUTHENTICATION_REQUIRED = false
+
         // verifier
         const val VERIFIER_URL = "https://verifier.eudiw.dev/home"
         // Proof age verification
+        const val VERIFIER_URL_AGE_VERIFICATION = "https://verifier.ageverification.dev/"
     }
 
     private var _config: EudiWalletConfig? = null
@@ -80,13 +78,16 @@ internal class WalletCoreConfigImpl(
                         )
                     }
 
-                    configureOpenId4Vci {
-                        withIssuerUrl(issuerUrl = VCI_ISSUER_URL)
-                        withClientId(clientId = VCI_CLIENT_ID)
-                        withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
-                        withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-                        withUseDPoPIfSupported(true)
-                    }
+//                    VCI_ISSUER_URLS.forEach { issuerUrl ->
+//                        configureOpenId4Vci {
+//                            withIssuerUrl(issuerUrl = issuerUrl)
+//                            withClientId(clientId = VCI_CLIENT_ID)
+//                            withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
+//                            withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
+//                            withUseDPoPIfSupported(true)
+//                        }
+//                    }
+
 
                     // reader C.A
                     configureReaderTrustStore(

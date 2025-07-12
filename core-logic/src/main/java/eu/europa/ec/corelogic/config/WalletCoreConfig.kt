@@ -33,6 +33,7 @@ interface WalletCoreConfig {
      */
     val config: EudiWalletConfig
 
+
     /**
      * Returns a predefined set of document categories and their associated identifiers.
      *
@@ -198,12 +199,16 @@ interface WalletCoreConfig {
                 ),
                 DocumentIdentifier.AgeOver18Pid to DocumentIssuanceRule(
                     policy = CredentialPolicy.OneTimeUse,
-                    numberOfCredentials = 10
+                    numberOfCredentials = 4
                 ),
                 DocumentIdentifier.MdocAgeOver18ProofPseudonym to DocumentIssuanceRule(
                     policy = CredentialPolicy.OneTimeUse,
-                    numberOfCredentials = 10
-                )
+                    numberOfCredentials = 4
+                ),
+                DocumentIdentifier.MdocEUDIAgeOver18 to DocumentIssuanceRule(
+                    policy = CredentialPolicy.OneTimeUse,
+                    numberOfCredentials = 4
+                ),
 
             )
         )

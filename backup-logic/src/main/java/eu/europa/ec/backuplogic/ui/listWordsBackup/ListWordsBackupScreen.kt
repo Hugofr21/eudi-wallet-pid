@@ -31,12 +31,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import eu.europa.ec.backuplogic.ui.backup.Effect
-import eu.europa.ec.backuplogic.ui.backup.Event
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
+import eu.europa.ec.uilogic.component.preview.PreviewTheme
+import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.VSpacer
+import eu.europa.ec.uilogic.component.wrap.ButtonConfig
+import eu.europa.ec.uilogic.component.wrap.ButtonType
 import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapText
 import kotlinx.coroutines.flow.Flow
@@ -49,20 +51,19 @@ fun ListWordsBackupScreen(navController: NavController, viewModel: ListWordsBack
     val state = viewModel.viewState.collectAsStateWithLifecycle()
     val effectFlow = viewModel.effect
 
-//    ContentScreen(
-//        isLoading = false,
-//        navigatableAction = ScreenNavigateAction.NONE,
-//        onBack = { viewModel.setEvent(Event.GoBack) },
-//
-//        stickyBottom = { paddingValues ->
-//        }) { paddingValues ->
-//        NavigationSlider(
-//            paddingValues = paddingValues,
-//            effectFlow = effectFlow,
-//            onNavigationRequested = { navigationEffect ->
-//                handleNavigationEffect(navigationEffect, navController)
-//            })
-//    }
+    ContentScreen(
+        isLoading = false,
+        navigatableAction = ScreenNavigateAction.NONE,
+        onBack = { viewModel.setEvent(Event.GoBack) },
+
+        stickyBottom = { paddingValues ->
+        }) { paddingValues ->
+        NavigationSlider(
+            paddingValues = paddingValues,
+            effectFlow = viewModel.effect,
+            onNavigationRequested = { handleNavigationEffect(it, navController) }
+        )
+    }
 
 }
 
@@ -76,8 +77,8 @@ private fun NavigationSlider(
 ) {
     Column(
         modifier = Modifier
-         .fillMaxWidth()
-         .padding(paddingValues)
+            .fillMaxWidth()
+            .padding(paddingValues)
     ) {
         MainContent(
             paddingValues = paddingValues,
@@ -98,11 +99,11 @@ private fun NavigationSlider(
 
 
 private fun handleNavigationEffect(
-    navigationEffect: eu.europa.ec.backuplogic.ui.backup.Effect.Navigation,
+    navigationEffect: Effect.Navigation,
     navController: NavController,
 ) {
     when (navigationEffect) {
-        is eu.europa.ec.backuplogic.ui.backup.Effect.Navigation.SwitchScreen -> {
+        is Effect.Navigation.SwitchScreen -> {
             navController.navigate(navigationEffect.screenRoute)
         }
 
@@ -117,8 +118,8 @@ private fun handleNavigationEffect(
 fun MainContent(paddingValues: PaddingValues, state: State) {
     Column(
         modifier = Modifier
-         .fillMaxSize()
-         .padding(paddingValues)
+            .fillMaxSize()
+            .padding(paddingValues)
     ) {
 
         val list = state.listWords.listIterator()
@@ -160,6 +161,18 @@ fun MainContent(paddingValues: PaddingValues, state: State) {
 }
 
 
-fun ListWords() {
+fun ListWords(state: State) {
+    val listWord = state.listWords.listIterator()
 
+
+}
+
+
+@ThemeModePreviews
+@Composable
+private fun ContentPreview() {
+    PreviewTheme {
+
+
+    }
 }

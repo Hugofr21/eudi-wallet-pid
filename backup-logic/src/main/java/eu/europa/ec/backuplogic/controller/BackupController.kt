@@ -16,6 +16,9 @@
 
 package eu.europa.ec.backuplogic.controller
 
+import android.content.Context
+import java.io.File
+
 interface BackupController {
     fun exportBackup(value: CharArray)
     fun importBackup(value: CharArray)
@@ -25,12 +28,16 @@ interface BackupController {
 
 
 class BackupControllerImpl(
+    private val context: Context
 ) : BackupController  {
     companion object {
         private const val LOG_FILE_NAME_TXT = "eudi-android-wallet-backup%g.zip"
         private const val FILE_SIZE_LIMIT = 5242880
         private const val FILE_LIMIT = 10
     }
+
+    private val logsDir = File(context.filesDir.absolutePath + "/backup")
+
 
     override fun exportBackup(key: CharArray) {
         TODO("Not yet implemented")
