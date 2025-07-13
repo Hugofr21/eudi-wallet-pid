@@ -229,9 +229,6 @@ class WalletCoreDocumentsControllerImpl(
         const val VCI_CLIENT_ID = "wallet-dev"
     }
 
-    @Volatile
-    private var activeIssuanceManager: OpenId4VciManager? = null
-
     private val genericErrorMessage
         get() = resourceProvider.genericErrorMessage()
 
@@ -239,8 +236,8 @@ class WalletCoreDocumentsControllerImpl(
         get() = resourceProvider.getString(R.string.issuance_generic_error)
 
 
-    private val openId4VciManager: List<OpenId4VciManager> by lazy {
-        VCI_ISSUER_URLS.map { url ->
+    private val openId4VciManager: Map<String, OpenId4VciManager> by lazy {
+        VCI_ISSUER_URLS.associateWith { url ->
             eudiWallet.createOpenId4VciManager(
                 OpenId4VciManager.Config.Builder()
                     .withIssuerUrl(url)
@@ -264,7 +261,7 @@ class WalletCoreDocumentsControllerImpl(
             runCatching {
 
                 val listsOfDomains = coroutineScope {
-                    openId4VciManager.map { mgr ->
+                    openId4VciManager.values.map { mgr ->
                         async {
                             val metadata = mgr.getIssuerMetadata().getOrThrow()
                             println(">> Metadata for ${metadata.credentialConfigurationsSupported}: ${metadata.credentialConfigurationsSupported.keys}")
@@ -397,7 +394,7 @@ class WalletCoreDocumentsControllerImpl(
         txCode: String?,
     ): Flow<IssueDocumentsPartialState> =
         callbackFlow {
-            openId4VciManager.map { openId4VciManager ->
+            openId4VciManager.values.map { openId4VciManager ->
                 openId4VciManager.issueDocumentByOfferUri(
                     offerUri = offerUri,
                     onIssueEvent = issuanceCallback(),
@@ -496,7 +493,7 @@ class WalletCoreDocumentsControllerImpl(
 
     override fun resolveDocumentOffer(offerUri: String): Flow<ResolveDocumentOfferPartialState> =
         callbackFlow {
-            openId4VciManager.forEach { openId4VciManager ->
+            openId4VciManager.values.forEach { openId4VciManager ->
                 openId4VciManager.resolveDocumentOffer(
                     offerUri = offerUri,
                     onResolvedOffer = { offerResult ->
@@ -531,7 +528,7 @@ class WalletCoreDocumentsControllerImpl(
     override fun issueDeferredDocument(docId: DocumentId): Flow<IssueDeferredDocumentPartialState> =
         callbackFlow {
             (getDocumentById(docId) as? DeferredDocument)?.let { deferredDoc ->
-                openId4VciManager.forEach { openId4VciManager ->
+                openId4VciManager.values.forEach { openId4VciManager ->
 
                     openId4VciManager.issueDeferredDocument(
                         deferredDocument = deferredDoc,
@@ -615,9 +612,12 @@ class WalletCoreDocumentsControllerImpl(
         println(">> Resume OpenID4VCI with authorization: $uri")
         val containsIssuer = uri.contains("issuer.ageverification.dev")
         println("Contains issuer.ageverification.dev? $containsIssuer")
+        val containsIssuer2 = uri.contains("issuer.eudiw.dev")
+        println("Contains issuer.eudiw.dev? $containsIssuer2")
+
         var resumed = false
 
-        openId4VciManager.forEach { manager ->
+        openId4VciManager.values.forEach { manager ->
             println(">> Trying OpenID4VCI Manager: ${manager.getScopeName()}")
 
             try {
@@ -682,7 +682,7 @@ class WalletCoreDocumentsControllerImpl(
     private fun issueDocumentWithOpenId4VCI(configId: String): Flow<IssueDocumentsPartialState> =
         callbackFlow {
 
-            openId4VciManager.map { openId4VciManager ->
+            openId4VciManager.values.map { openId4VciManager ->
                 openId4VciManager.issueDocumentByConfigurationIdentifier(
                     credentialConfigurationId = configId,
                     onIssueEvent = issuanceCallback()

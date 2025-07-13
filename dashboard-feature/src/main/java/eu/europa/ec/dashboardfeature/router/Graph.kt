@@ -23,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import eu.europa.ec.backuplogic.ui.backup.BackupScreen
 import eu.europa.ec.dashboardfeature.BuildConfig
 import eu.europa.ec.dashboardfeature.ui.dashboard.DashboardScreen
 import eu.europa.ec.dashboardfeature.ui.document_sign.DocumentSignScreen
@@ -30,6 +31,7 @@ import eu.europa.ec.dashboardfeature.ui.documents.detail.DocumentDetailsScreen
 import eu.europa.ec.dashboardfeature.ui.profile.ProfileScreen
 import eu.europa.ec.dashboardfeature.ui.settings.SettingsScreen
 import eu.europa.ec.dashboardfeature.ui.transactions.detail.TransactionDetailsScreen
+import eu.europa.ec.uilogic.navigation.BackupScreens
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.ModuleRoute
 import org.koin.androidx.compose.koinViewModel
@@ -130,6 +132,7 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 )
             )
         }
+
         composable(route = DashboardScreens.Profile.screenRoute ){
             ProfileScreen(
                 navController, koinViewModel())

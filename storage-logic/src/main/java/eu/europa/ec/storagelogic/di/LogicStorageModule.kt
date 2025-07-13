@@ -48,9 +48,9 @@ fun provideAppDatabase(
     if (!storage.hasSQLCipherKey()) {
         val randomBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val randomValue = Base64.encodeToString(randomBytes, Base64.NO_WRAP)
-        println("MyApp: SQLCipher passphrase not found, generating...")
-        println("Random bytes: (length=${randomValue.length})")
-        println("Random passphrase: (length=${randomValue.length})")
+//        println("MyApp: SQLCipher passphrase not found, generating...")
+//        println("Random bytes: (length=${randomValue.length})")
+//        println("Random passphrase: (length=${randomValue.length})")
         storage.setSQLCipherKey(randomValue)
     }
 

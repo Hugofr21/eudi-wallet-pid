@@ -52,7 +52,7 @@ class PrefsSQLCipherStorageProvider(
      */
     override fun setSQLCipherKey(value: String) {
 
-        val salt = ByteArray(SALT_LEN).also { secureRandom.nextBytes(it) }
+        val salt = cryptoController.generateSalt()
         prefsController.setString(KEY_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
 
         val derived = cryptoController.deriveKey(value, salt)

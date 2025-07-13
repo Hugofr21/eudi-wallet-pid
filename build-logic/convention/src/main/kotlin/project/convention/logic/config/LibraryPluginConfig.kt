@@ -27,6 +27,7 @@ enum class LibraryModule(val path: String) {
     AuthenticationLogic(":authentication-logic"),
     UiLogic(":ui-logic"),
     NetworkLogic(":network-logic"),
+
     ResourcesLogic(":resources-logic"),
     StorageLogic(":storage-logic"),
     BaselineProfileLogic(":baseline-profile"),

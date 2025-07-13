@@ -57,6 +57,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.annotation.InjectedParam
+import org.koin.core.component.getScopeName
 
 data class State(
     val navigatableAction: ScreenNavigateAction,
@@ -197,7 +198,7 @@ class AddDocumentViewModel(
 
         viewModelScope.launch {
             addDocumentInteractor.getAddDocumentOption(flowType).collect { response ->
-                println("AddDocument getAddDocumentOption $response")
+                println("AddDocument getAddDocumentOption ${response.getScopeName()}")
                 when (response) {
                     is AddDocumentInteractorPartialState.Success -> {
                         setState {

@@ -21,11 +21,14 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.vector.ImageVector
 import eu.europa.ec.resourceslogic.R
@@ -120,9 +123,9 @@ object AppIcons {
     )
 
     val User: IconDataUi = IconDataUi(
-        resourceId = R.drawable.ic_user,
+        resourceId = null,
         contentDescriptionId = R.string.content_description_user_icon,
-        imageVector = null
+        imageVector = Icons.Default.AccountCircle
     )
 
     val Id: IconDataUi = IconDataUi(
@@ -414,9 +417,9 @@ object AppIcons {
     )
 
     val Backup: IconDataUi = IconDataUi(
-        resourceId = R.drawable.ic_backup,
+        resourceId = null,
         contentDescriptionId = R.string.content_description_backup_icon,
-        imageVector = null
+        imageVector = Icons.Default.Refresh
     )
 
     val eID: IconDataUi = IconDataUi(
@@ -426,9 +429,9 @@ object AppIcons {
     )
 
     val Logs: IconDataUi = IconDataUi(
-        resourceId = R.drawable.ic_logs,
+        resourceId = null,
         contentDescriptionId = R.string.logs_eid_description,
-        imageVector = null
+        imageVector = Icons.Default.Lock
     )
 
     val Fingerprint: IconDataUi = IconDataUi(

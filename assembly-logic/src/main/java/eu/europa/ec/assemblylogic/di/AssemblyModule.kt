@@ -19,6 +19,7 @@ package eu.europa.ec.assemblylogic.di
 import android.app.Application
 import eu.europa.ec.analyticslogic.di.LogicAnalyticsModule
 import eu.europa.ec.authenticationlogic.di.LogicAuthenticationModule
+import eu.europa.ec.backuplogic.di.LogicBackupModule
 import eu.europa.ec.businesslogic.di.LogicBusinessModule
 import eu.europa.ec.commonfeature.di.FeatureCommonModule
 import eu.europa.ec.corelogic.di.LogicCoreModule
@@ -49,7 +50,7 @@ private val assembledModules = listOf(
     LogicAuthenticationModule().module,
     LogicCoreModule().module,
     LogicStorageModule().module,
-//    LogicBackupModule().module,
+    LogicBackupModule().module,
 
 
     // Feature Modules

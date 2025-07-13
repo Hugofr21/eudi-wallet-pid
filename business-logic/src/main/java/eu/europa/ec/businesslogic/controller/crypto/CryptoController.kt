@@ -48,6 +48,8 @@ interface CryptoController {
     fun verifyPin( attempt: String, storedSaltB64: String, storedHashB64: String): Boolean
 
     fun deriveKey(password: String, salt: ByteArray): ByteArray
+
+    fun generateSalt():ByteArray
 }
 
 class CryptoControllerImpl(
@@ -142,7 +144,7 @@ class CryptoControllerImpl(
     }
 
 
-    private fun generateSalt():ByteArray{
+    override fun generateSalt():ByteArray{
         val random = SecureRandom()
         val salt = ByteArray(SALT_BITS)
         random.nextBytes(salt)
