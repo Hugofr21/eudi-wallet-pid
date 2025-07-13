@@ -131,7 +131,6 @@ fun MainContent(paddingValues: PaddingValues, state: State) {
             .padding(paddingValues)
     ) {
 
-        val list = state.listWords.listIterator()
 
         WrapText(
             text = stringResource(R.string.recovery_backup_content_title),

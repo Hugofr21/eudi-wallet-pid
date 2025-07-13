@@ -39,7 +39,7 @@ class BackupControllerImpl(
     private val logsDir = File(context.filesDir.absolutePath + "/backup")
 
 
-    override fun exportBackup(key: CharArray) {
+    override fun exportBackup(value: CharArray) {
         TODO("Not yet implemented")
     }
 
