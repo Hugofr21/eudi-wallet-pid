@@ -16,18 +16,28 @@
 
 package eu.europa.ec.backuplogic.ui.listWordsBackup
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -37,11 +47,10 @@ import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
 import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.VSpacer
-import eu.europa.ec.uilogic.component.wrap.ButtonConfig
-import eu.europa.ec.uilogic.component.wrap.ButtonType
 import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapText
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 
@@ -53,7 +62,7 @@ fun ListWordsBackupScreen(navController: NavController, viewModel: ListWordsBack
 
     ContentScreen(
         isLoading = false,
-        navigatableAction = ScreenNavigateAction.NONE,
+        navigatableAction = ScreenNavigateAction.BACKABLE,
         onBack = { viewModel.setEvent(Event.GoBack) },
 
         stickyBottom = { paddingValues ->
@@ -156,15 +165,52 @@ fun MainContent(paddingValues: PaddingValues, state: State) {
         VSpacer.ExtraLarge()
 
 
-
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            itemsIndexed(state.listWords) { index, word ->
+                WordItem(index + 1, word)
+            }
+        }
     }
 }
 
 
-fun ListWords(state: State) {
-    val listWord = state.listWords.listIterator()
-
-
+@Composable
+fun WordItem(index: Int, word: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$index.",
+            style = MaterialTheme.typography.bodyMedium.merge(
+                TextStyle(
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            ),
+            modifier = Modifier.padding(end = 8.dp)
+        )
+        Text(
+            text = word,
+            style = MaterialTheme.typography.bodyMedium.merge(
+                TextStyle(
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        )
+    }
 }
 
 
@@ -172,6 +218,21 @@ fun ListWords(state: State) {
 @Composable
 private fun ContentPreview() {
     PreviewTheme {
+        ContentScreen(
+            isLoading = false,
+            navigatableAction = ScreenNavigateAction.NONE,
+            onBack = { },
+            stickyBottom = { paddingValues ->
+            }) { paddingValues ->
+            NavigationSlider(
+                paddingValues = paddingValues,
+                effectFlow = channelFlow {
+                },
+                onNavigationRequested = {
+
+                }
+            )
+        }
 
 
     }

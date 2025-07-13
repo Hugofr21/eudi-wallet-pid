@@ -75,7 +75,7 @@ fun BackupScreen(navController: NavController, viewModel: BackupViewModel) {
 
     ContentScreen(
         isLoading = false,
-        navigatableAction = ScreenNavigateAction.NONE,
+        navigatableAction = ScreenNavigateAction.BACKABLE,
         onBack = { viewModel.setEvent(Event.GoBack) },
 
         stickyBottom = { paddingValues ->

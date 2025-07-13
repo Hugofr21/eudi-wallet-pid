@@ -27,6 +27,7 @@ interface ListWordsController{
 * List of Words Controller: Enable a Passphrase (BIP-39 Optional Word)
 * Dictionary Attacks: When Random Isn’t Random Enough
 */
+
 class ListWordsControllerImpl(
     private val context: Context,
 ): ListWordsController{
@@ -39,7 +40,6 @@ class ListWordsControllerImpl(
     }
 
 
-
     private fun listWords(): List<String> {
         val fileContent = context.assets.open("words.txt").bufferedReader().use { it.readText() }
         return fileContent.split("\n")
@@ -47,4 +47,6 @@ class ListWordsControllerImpl(
             .map { it.trim() }
             .filter { it.length >= 3 }
     }
+
+
 }

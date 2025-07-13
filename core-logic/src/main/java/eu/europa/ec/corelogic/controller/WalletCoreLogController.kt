@@ -26,12 +26,19 @@ class WalletCoreLogControllerImpl(
 ) : WalletCoreLogController {
 
     override fun log(record: Logger.Record) {
-        when (record.level) {
-            Logger.LEVEL_ERROR -> record.thrown?.let { logController.e(it) }
-                ?: logController.e { record.message }
+        val msg = record.message.trim()
 
-            Logger.LEVEL_INFO -> logController.i { record.message }
-            Logger.LEVEL_DEBUG -> logController.d { record.message }
+        when {
+            msg.startsWith("REQUEST")  -> logController.d { "[HTTP-REQ] $msg" }
+            msg.startsWith("RESPONSE") -> logController.d { "[HTTP-RES] $msg" }
+            record.level == Logger.LEVEL_ERROR ->
+                record.thrown?.let { logController.e(it) } ?: logController.e { msg }
+            record.level == Logger.LEVEL_INFO  ->
+                logController.i { msg }
+            record.level == Logger.LEVEL_DEBUG ->
+                logController.d { msg }
+            else ->
+                logController.d { msg }
         }
     }
 }
