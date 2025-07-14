@@ -485,6 +485,7 @@
     <string name="biometric_setup_description">Use your fingerprint or face recognition to log in to the \\\"%1$s\\\" app</string>
     <string name="content_description_fingerprint_icon">Fingerprint</string>
     <string name="backup_screen_confirm_button">Start backup</string>
+    <string name="backup_screen_skip_button">Skip</string>
     <string name="consent_backup_content_title">Backups will save your data</string>
     <string name="backup_content_description">Secure and reliable backups are foundational to maintaining trust, availability, and compliance across all electronic identification and trust service components.</string>
     <string name="backup_local">Selected location for backup</string>
@@ -495,6 +496,7 @@
     <string name="error_no_sqlcipher_key">Error authenticating to database</string>
     <string name="recovery_backup_content_title">Mnemonic Phrase</string>
     <string name="recovery_backup_content_description">Sequence of 10 words that serves as the master key to generate all other cryptographic keys.</string>
+    <string name="backup_slot_placeholder">Drag</string>
 
     <!-- Logs Screen -->
 </resources>

@@ -74,18 +74,29 @@ fun BackupScreen(navController: NavController, viewModel: BackupViewModel) {
 
 
     ContentScreen(
-        isLoading = false,
+        isLoading = state.value.isLoading,
         navigatableAction = ScreenNavigateAction.BACKABLE,
         onBack = { viewModel.setEvent(Event.GoBack) },
+        stickyBottom =
+                { paddingValues ->
+                ContinueButton(
+                    paddingValues = paddingValues,
+                    config = ButtonConfig(
+                        type = ButtonType.PRIMARY,
+                        onClick = { viewModel.setEvent(Event.GoNext) },
+                        enabled = !state.value.isLoading
+                    )
+                )
+            }
+        ) { paddingValues ->
+            NavigationSlider(
+                paddingValues = paddingValues,
+                effectFlow = effectFlow,
+                onNavigationRequested = { navigationEffect ->
+                    handleNavigationEffect(navigationEffect, navController)
+                }
+            )
 
-        stickyBottom = { paddingValues ->
-        }) { paddingValues ->
-        NavigationSlider(
-            paddingValues = paddingValues,
-            effectFlow = effectFlow,
-            onNavigationRequested = { navigationEffect ->
-                handleNavigationEffect(navigationEffect, navController)
-            })
     }
 }
 

@@ -81,7 +81,11 @@ sealed class DashboardScreens {
 
 sealed class BackupScreens {
     data object Backup : Screen(name = "BACKUP")
+    data object BackupPhraseList : Screen(name = "PHRASE_LIST")
+    data object BackupPhraseListCreated : Screen(name = "PHRASE_LIST_CREATED")
+    data object Restore : Screen(name = "RESTORE")
 }
+
 
 sealed class PresentationScreens {
     data object PresentationRequest : Screen(

@@ -16,15 +16,18 @@
 
 package eu.europa.ec.backuplogic.ui.backup
 
+
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
+import eu.europa.ec.uilogic.navigation.BackupScreens
 import org.koin.android.annotation.KoinViewModel
 
 
 data class State(
     val tosAccepted: Boolean = false,
+    val isLoading: Boolean = false
 ) : ViewState
 
 sealed class Event : ViewEvent {
@@ -45,11 +48,15 @@ class BackupViewModel : MviViewModel<Event, State, Effect>() {
 
     override fun handleEvents(event: Event) {
         when (event) {
-            Event.GoBack ->{
+            Event.GoBack -> {
                 setEffect { Effect.Navigation.Pop }
             }
-            Event.GoNext -> TODO()
+            Event.GoNext -> {
+                setEffect { Effect.Navigation.SwitchScreen(
+                    screenRoute = BackupScreens.BackupPhraseList.screenRoute
+                    )
+                }
+            }
         }
     }
-
 }

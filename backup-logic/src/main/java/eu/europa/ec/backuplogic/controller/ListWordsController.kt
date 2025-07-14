@@ -20,7 +20,7 @@ import android.content.Context
 import java.security.SecureRandom
 
 interface ListWordsController{
-    fun generateOrderByListWords(): List<String>
+    fun generateOrderByListWords(count: Int): List<String>
 }
 
 /*
@@ -32,11 +32,11 @@ class ListWordsControllerImpl(
     private val context: Context,
 ): ListWordsController{
 
-    override fun generateOrderByListWords(): List<String> {
+    override fun generateOrderByListWords(count: Int): List<String> {
         val listWords = listWords().toMutableList()
         val numberSecured = SecureRandom()
         val randomListWords = listWords.shuffled(numberSecured)
-        return randomListWords.take(12)
+        return randomListWords.take(count)
     }
 
 

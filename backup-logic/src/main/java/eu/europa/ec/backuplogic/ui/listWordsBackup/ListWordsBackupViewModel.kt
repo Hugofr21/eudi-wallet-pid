@@ -16,15 +16,17 @@
 
 package eu.europa.ec.backuplogic.ui.listWordsBackup
 
-import eu.europa.ec.backuplogic.interactor.BackupInteractorIml
+import eu.europa.ec.backuplogic.interactor.BackupInteractor
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
+import eu.europa.ec.uilogic.navigation.BackupScreens
 import org.koin.android.annotation.KoinViewModel
 
 data class State(
     val listWords: List<String> = emptyList(),
+    val isLoading: Boolean = false
 ) : ViewState
 
 sealed class Event : ViewEvent {
@@ -41,12 +43,12 @@ sealed class Effect : ViewSideEffect {
 
 @KoinViewModel
 class ListWordsBackupViewModel(
-    private val backupInteractorIml: BackupInteractorIml
+    private val BackupInteractor: BackupInteractor
 ) : MviViewModel<Event, State, Effect>() {
 
     override fun setInitialState(): State =
         State(
-            listWords = backupInteractorIml.getListWords()
+            listWords = BackupInteractor.getListWords()
         )
 
     override fun handleEvents(event: Event) {
@@ -55,7 +57,10 @@ class ListWordsBackupViewModel(
                 setEffect { Effect.Navigation.Pop }
             }
             Event.GoNext -> {
-                // TODO: Implement GoNext behavior
+                setEffect { Effect.Navigation.SwitchScreen(
+                    screenRoute = BackupScreens.BackupPhraseListCreated.screenRoute
+                )
+                }
             }
         }
     }

@@ -14,15 +14,18 @@
  * governing permissions and limitations under the Licence.
  */
 
-package eu.europa.ec.backuplogic.ui.listWordsBackup
+package eu.europa.ec.backuplogic.ui.quizPhraseWords
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -32,9 +35,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -45,8 +50,6 @@ import androidx.navigation.NavController
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
-import eu.europa.ec.uilogic.component.preview.PreviewTheme
-import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.ButtonConfig
 import eu.europa.ec.uilogic.component.wrap.ButtonType
@@ -56,9 +59,11 @@ import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 import eu.europa.ec.uilogic.component.wrap.WrapText
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 val LightSkyBlue   = Color(0xFFCAE6FD)
 val OceanBlue      = Color(0xFF2A5ED9)
@@ -67,9 +72,16 @@ val SoftYellow     = Color(0xFFFFF1BA)
 val CoralRed       = Color(0xFFFF6E70)
 
 @Composable
-fun ListWordsBackupScreen(navController: NavController, viewModel: ListWordsBackupViewModel) {
+fun QuizPhraseWordsScreen(navController: NavController, viewModel: QuizPhraseWordsViewModel) {
     val state = viewModel.viewState.collectAsStateWithLifecycle()
     val effectFlow = viewModel.effect
+
+    val configButton = ButtonConfig(
+        type = ButtonType.PRIMARY,
+        onClick = {viewModel.setEvent(
+            if (state is State.VerifyOrder) Event.Confirm else Event.Skip
+        ) }
+    )
 
     ContentScreen(
         isLoading = false,
@@ -79,19 +91,16 @@ fun ListWordsBackupScreen(navController: NavController, viewModel: ListWordsBack
         stickyBottom = { paddingValues ->
             ContinueButton(
                 paddingValues = paddingValues,
-                config = ButtonConfig(
-                    type = ButtonType.PRIMARY,
-                    onClick = { viewModel.setEvent(Event.GoNext) },
-                    enabled = !state.value.isLoading
-                )
+                config = configButton
             )
         })
-      { paddingValues ->
+    { paddingValues ->
         NavigationSlider(
             paddingValues = paddingValues,
-            effectFlow = viewModel.effect,
+            effectFlow = effectFlow,
             onNavigationRequested = { handleNavigationEffect(it, navController) },
-            state = state.value
+            state = state.value,
+            viewModel = viewModel
         )
     }
 
@@ -118,10 +127,11 @@ private fun ContinueButton(
 
 @Composable
 private fun NavigationSlider(
- paddingValues: PaddingValues,
- effectFlow: Flow<Effect>,
- onNavigationRequested: (Effect.Navigation) -> Unit,
- state: State,
+    paddingValues: PaddingValues,
+    effectFlow: Flow<Effect>,
+    onNavigationRequested: (Effect.Navigation) -> Unit,
+    state: State,
+    viewModel: QuizPhraseWordsViewModel
 ) {
     Column(
         modifier = Modifier
@@ -131,6 +141,7 @@ private fun NavigationSlider(
         MainContent(
             paddingValues = paddingValues,
             state =  state,
+            viewModel = viewModel
         )
     }
 
@@ -140,6 +151,8 @@ private fun NavigationSlider(
                 is Effect.Navigation -> onNavigationRequested(effect)
                 Effect.Navigation.Pop -> TODO()
                 is Effect.Navigation.SwitchScreen -> TODO()
+                Effect.Error -> TODO()
+                Effect.Success -> TODO()
             }
         }.collect()
     }
@@ -161,16 +174,19 @@ private fun handleNavigationEffect(
     }
 }
 
-
 @Composable
-fun MainContent(paddingValues: PaddingValues, state: State) {
+fun MainContent(
+    paddingValues: PaddingValues,
+    state: State,
+    viewModel: QuizPhraseWordsViewModel
+) {
+    var draggedWord by remember { mutableStateOf<String?>(null) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-
-
         WrapText(
             text = stringResource(R.string.recovery_backup_content_title),
             textConfig = TextConfig(
@@ -183,7 +199,7 @@ fun MainContent(paddingValues: PaddingValues, state: State) {
                         fontWeight = FontWeight.Bold
                     )
                 )
-            ),
+            )
         )
         VSpacer.ExtraSmall()
         WrapText(
@@ -198,11 +214,11 @@ fun MainContent(paddingValues: PaddingValues, state: State) {
                         fontWeight = FontWeight.Medium
                     )
                 )
-            ),
+            )
         )
         VSpacer.ExtraLarge()
 
-
+        // Exibir slots (fullList)
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = Modifier.fillMaxWidth(),
@@ -210,74 +226,75 @@ fun MainContent(paddingValues: PaddingValues, state: State) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            itemsIndexed(state.listWords) { index, word ->
-                WordItem(index + 1, word)
+            itemsIndexed((state as State.DisplayAll).fullList) { index, slot ->
+                if (slot.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                            .pointerInput(Unit) {
+                                detectDragGestures(
+                                    onDrag = { change, _ -> change.consume() },
+                                    onDragEnd = {
+                                        draggedWord?.let { word ->
+                                            viewModel.setEvent(Event.PlaceWord(word, index))
+                                            draggedWord = null
+                                        }
+                                    }
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.backup_slot_placeholder),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    Text(
+                        text = slot,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(LightSkyBlue, RoundedCornerShape(8.dp))
+                            .padding(8.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            (state as State.DisplayAll).quizWords.forEach { word ->
+                Box(
+                    modifier = Modifier
+                        .background(SoftYellow, RoundedCornerShape(8.dp))
+                        .padding(8.dp)
+                        .pointerInput(Unit) {
+                            detectDragGestures(
+                                onDragStart = { draggedWord = word },
+                                onDrag = { change, _ -> change.consume() },
+                                onDragEnd = { /* Drop é tratado nos slots */ }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = word,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
 }
 
-
-@Composable
-fun WordItem(index: Int, word: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = LightSkyBlue,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "$index.",
-            style = MaterialTheme.typography.bodyMedium.merge(
-                TextStyle(
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-            ),
-            modifier = Modifier.padding(end = 8.dp)
-        )
-        Text(
-            text = word,
-            style = MaterialTheme.typography.bodyMedium.merge(
-                TextStyle(
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        )
-    }
-}
-
-
-@ThemeModePreviews
-@Composable
-private fun ContentPreview() {
-    PreviewTheme {
-        ContentScreen(
-            isLoading = false,
-            navigatableAction = ScreenNavigateAction.NONE,
-            onBack = { },
-            stickyBottom = { paddingValues ->
-            }) { paddingValues ->
-            NavigationSlider(
-                paddingValues = paddingValues,
-                effectFlow = channelFlow {
-                },
-                onNavigationRequested = {
-
-                },
-                state = State(
-                    listWords = listOf(
-                        "apple", "banana", "cherry", "date",
-                        "elderberry", "fig", "grape", "honey"
-                    )
-                )
-            )
-        }
-
-
-    }
-}

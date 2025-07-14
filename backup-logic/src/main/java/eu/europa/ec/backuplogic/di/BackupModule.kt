@@ -16,6 +16,10 @@
 
 package eu.europa.ec.backuplogic.di
 
+import android.content.Context
+import eu.europa.ec.backuplogic.controller.BackupController
+import eu.europa.ec.backuplogic.controller.BackupControllerImpl
+import eu.europa.ec.backuplogic.controller.ListWordsController
 import eu.europa.ec.backuplogic.controller.ListWordsControllerImpl
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
 import eu.europa.ec.backuplogic.interactor.BackupInteractorIml
@@ -31,14 +35,32 @@ import eu.europa.ec.uilogic.serializer.UiSerializer
 class LogicBackupModule
 
 @Factory
+fun provideListWordsController(
+    context: Context
+): ListWordsController = ListWordsControllerImpl(
+    context
+)
+
+
+@Factory
+fun provideBackupController(
+    context: Context
+): BackupController = BackupControllerImpl(
+    context
+)
+
+
+@Factory
 fun provideBackupInteractor(
     uiSerializer: UiSerializer,
     resourceProvider: ResourceProvider,
     walletCoreDocumentsController: WalletCoreDocumentsController,
-    listWordsController: ListWordsControllerImpl
-): BackupInteractor = BackupInteractorIml(
+    listWordsController: ListWordsController
+): BackupInteractor =
+    BackupInteractorIml(
     uiSerializer,
     resourceProvider,
     walletCoreDocumentsController,
     listWordsController
-)
+    )
+

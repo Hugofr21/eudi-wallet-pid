@@ -16,6 +16,7 @@
 
 package eu.europa.ec.backuplogic.interactor
 
+import eu.europa.ec.backuplogic.controller.ListWordsController
 import eu.europa.ec.backuplogic.controller.ListWordsControllerImpl
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
@@ -25,17 +26,25 @@ interface BackupInteractor {
     suspend fun backupWallet(): String
     suspend fun restoreWallet(backupData: String): Boolean
     suspend fun deleteWallet(): Boolean
-
     fun getListWords(): List<String>
 
+    fun generateQuiz(list: List<String>): Triple<List<String>, List<String>, List<Int>>
+
+    fun getQuizSlots(): List<String>
 }
 
 class BackupInteractorIml (
     private val uiSerializer: UiSerializer,
     private val resourceProvider: ResourceProvider,
     private val walletCoreDocumentsController: WalletCoreDocumentsController,
-    private val listWordsController: ListWordsControllerImpl
+    private val listWordsController: ListWordsController
 ): BackupInteractor {
+
+    companion object{
+        private var lastQuiz: MutableList<String> = mutableListOf()
+        private var countTake: Int = 12
+        private var wordToGuess: Int = 4
+    }
 
     override suspend fun backupWallet(): String {
         TODO("Not yet implemented")
@@ -50,7 +59,23 @@ class BackupInteractorIml (
     }
 
     override fun getListWords(): List<String> {
-        return listWordsController.generateOrderByListWords()
+        return listWordsController.generateOrderByListWords(countTake)
     }
+
+    override fun getQuizSlots(): List<String> {
+        return lastQuiz
+    }
+
+    override fun generateQuiz(list: List<String>): Triple<List<String>, List<String>, List<Int>> {
+        val originalList = list.shuffled()
+        val indicesToRemove = (0 until originalList.size).shuffled().take(wordToGuess)
+        val slots = originalList.mapIndexed { index, word ->
+            if (index in indicesToRemove) "" else word
+        }
+        val removedWords = indicesToRemove.map { originalList[it] }
+        lastQuiz = slots.toMutableList()
+        return Triple(slots, removedWords, indicesToRemove)
+    }
+
 
 }
