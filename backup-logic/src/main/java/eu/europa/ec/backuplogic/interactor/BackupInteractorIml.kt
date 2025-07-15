@@ -67,13 +67,15 @@ class BackupInteractorIml (
     }
 
     override fun generateQuiz(list: List<String>): Triple<List<String>, List<String>, List<Int>> {
-        val originalList = list.shuffled()
-        val indicesToRemove = (0 until originalList.size).shuffled().take(wordToGuess)
-        val slots = originalList.mapIndexed { index, word ->
+        println(">>> generateQuiz: list=$list")
+        val indicesToRemove = (0 until list.size).shuffled().take(wordToGuess).sorted()
+        println(">>> generateQuiz: indicesToRemove=$indicesToRemove")
+        val slots = list.mapIndexed { index, word ->
             if (index in indicesToRemove) "" else word
         }
-        val removedWords = indicesToRemove.map { originalList[it] }
+        val removedWords = indicesToRemove.map { list[it] }
         lastQuiz = slots.toMutableList()
+        println(">>> generateQuiz: list=$list, indicesToRemove=$indicesToRemove, slots=$slots, removedWords=$removedWords")
         return Triple(slots, removedWords, indicesToRemove)
     }
 

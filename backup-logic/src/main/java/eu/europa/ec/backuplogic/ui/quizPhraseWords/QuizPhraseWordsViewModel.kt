@@ -43,8 +43,9 @@ sealed class State : ViewState {
 sealed class Event : ViewEvent {
     object Skip : Event()
     data class PlaceWord(val word: String, val index: Int) : Event()
-    object Confirm : Event()
     object GoBack : Event()
+
+    object ResetWords : Event()
 }
 
 sealed class Effect : ViewSideEffect {
@@ -55,18 +56,30 @@ sealed class Effect : ViewSideEffect {
     object Success : Effect()
     object Error : Effect()
 }
+
+
 @KoinViewModel
 class QuizPhraseWordsViewModel(
     private val interactor: BackupInteractor
 ) : MviViewModel<Event, State, Effect>() {
 
+    companion object {
+        private var originalList = listOf<String>()
+        private var initialSlots = listOf<String>()
+        private var initialRemovedWords = listOf<String>()
+        private var initialIndicesRemoved = listOf<Int>()
+    }
+
     override fun setInitialState(): State {
-        val originalList = interactor.getListWords()
+        originalList = interactor.getListWords()
         val (slots, removedWords, indicesRemoved) = interactor.generateQuiz(originalList)
-        println("Original list: $originalList")
-        println("Slots: $slots")
-        println("Removed words: $removedWords")
-        println("Indices removed: $indicesRemoved")
+//        println("Original list: $originalList")
+//        println("Slots: $slots")
+//        println("Removed words: $removedWords")
+//        println("Indices removed: $indicesRemoved")
+        initialSlots = slots
+        initialRemovedWords = removedWords
+        initialIndicesRemoved = indicesRemoved
 
         return State.DisplayAll(
             originalList = originalList,
@@ -76,6 +89,7 @@ class QuizPhraseWordsViewModel(
         )
     }
 
+
     override fun handleEvents(event: Event) {
         val s = viewState.value
         when (s) {
@@ -83,15 +97,38 @@ class QuizPhraseWordsViewModel(
                 Event.Skip -> setState { State.VerifyOrder(s.originalList, s.fullList, s.quizWords, s.indexRemove) }
                 is Event.PlaceWord -> {
                     val newSlots = s.fullList.toMutableList()
-                    if (newSlots[event.index].isEmpty()) {
-                        newSlots[event.index] = event.word
-                        setState { s.copy(fullList = newSlots) }
+                    newSlots[event.index] = event.word
+//                    println("New slots: $newSlots")
+                    val newQuizWords = s.quizWords.toMutableList().apply {
+                        remove(event.word)
+                    }
+//                    println("New quiz words: $newQuizWords")
+                    setState {
+                        s.copy(
+                            fullList = newSlots,
+                            quizWords = newQuizWords
+                        )
+                    }
+                }
+                Event.ResetWords -> {
+//                    println(">>> ResetWords: Restoring initial state")
+//                    println(">>> Original list: $originalList")
+//                    println(">>> Initial slots: $initialSlots")
+//                    println(">>> Initial removed words: $initialRemovedWords")
+//                    println(">>> Initial indices removed: $initialIndicesRemoved")
+                    setState {
+                        State.DisplayAll(
+                            originalList = originalList,
+                            fullList = initialSlots,
+                            quizWords = initialRemovedWords,
+                            indexRemove = initialIndicesRemoved
+                        )
                     }
                 }
                 else -> {}
             }
             is State.VerifyOrder -> when (event) {
-                Event.Confirm -> {
+                Event.Skip -> {
                     if (s.fullList == s.originalList) setEffect { Effect.Success }
                     else setEffect { Effect.Error }
                 }
