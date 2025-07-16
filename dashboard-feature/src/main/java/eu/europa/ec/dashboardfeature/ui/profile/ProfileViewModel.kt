@@ -28,19 +28,19 @@ import eu.europa.ec.uilogic.navigation.DashboardScreens
 import org.koin.android.annotation.KoinViewModel
 
 data class State(
-    val documentsUi: List<String> = emptyList(),
     val firstName: String,
     val lastName: String,
     val isLoading: Boolean = false,
     val imageBase64: String? = null,
     val claimsUi: List<ClaimsUI> = emptyList(),
+    val documentsUi: List<Any> = emptyList(),
+    val qrCodeData: String? = null
 ) : ViewState
 
 sealed class Event : ViewEvent {
-    data object Init : Event()
-    data object GetDocuments : Event()
-    data object BackPressed : Event()
     data object GoBack : Event()
+    data object CreateQrCode : Event()
+    data object AddDocument : Event()
 
 }
 
@@ -52,12 +52,10 @@ sealed class Effect : ViewSideEffect {
             val popUpToScreenRoute: String = DashboardScreens.Profile.screenRoute,
             val inclusive: Boolean = false,
         ) : Navigation()
+
+        data object CreateQrCode : Navigation()
+        data object AddDocument : Navigation()
     }
-
-    data class DocumentsFetched(val deferredDocs: Map<DocumentId, FormatType>) : Effect()
-
-    data object ShowBottomSheet : Effect()
-    data object CloseBottomSheet : Effect()
 
 }
 
@@ -70,6 +68,9 @@ class ProfileViewModel(
 ) {
     override fun setInitialState(): State {
        val (firstName, lastName) = personIdentificationDataInteractor.getUserFirstAndLastName()
+        println("firstName: $firstName")
+        println("lastName: $lastName")
+
         personIdentificationDataInteractor.printAllDocumentDetails()
         personIdentificationDataInteractor.getUserWithPortrait()
 
@@ -86,12 +87,11 @@ class ProfileViewModel(
 
     override fun handleEvents(event: Event) {
        when (event) {
-           Event.BackPressed -> TODO()
-           Event.GetDocuments -> TODO()
+           Event.AddDocument -> TODO()
+           Event.CreateQrCode -> TODO()
            Event.GoBack -> {
                setEffect { Effect.Navigation.Pop }
            }
-           Event.Init -> TODO()
        }
     }
 }

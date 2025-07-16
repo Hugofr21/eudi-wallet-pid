@@ -267,7 +267,6 @@ fun MainContent(
             itemsIndexed(fullList) { index, slot ->
                 val modifierWithBounds = Modifier
                     .onGloballyPositioned { coords ->
-                        // Adjust slot bounds for scroll offset
                         val scrollOffset = gridState.firstVisibleItemScrollOffset.toFloat()
                         val bounds = coords.boundsInWindow()
                         slotBounds[index] = Rect(
@@ -276,7 +275,7 @@ fun MainContent(
                             bounds.right,
                             bounds.bottom - scrollOffset
                         )
-                        println(">>> Slot[$index] bounds: ${slotBounds[index]}")
+//                        println(">>> Slot[$index] bounds: ${slotBounds[index]}")
                     }
 
                 if (slot.isEmpty()) {
@@ -284,7 +283,7 @@ fun MainContent(
                         modifier = modifierWithBounds
                             .fillMaxWidth()
                             .height(50.dp)
-                            .background(CoralRed, RoundedCornerShape(8.dp)) // CoralRed
+                            .background(CoralRed, RoundedCornerShape(8.dp))
                             .padding(8.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -394,12 +393,12 @@ fun MainContent(
                                                         val isValidIndex = index >= 0 && index < fullList.size
                                                         val isEmpty = isValidIndex && fullList[index].isEmpty()
                                                         val containsPosition = rect.contains(dropPosition)
-                                                        println("Slot[$index] validIndex: $isValidIndex, isEmpty: $isEmpty, containsPosition: $containsPosition")
+//                                                        println("Slot[$index] validIndex: $isValidIndex, isEmpty: $isEmpty, containsPosition: $containsPosition")
                                                         isEmpty && containsPosition
                                                     }?.key
 
                                                 if (targetSlot != null) {
-                                                    println(">>> Word ${item.word} placed in the slot $targetSlot")
+//                                                    println(">>> Word ${item.word} placed in the slot $targetSlot")
                                                     viewModel.setEvent(
                                                         Event.PlaceWord(
                                                             item.word,

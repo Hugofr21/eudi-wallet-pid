@@ -25,26 +25,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SheetState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,14 +54,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import eu.europa.ec.dashboardfeature.model.ClaimsUI
-import eu.europa.ec.dashboardfeature.ui.transactions.list.DashboardEvent
-import eu.europa.ec.dashboardfeature.ui.transactions.list.OpenSideMenuEvent
 import eu.europa.ec.resourceslogic.R
-import eu.europa.ec.uilogic.component.AppIconAndText
-import eu.europa.ec.uilogic.component.AppIconAndTextDataUi
 import eu.europa.ec.uilogic.component.AppIcons
-import eu.europa.ec.uilogic.component.ListItemDataUi
-import eu.europa.ec.uilogic.component.ListItemMainContentDataUi
 import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
 import eu.europa.ec.uilogic.component.preview.PreviewTheme
@@ -76,9 +64,7 @@ import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
 import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.TextConfig
-import eu.europa.ec.uilogic.component.wrap.WrapIconButton
 import eu.europa.ec.uilogic.component.wrap.WrapImage
-import eu.europa.ec.uilogic.component.wrap.WrapListItem
 import eu.europa.ec.uilogic.component.wrap.WrapText
 import eu.europa.ec.uilogic.extension.finish
 import kotlinx.coroutines.channels.Channel
@@ -89,10 +75,15 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.compose.foundation.Image
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asImageBitmap
 import eu.europa.ec.dashboardfeature.model.ClaimValue
 import eu.europa.ec.uilogic.component.IconDataUi
+import eu.europa.ec.dashboardfeature.ui.profile.compoment.ActionButtons
+import eu.europa.ec.dashboardfeature.ui.profile.compoment.NoResults
+
 
 typealias DashboardEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event
 typealias OpenSideMenuEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event.SideMenu.Open
@@ -106,22 +97,51 @@ fun ProfileScreen(
     val context = LocalContext.current
     val state: State by viewModel.viewState.collectAsStateWithLifecycle()
     val effects = viewModel.effect
+    var showQrCode by remember { mutableStateOf(false) }
 
     ContentScreen(
         isLoading = state.isLoading,
         navigatableAction = ScreenNavigateAction.BACKABLE,
-        onBack = { viewModel.setEvent(Event.GoBack)},
-
+        onBack = { viewModel.setEvent(Event.GoBack) },
+        stickyBottom = { paddingValues ->
+            if (!state.firstName.isNullOrBlank() || !state.lastName.isNullOrBlank()) {
+                ActionButtons(
+                    viewModel = viewModel,
+                    paddingValues = paddingValues,
+                    isLoading = state.isLoading,
+                    onShowQrCode = { showQrCode = true }
+                )
+            }
+        }
     ) { paddingValues ->
-        Content(
-            state = state,
-            effectFlow = viewModel.effect,
-            onNavigationRequested = { navigationEffect ->
-                handleNavigationEffect(navigationEffect, navHostController, context)
-            },
-            paddingValues = paddingValues
-        )
+        println("ProfileScreen: firstName='${state.firstName}', lastName='${state.lastName}'")
+
+        if (state.firstName.isNullOrBlank() && state.lastName.isNullOrBlank()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = SPACING_MEDIUM.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                NoResults(
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else if (showQrCode) {
+            // Show QR code screen
+        } else {
+            Content(
+                state = state,
+                effectFlow = viewModel.effect,
+                onNavigationRequested = { navigationEffect ->
+                    handleNavigationEffect(navigationEffect, navHostController, context)
+                },
+                paddingValues = paddingValues
+            )
+        }
     }
+
     LaunchedEffect(effects) {
         effects.collect { effect ->
             when (effect) {
@@ -133,18 +153,16 @@ fun ProfileScreen(
                         popUpTo(effect.popUpToScreenRoute) { inclusive = effect.inclusive }
                     }
                 }
-                else -> {
-
+                is Effect.Navigation.CreateQrCode -> {
+                    showQrCode = true
+                }
+                is Effect.Navigation.AddDocument -> {
+                    navHostController.navigate("add_document_screen")
                 }
             }
         }
     }
-
-
-
 }
-
-
 
 private fun handleNavigationEffect(
     navigationEffect: Effect.Navigation,
@@ -160,11 +178,11 @@ private fun handleNavigationEffect(
                 }
             }
         }
+
+        Effect.Navigation.AddDocument -> TODO()
+        Effect.Navigation.CreateQrCode -> TODO()
     }
 }
-
-
-
 
 
 
@@ -192,11 +210,9 @@ private fun Content(
             .padding(vertical = SPACING_MEDIUM.dp),
         verticalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
     ) {
-        VSpacer.ExtraLarge()
         CardItem(state)
         ListItemFirstNameAndLastName(state)
         ListItemOther(state)
-
     }
 
 
@@ -297,7 +313,7 @@ private fun ProfileImage(
 
 @Composable
 private fun ListItemFirstNameAndLastName(
-    state: State,
+    state: State ,
 ){
     Row(
         modifier = Modifier
@@ -431,25 +447,6 @@ private fun ClaimValueView(value: ClaimValue) {
     }
 }
 
-
-@Composable
-private fun NoResults(
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier) {
-        WrapListItem(
-            item = ListItemDataUi(
-                itemId = stringResource(R.string.profile_screen_search_no_results_id),
-                mainContentData = ListItemMainContentDataUi.Text(
-                    text = stringResource(R.string.profile_screen_search_no_results)
-                ),
-            ),
-            onItemClick = null,
-            modifier = Modifier.fillMaxWidth(),
-            mainContentVerticalPadding = SPACING_MEDIUM.dp,
-        )
-    }
-}
 
 
 @OptIn(ExperimentalMaterial3Api::class)

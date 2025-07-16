@@ -84,12 +84,6 @@ class PersonIdentificationDataImpl(
     override fun getUserFirstAndLastName (): Pair<String, String> {
         val docs = getPidDocumentDetails()
 
-        if (docs.isEmpty()) {
-            println("No PID documents found.")
-            return "" to ""
-        }
-
-
         val allClaims = docs.flatMap { it.data.claims }
         val firstNameClaim = allClaims.find { it.identifier.equals("given_name", ignoreCase = true) }
         val lastNameClaim  = allClaims.find { it.identifier.equals("family_name", ignoreCase = true) }
