@@ -29,14 +29,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,14 +71,17 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.layout.boundsInRoot
+import eu.europa.ec.backuplogic.ui.quizPhraseWords.compoment.ResetButton
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import eu.europa.ec.backuplogic.ui.quizPhraseWords.model.DraggedItem
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
+import kotlin.text.isEmpty
 
 val LightSkyBlue   = Color(0xFFCAE6FD)
 val OceanBlue      = Color(0xFF2A5ED9)
@@ -130,7 +130,6 @@ fun QuizPhraseWordsScreen(navController: NavController, viewModel: QuizPhraseWor
     }
 
 }
-
 
 @Composable
 private fun ContinueButton(
@@ -441,27 +440,3 @@ fun MainContent(
     }
 }
 
-@Composable
-fun ResetButton(
-    viewModel: QuizPhraseWordsViewModel
-) {
-    Button(
-        onClick = {
-            viewModel.setEvent(Event.ResetWords)
-        },
-        modifier = Modifier
-            .size(width = 80.dp, height = 28.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        ),
-        shape = RoundedCornerShape(0.dp),
-        contentPadding = PaddingValues(4.dp)
-    ) {
-        Text(
-            text = "Reset",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}

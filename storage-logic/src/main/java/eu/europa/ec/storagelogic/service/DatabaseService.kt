@@ -18,18 +18,24 @@ package eu.europa.ec.storagelogic.service
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import eu.europa.ec.storagelogic.dao.BackupLogDao
 import eu.europa.ec.storagelogic.dao.BookmarkDao
+import eu.europa.ec.storagelogic.dao.IssuerLogDao
 import eu.europa.ec.storagelogic.dao.RevokedDocumentDao
 import eu.europa.ec.storagelogic.dao.TransactionLogDao
 import eu.europa.ec.storagelogic.model.Bookmark
 import eu.europa.ec.storagelogic.model.RevokedDocument
 import eu.europa.ec.storagelogic.model.TransactionLog
+import eu.europa.ec.storagelogic.model.BackupLog
+import eu.europa.ec.storagelogic.model.IssuerLog
 
 @Database(
     entities = [
         Bookmark::class,
         RevokedDocument::class,
-        TransactionLog::class
+        TransactionLog::class,
+        BackupLog::class,
+        IssuerLog::class
     ],
     version = 1
 )
@@ -37,4 +43,8 @@ abstract class DatabaseService : RoomDatabase() {
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun revokedDocumentDao(): RevokedDocumentDao
     abstract fun transactionLogDao(): TransactionLogDao
+    abstract fun backupLogDao(): BackupLogDao
+
+    abstract fun issuerLogDao(): IssuerLogDao
+
 }

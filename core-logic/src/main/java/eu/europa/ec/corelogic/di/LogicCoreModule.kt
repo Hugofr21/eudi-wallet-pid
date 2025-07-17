@@ -29,6 +29,7 @@ import eu.europa.ec.corelogic.controller.WalletCoreTransactionLogController
 import eu.europa.ec.corelogic.controller.WalletCoreTransactionLogControllerImpl
 import eu.europa.ec.eudi.wallet.EudiWallet
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
+import eu.europa.ec.storagelogic.dao.BackupLogDao
 import eu.europa.ec.storagelogic.dao.BookmarkDao
 import eu.europa.ec.storagelogic.dao.RevokedDocumentDao
 import eu.europa.ec.storagelogic.dao.TransactionLogDao
@@ -81,7 +82,9 @@ fun provideWalletCoreDocumentsController(
     walletCoreConfig: WalletCoreConfig,
     bookmarkDao: BookmarkDao,
     transactionLogDao: TransactionLogDao,
-    revokedDocumentDao: RevokedDocumentDao
+    revokedDocumentDao: RevokedDocumentDao,
+    backupLogDao: BackupLogDao
+
 ): WalletCoreDocumentsController =
     WalletCoreDocumentsControllerImpl(
         resourceProvider,
@@ -89,7 +92,8 @@ fun provideWalletCoreDocumentsController(
         walletCoreConfig,
         bookmarkDao,
         transactionLogDao,
-        revokedDocumentDao
+        revokedDocumentDao,
+        backupLogDao
     )
 
 /**

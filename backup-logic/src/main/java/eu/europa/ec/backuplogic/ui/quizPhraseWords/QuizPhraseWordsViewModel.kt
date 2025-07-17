@@ -129,6 +129,9 @@ class QuizPhraseWordsViewModel(
             }
             is State.VerifyOrder -> when (event) {
                 Event.Skip -> {
+                    println("Incorrect word order. Please try again.")
+                    println("Original list: $originalList")
+                    println("Full list: ${s.fullList}")
                     if (s.fullList == s.originalList) setEffect { Effect.Success }
                     else setEffect { Effect.Error }
                 }

@@ -44,9 +44,11 @@ fun provideListWordsController(
 
 @Factory
 fun provideBackupController(
-    context: Context
+    context: Context,
+    walletCoreDocumentsController: WalletCoreDocumentsController
 ): BackupController = BackupControllerImpl(
-    context
+    context,
+    walletCoreDocumentsController
 )
 
 

@@ -23,7 +23,9 @@ import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.uilogic.serializer.UiSerializer
 
 interface BackupInteractor {
-    suspend fun backupWallet(): String
+    suspend fun getBackupWallet(): String
+
+    fun existBackup(): Boolean
     suspend fun restoreWallet(backupData: String): Boolean
     suspend fun deleteWallet(): Boolean
     fun getListWords(): List<String>
@@ -46,7 +48,11 @@ class BackupInteractorIml (
         private var wordToGuess: Int = 4
     }
 
-    override suspend fun backupWallet(): String {
+    override suspend fun getBackupWallet(): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun existBackup(): Boolean {
         TODO("Not yet implemented")
     }
 

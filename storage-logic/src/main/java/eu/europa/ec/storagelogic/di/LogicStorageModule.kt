@@ -19,10 +19,10 @@ package eu.europa.ec.storagelogic.di
 import android.content.Context
 import android.util.Base64
 import androidx.room.Room
-import eu.europa.ec.authenticationlogic.controller.authentication.SQLCipherAuthenticationController
 import eu.europa.ec.storagelogic.dao.BookmarkDao
 import eu.europa.ec.storagelogic.dao.RevokedDocumentDao
 import eu.europa.ec.storagelogic.dao.TransactionLogDao
+import eu.europa.ec.storagelogic.dao.BackupLogDao
 import eu.europa.ec.storagelogic.service.DatabaseService
 import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
@@ -32,6 +32,7 @@ import org.koin.core.annotation.Single
 import org.koin.core.annotation.Singleton
 import com.google.inject.Provides;
 import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherStorageController
+import eu.europa.ec.storagelogic.dao.IssuerLogDao
 import java.security.SecureRandom
 
 @Module
@@ -74,3 +75,11 @@ fun provideRevokedDocumentDao(service: DatabaseService): RevokedDocumentDao =
 @Single
 fun provideTransactionLogDao(service: DatabaseService): TransactionLogDao =
     service.transactionLogDao()
+
+@Single
+fun provideBackupLogDao(service: DatabaseService): BackupLogDao =
+    service.backupLogDao()
+
+@Single
+fun provideIssuerLogDao(service: DatabaseService): IssuerLogDao =
+    service.issuerLogDao()

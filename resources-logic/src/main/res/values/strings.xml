@@ -500,6 +500,17 @@
     <string name="recovery_backup_mnemonic_description">Please add the words in the order they were originally listed.</string>
     <string name="string_document">Document</string>
     <string name="create_qr_code">Show Qr / Tab</string>
+    <string name="backup_screen_created_button">New Backup</string>
+    <string name="backup_you_wallet">Restore your wallet</string>
+    <string name="backup_recovery_phrase">Type in your recovery phrase</string>
+    <string name="backup_import">Import your backup file</string>
+    <string name="consent_backup_first_page_title">Select your backup</string>
+    <string name="consent_backup_first_page_description">ou can import a backup from a previously installed EUDI Wallet. The backup must be an archive file.</string>
+    <string name="consent_backup_phase_page_title">Recovery phrase</string>
+    <string name="consent_backup_third_page_restore_wallet_title">Restore wallet</string>
+    <string name="consent_backup_third_page_restore_wallet_description">When you click Restore, your identity documents, verifiable credentials, and linked resources will be recovered.</string>
+    <string name="select_file_button">Select file</string>
+    <string name="selected_file_label">Selected file: %1$s</string>
 
     <!-- Logs Screen -->
 </resources>

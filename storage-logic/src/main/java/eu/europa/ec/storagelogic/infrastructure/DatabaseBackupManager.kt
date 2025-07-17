@@ -19,7 +19,7 @@ package eu.europa.ec.storagelogic.infrastructure
 import android.content.Context
 import java.io.File
 
-object giy {
+object BackupDatabase {
 
     private fun getDatabasePath(context: Context): File =
         context.getDatabasePath("eudi.app.wallet.storage")

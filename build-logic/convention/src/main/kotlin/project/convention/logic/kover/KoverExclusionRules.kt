@@ -205,13 +205,6 @@ sealed interface KoverExclusionRules {
             )
     }
 
-//    object UserConsent : FeatureModule {
-//        override val classes: List<String>
-//            get() = commonClasses
-//        override val packages: List<String>
-//            get() = commonPackages
-//    }
-
     object UserConsent : FeatureModule {
         override val classes: List<String>
             get() = commonClasses

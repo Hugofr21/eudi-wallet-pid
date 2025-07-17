@@ -17,18 +17,23 @@
 package eu.europa.ec.backuplogic.controller
 
 import android.content.Context
+import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
+import eu.europa.ec.storagelogic.model.BackupLog
 import java.io.File
+import java.util.UUID
+
 
 interface BackupController {
-    fun exportBackup(value: CharArray)
-    fun importBackup(value: CharArray)
+    fun exportBackup(passPhrase: CharArray, provider: String)
+    fun importBackup(passPhrase: CharArray)
     fun deleteBackup()
-    fun restoreBackup(value: CharArray)
+    fun restoreBackup(passPhrase: CharArray)
 }
 
 
 class BackupControllerImpl(
-    private val context: Context
+    private val context: Context,
+    private val walletCoreDocumentsController: WalletCoreDocumentsController,
 ) : BackupController  {
     companion object {
         private const val LOG_FILE_NAME_TXT = "eudi-android-wallet-backup%g.zip"
@@ -39,11 +44,18 @@ class BackupControllerImpl(
     private val logsDir = File(context.filesDir.absolutePath + "/backup")
 
 
-    override fun exportBackup(value: CharArray) {
+    override fun exportBackup(passPhrase: CharArray, provider: String) {
+
+        val backupLog = BackupLog(
+            identifier = UUID.randomUUID().toString(),
+            provider = provider,
+            createdAt = System.currentTimeMillis()
+        )
         TODO("Not yet implemented")
+
     }
 
-    override fun importBackup(value: CharArray) {
+    override fun importBackup(passPhrase: CharArray) {
         TODO("Not yet implemented")
     }
 
@@ -51,7 +63,7 @@ class BackupControllerImpl(
         TODO("Not yet implemented")
     }
 
-    override fun restoreBackup(value: CharArray) {
+    override fun restoreBackup(passPhrase: CharArray) {
         TODO("Not yet implemented")
     }
 
