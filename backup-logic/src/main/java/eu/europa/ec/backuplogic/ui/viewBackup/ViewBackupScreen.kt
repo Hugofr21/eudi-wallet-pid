@@ -226,11 +226,20 @@ private fun MainContent(
         )
 
         VSpacer.Large()
-        val backupKey = (state as State.Default).backupKey
-        LastBackupInfo(
-            (backupKey as BackupKey),
-            onClick = {viewModel.setEvent(Event.Share)}
-        )
+        VSpacer.Large()
+        if (state is State.Default && state.backupKey != null) {
+            LastBackupInfo(
+                backupKey = state.backupKey,
+                onClick = { viewModel.setEvent(Event.Share) }
+            )
+        } else {
+            // Optionally display a placeholder or message
+            Text(
+                text = "No backup available",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
 
         VSpacer.Large()
         InfoFooter()

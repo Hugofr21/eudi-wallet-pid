@@ -53,9 +53,12 @@ class ViewBackupViewModel(
 ) : MviViewModel<Event, State, Effect>() {
 
     override fun setInitialState(): State {
-        val existBackup = backupInteractor.existBackup()
+//        val existBackup = backupInteractor.existBackup()
+//        val backupKey = if (existBackup) backupInteractor.getBackupKey() else null
+
         return State.Default(
-            existBackup = existBackup
+            existBackup = false,
+            backupKey = null
         )
     }
 

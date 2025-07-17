@@ -57,9 +57,9 @@ class ListWordsBackupViewModel(
                 setEffect { Effect.Navigation.Pop }
             }
             Event.GoNext -> {
-                setEffect { Effect.Navigation.SwitchScreen(
-                    screenRoute = BackupScreens.BackupPhraseListCreated.screenRoute
-                )
+                    setEffect { Effect.Navigation.SwitchScreen(
+                        screenRoute = BackupScreens.BackupPhraseListCreated.screenRoute
+                    )
                 }
             }
         }

@@ -22,7 +22,9 @@ import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
+import eu.europa.ec.uilogic.navigation.BackupScreens
 import org.koin.android.annotation.KoinViewModel
+
 
 sealed class State : ViewState {
     object Loading : State()
@@ -44,7 +46,6 @@ sealed class Event : ViewEvent {
     object Skip : Event()
     data class PlaceWord(val word: String, val index: Int) : Event()
     object GoBack : Event()
-
     object ResetWords : Event()
 }
 
@@ -56,7 +57,6 @@ sealed class Effect : ViewSideEffect {
     object Success : Effect()
     object Error : Effect()
 }
-
 
 @KoinViewModel
 class QuizPhraseWordsViewModel(
@@ -73,10 +73,6 @@ class QuizPhraseWordsViewModel(
     override fun setInitialState(): State {
         originalList = interactor.getListWords()
         val (slots, removedWords, indicesRemoved) = interactor.generateQuiz(originalList)
-//        println("Original list: $originalList")
-//        println("Slots: $slots")
-//        println("Removed words: $removedWords")
-//        println("Indices removed: $indicesRemoved")
         initialSlots = slots
         initialRemovedWords = removedWords
         initialIndicesRemoved = indicesRemoved
@@ -89,33 +85,45 @@ class QuizPhraseWordsViewModel(
         )
     }
 
-
     override fun handleEvents(event: Event) {
         val s = viewState.value
         when (s) {
             is State.DisplayAll -> when (event) {
-                Event.Skip -> setState { State.VerifyOrder(s.originalList, s.fullList, s.quizWords, s.indexRemove) }
+                Event.Skip -> {} // // Should not occur, as the button is only enabled when quizWords is empty
                 is Event.PlaceWord -> {
                     val newSlots = s.fullList.toMutableList()
                     newSlots[event.index] = event.word
-//                    println("New slots: $newSlots")
                     val newQuizWords = s.quizWords.toMutableList().apply {
                         remove(event.word)
                     }
-//                    println("New quiz words: $newQuizWords")
                     setState {
-                        s.copy(
-                            fullList = newSlots,
-                            quizWords = newQuizWords
-                        )
+                        if (newQuizWords.isEmpty()) {
+                            State.VerifyOrder(
+                                originalList = s.originalList,
+                                fullList = newSlots,
+                                quizWords = newQuizWords,
+                                indexRemove = s.indexRemove
+                            )
+                        } else {
+                            s.copy(
+                                fullList = newSlots,
+                                quizWords = newQuizWords
+                            )
+                        }
+                    }
+
+                    if (newQuizWords.isEmpty()) {
+                        if (newSlots == s.originalList) {
+                            setEffect { Effect.Success }
+                            Effect.Navigation.SwitchScreen(
+                                screenRoute = BackupScreens.ViewRestore.screenRoute
+                            )
+                        } else {
+                            setEffect { Effect.Error }
+                        }
                     }
                 }
                 Event.ResetWords -> {
-//                    println(">>> ResetWords: Restoring initial state")
-//                    println(">>> Original list: $originalList")
-//                    println(">>> Initial slots: $initialSlots")
-//                    println(">>> Initial removed words: $initialRemovedWords")
-//                    println(">>> Initial indices removed: $initialIndicesRemoved")
                     setState {
                         State.DisplayAll(
                             originalList = originalList,
@@ -125,20 +133,52 @@ class QuizPhraseWordsViewModel(
                         )
                     }
                 }
-                else -> {}
+                Event.GoBack -> setEffect { Effect.Navigation.Pop }
             }
             is State.VerifyOrder -> when (event) {
                 Event.Skip -> {
-                    println("Incorrect word order. Please try again.")
-                    println("Original list: $originalList")
-                    println("Full list: ${s.fullList}")
-                    if (s.fullList == s.originalList) setEffect { Effect.Success }
-                    else setEffect { Effect.Error }
+                    if (s.fullList == s.originalList) {
+                        setEffect { Effect.Success }
+                        setEffect {  Effect.Navigation.SwitchScreen(
+                            screenRoute = BackupScreens.ViewRestore.screenRoute
+                        ) }
+
+                    } else {
+                        setEffect { Effect.Error }
+                    }
                 }
                 Event.GoBack -> setEffect { Effect.Navigation.Pop }
-                else -> {}
+                is Event.PlaceWord -> {
+                    val newSlots = s.fullList.toMutableList()
+                    newSlots[event.index] = event.word
+                    val newQuizWords = s.quizWords.toMutableList().apply {
+                        remove(event.word)
+                    }
+                    setState {
+                        s.copy(
+                            fullList = newSlots,
+                            quizWords = newQuizWords
+                        )
+                    }
+
+                    if (newSlots == s.originalList) {
+                        setEffect { Effect.Success }
+                    } else {
+                        setEffect { Effect.Error }
+                    }
+                }
+                Event.ResetWords -> {
+                    setState {
+                        State.DisplayAll(
+                            originalList = originalList,
+                            fullList = initialSlots,
+                            quizWords = initialRemovedWords,
+                            indexRemove = initialIndicesRemoved
+                        )
+                    }
+                }
             }
-            else -> {}
+            is State.Loading -> {}
         }
     }
 }

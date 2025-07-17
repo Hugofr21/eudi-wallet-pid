@@ -34,6 +34,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -78,6 +79,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import eu.europa.ec.backuplogic.ui.quizPhraseWords.model.DraggedItem
+import eu.europa.ec.uilogic.navigation.BackupScreens
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -97,14 +99,12 @@ fun QuizPhraseWordsScreen(navController: NavController, viewModel: QuizPhraseWor
     val configButton = ButtonConfig(
         type = ButtonType.PRIMARY,
         onClick = {
-            when(state)
-            {
-                is State.VerifyOrder -> viewModel.setEvent(Event.Skip)
-                else -> {
-
-                }
-            }
-
+            viewModel.setEvent(Event.Skip)
+        },
+        enabled = when (state) {
+            is State.DisplayAll -> state.quizWords.isEmpty()
+            is State.VerifyOrder -> true
+            else -> false
         }
     )
 
@@ -179,7 +179,7 @@ private fun NavigationSlider(
                     Toast.makeText(context, "Incorrect word order. Please try again.", Toast.LENGTH_SHORT).show()
                 }
                 Effect.Success -> {
-                    onNavigationRequested(Effect.Navigation.Pop)
+                    onNavigationRequested(Effect.Navigation.SwitchScreen(BackupScreens.ViewRestore.screenRoute))
                 }
             }
         }.collect()
@@ -201,241 +201,232 @@ private fun handleNavigationEffect(
         }
     }
 }
-
 @Composable
 fun MainContent(
     paddingValues: PaddingValues,
     state: State,
     viewModel: QuizPhraseWordsViewModel
 ) {
-    var draggedWord by remember { mutableStateOf<DraggedItem?>(null) }
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    val slotBounds = remember { mutableStateMapOf<Int, Rect>() }
-    val wordBounds = remember { mutableStateMapOf<String, Offset>() }
-    val fullList = (state as State.DisplayAll).fullList
-    val quizWords = (state as State.DisplayAll).quizWords
-    var startOffset by remember { mutableStateOf(Offset.Zero) }
-    val gridState = rememberLazyGridState()
-    val placedWords = fullList.filter { it.isNotEmpty() }.toSet()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-    ) {
-
-        WrapText(
-            text = stringResource(R.string.recovery_backup_content_title),
-            textConfig = TextConfig(
-                style = MaterialTheme.typography.titleLarge.merge(
-                    TextStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 32.sp,
-                        lineHeight = 48.sp,
-                        letterSpacing = (-0.02).sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            )
-        )
-        VSpacer.ExtraSmall()
-        WrapText(
-            text = stringResource(R.string.recovery_backup_mnemonic_description),
-            textConfig = TextConfig(
-                style = MaterialTheme.typography.titleLarge.merge(
-                    TextStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        letterSpacing = (-0.02).sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                )
-            )
-        )
-        VSpacer.ExtraLarge()
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            modifier = Modifier.fillMaxWidth(),
-            state = gridState,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            itemsIndexed(fullList) { index, slot ->
-                val modifierWithBounds = Modifier
-                    .onGloballyPositioned { coords ->
-                        val scrollOffset = gridState.firstVisibleItemScrollOffset.toFloat()
-                        val bounds = coords.boundsInWindow()
-                        slotBounds[index] = Rect(
-                            bounds.left,
-                            bounds.top - scrollOffset,
-                            bounds.right,
-                            bounds.bottom - scrollOffset
-                        )
-//                        println(">>> Slot[$index] bounds: ${slotBounds[index]}")
-                    }
-
-                if (slot.isEmpty()) {
-                    Box(
-                        modifier = modifierWithBounds
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .background(CoralRed, RoundedCornerShape(8.dp))
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = slot.ifEmpty { stringResource(R.string.backup_slot_placeholder) },
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                } else {
-                    Text(
-                        text = slot,
-                        modifier = modifierWithBounds
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .background(LightSkyBlue,
-                                RoundedCornerShape(0.dp))
-                            .padding(8.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Normal
-                    )
-                }
+    when (state) {
+        is State.Loading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
         }
+        is State.DisplayAll, is State.VerifyOrder -> {
+            val fullList = when (state) {
+                is State.DisplayAll -> state.fullList
+                is State.VerifyOrder -> state.fullList
+                else -> emptyList()
+            }
+            val quizWords = when (state) {
+                is State.DisplayAll -> state.quizWords
+                is State.VerifyOrder -> state.quizWords
+                else -> emptyList()
+            }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            quizWords.forEachIndexed { originIdx, word ->
-                key(word) {
-                    Box(
-                        modifier = Modifier
-                            .onGloballyPositioned { coords ->
-                                // Store word position
-                                wordBounds[word] = coords.boundsInWindow().topLeft
-                                if (draggedWord?.word == word) {
-                                    startOffset = coords.boundsInWindow().topLeft
-//                                    println(">>> Setting startOffset for word $word: $startOffset")
-                                }
-                            }
-                            .offset {
-                                if (draggedWord?.word == word) {
-                                    IntOffset(dragOffset.x.toInt(), dragOffset.y.toInt())
-                                } else {
-                                    IntOffset.Zero
-                                }
-                            }
-                            .background(
-                                if (placedWords.contains(word)) DeepBlue
-                                else SoftYellow,
-                                RoundedCornerShape(8.dp)
+            var draggedWord by remember { mutableStateOf<DraggedItem?>(null) }
+            var dragOffset by remember { mutableStateOf(Offset.Zero) }
+            val slotBounds = remember { mutableStateMapOf<Int, Rect>() }
+            val wordBounds = remember { mutableStateMapOf<String, Offset>() }
+            var startOffset by remember { mutableStateOf(Offset.Zero) }
+            val gridState = rememberLazyGridState()
+            val placedWords = fullList.filter { it.isNotEmpty() }.toSet()
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                WrapText(
+                    text = stringResource(R.string.recovery_backup_content_title),
+                    textConfig = TextConfig(
+                        style = MaterialTheme.typography.titleLarge.merge(
+                            TextStyle(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 32.sp,
+                                lineHeight = 48.sp,
+                                letterSpacing = (-0.02).sp,
+                                fontWeight = FontWeight.Bold
                             )
-                            .padding(8.dp)
-                            .pointerInput(Unit) {
-                                detectDragGestures(
-                                    onDragStart = {
-                                        if (!placedWords.contains(word)) {
-                                            draggedWord = DraggedItem(
-                                                word = word,
-                                                originIndex = originIdx,
-                                                fromQuizWords = true
-                                            )
-                                            dragOffset = Offset.Zero
-                                            startOffset = wordBounds[word] ?: Offset.Zero
-//                                            println(">>> onDragStart: draggedWord=$draggedWord, startOffset=$startOffset")
-                                        }
-                                    },
-                                    onDrag = { change, dragAmount ->
+                        )
+                    )
+                )
+                VSpacer.ExtraSmall()
+                WrapText(
+                    text = stringResource(R.string.recovery_backup_mnemonic_description),
+                    textConfig = TextConfig(
+                        style = MaterialTheme.typography.titleLarge.merge(
+                            TextStyle(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp,
+                                letterSpacing = (-0.02).sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        )
+                    )
+                )
+                VSpacer.ExtraLarge()
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.fillMaxWidth(),
+                    state = gridState,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(fullList) { index, slot ->
+                        val modifierWithBounds = Modifier
+                            .onGloballyPositioned { coords ->
+                                val scrollOffset = gridState.firstVisibleItemScrollOffset.toFloat()
+                                val bounds = coords.boundsInWindow()
+                                slotBounds[index] = Rect(
+                                    bounds.left,
+                                    bounds.top - scrollOffset,
+                                    bounds.right,
+                                    bounds.bottom - scrollOffset
+                                )
+                            }
+
+                        if (slot.isEmpty()) {
+                            Box(
+                                modifier = modifierWithBounds
+                                    .fillMaxWidth()
+                                    .height(50.dp)
+                                    .background(CoralRed, RoundedCornerShape(8.dp))
+                                    .padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = slot.ifEmpty { stringResource(R.string.backup_slot_placeholder) },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = slot,
+                                modifier = modifierWithBounds
+                                    .fillMaxWidth()
+                                    .height(50.dp)
+                                    .background(LightSkyBlue, RoundedCornerShape(0.dp))
+                                    .padding(8.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    quizWords.forEachIndexed { originIdx, word ->
+                        key(word) {
+                            Box(
+                                modifier = Modifier
+                                    .onGloballyPositioned { coords ->
+                                        wordBounds[word] = coords.boundsInWindow().topLeft
                                         if (draggedWord?.word == word) {
-                                            change.consume()
-                                            dragOffset += dragAmount
-//                                            println(">>> onDrag: dragAmount=$dragAmount, dragOffset=$dragOffset")
-                                        }
-                                    },
-                                    onDragEnd = {
-                                        if (draggedWord?.word == word) {
-                                            draggedWord?.let { item ->
-                                                // Calculate drop position
-                                                val dropPosition = startOffset + dragOffset
-
-//                                                println(">>> fullList: $fullList")
-//                                                println(">>> startOffset: $startOffset")
-//                                                println(">>> dragOffset: $dragOffset")
-//                                                println(">>> dropPosition: $dropPosition")
-//                                                println(">>> slotBounds: $slotBounds")
-
-                                                if (slotBounds.isEmpty()) {
-//                                                    println(">>> Error: slotBounds is empty, cannot release the word")
-                                                    return@let
-                                                }
-
-//                                                slotBounds.forEach { (idx, rect) ->
-//                                                    println("Slot[$idx] rect: $rect, contains dropPosition? ${rect.contains(dropPosition)}")
-//                                                    if (idx >= 0 && idx < fullList.size) {
-//                                                        println("fullList[$idx]: ${fullList[idx]}, isEmpty: ${fullList[idx].isEmpty()}")
-//                                                    } else {
-//                                                        println("Error: index $idx outside the limits of fullList (size: ${fullList.size})")
-//                                                    }
-//                                                }
-
-                                                val targetSlot = slotBounds.entries
-                                                    .firstOrNull { (index, rect) ->
-                                                        val isValidIndex = index >= 0 && index < fullList.size
-                                                        val isEmpty = isValidIndex && fullList[index].isEmpty()
-                                                        val containsPosition = rect.contains(dropPosition)
-//                                                        println("Slot[$index] validIndex: $isValidIndex, isEmpty: $isEmpty, containsPosition: $containsPosition")
-                                                        isEmpty && containsPosition
-                                                    }?.key
-
-                                                if (targetSlot != null) {
-//                                                    println(">>> Word ${item.word} placed in the slot $targetSlot")
-                                                    viewModel.setEvent(
-                                                        Event.PlaceWord(
-                                                            item.word,
-                                                            targetSlot
-                                                        )
-                                                    )
-                                                } else {
-                                                    println(">>> No valid slots found for dropPosition: $dropPosition")
-                                                }
-                                            }
-                                            // Reset drag state
-                                            draggedWord = null
-                                            dragOffset = Offset.Zero
-                                            startOffset = Offset.Zero
+                                            startOffset = coords.boundsInWindow().topLeft
                                         }
                                     }
+                                    .offset {
+                                        if (draggedWord?.word == word) {
+                                            IntOffset(dragOffset.x.toInt(), dragOffset.y.toInt())
+                                        } else {
+                                            IntOffset.Zero
+                                        }
+                                    }
+                                    .background(
+                                        if (placedWords.contains(word)) DeepBlue
+                                        else SoftYellow,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(8.dp)
+                                    .pointerInput(Unit) {
+                                        detectDragGestures(
+                                            onDragStart = {
+                                                if (!placedWords.contains(word)) {
+                                                    draggedWord = DraggedItem(
+                                                        word = word,
+                                                        originIndex = originIdx,
+                                                        fromQuizWords = true
+                                                    )
+                                                    dragOffset = Offset.Zero
+                                                    startOffset = wordBounds[word] ?: Offset.Zero
+                                                }
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                if (draggedWord?.word == word) {
+                                                    change.consume()
+                                                    dragOffset += dragAmount
+                                                }
+                                            },
+                                            onDragEnd = {
+                                                if (draggedWord?.word == word) {
+                                                    draggedWord?.let { item ->
+                                                        val dropPosition = startOffset + dragOffset
+                                                        if (slotBounds.isEmpty()) {
+                                                            return@let
+                                                        }
+                                                        val targetSlot = slotBounds.entries
+                                                            .firstOrNull { (index, rect) ->
+                                                                val isValidIndex = index >= 0 && index < fullList.size
+                                                                val isEmpty = isValidIndex && fullList[index].isEmpty()
+                                                                val containsPosition = rect.contains(dropPosition)
+                                                                isEmpty && containsPosition
+                                                            }?.key
+
+                                                        if (targetSlot != null) {
+                                                            viewModel.setEvent(
+                                                                Event.PlaceWord(
+                                                                    item.word,
+                                                                    targetSlot
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+                                                    draggedWord = null
+                                                    dragOffset = Offset.Zero
+                                                    startOffset = Offset.Zero
+                                                }
+                                            }
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = word,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
                                 )
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = word,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                            }
+                        }
                     }
                 }
-            }
-        }
-        VSpacer.ExtraSmall()
+                VSpacer.ExtraSmall()
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.End
-        ) {
-            ResetButton(viewModel)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    ResetButton(viewModel)
+                }
+            }
         }
     }
 }
