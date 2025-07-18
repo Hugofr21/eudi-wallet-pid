@@ -18,11 +18,13 @@ package eu.europa.ec.backuplogic.ui.restoring
 
 import android.net.Uri
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
+import eu.europa.ec.backuplogic.model.BackupKey
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import org.koin.android.annotation.KoinViewModel
+
 
 enum class RestoreStatus {
     SUCCESS, ERROR
@@ -30,32 +32,25 @@ enum class RestoreStatus {
 
 
 sealed class State : ViewState {
-    data class Init(
+    data class Default(
         val isLoading: Boolean = false,
-    ) : State()
-    data class SelectFile(
-        val isLoading: Boolean = false,
-        val selectedFileUri: Uri? = null,
-        val errorMessage: String? = null
-    ) : State()
-
-    data class EnterPhrase(
-        val isLoading: Boolean = false,
-        val words: List<String> = List(12) { "" },
-        val errorMessage: String? = null
-    ) : State()
-
-    data class RestoreWallet(
-        val isLoading: Boolean = false,
-        val restoreStatus: RestoreStatus? = null
+        val words: List<String> = emptyList(),
+        val backupKey: BackupKey? = null,
+        val selectedFileUri: Uri? = null
     ) : State()
 }
+
+
 sealed class Event : ViewEvent {
-    data class SelectFile(val uri: Uri) : Event()
-    data class EnterPhrase(val words: List<String>) : Event()
-    object RestoreWallet : Event()
     object GoBack : Event()
+    object Restore : Event()
+    data class FileSelected(val uri: Uri) : Event()
+    data class WordsChanged(val words: List<String>) : Event()
+    data class SubmitWords(val words: List<String>) : Event()
+    data class NextPage(val page: Int) : Event()
 }
+
+
 sealed class Effect : ViewSideEffect {
     sealed class Navigation : Effect() {
         data class SwitchScreen(val screenRoute: String) : Navigation()
@@ -63,6 +58,7 @@ sealed class Effect : ViewSideEffect {
     }
     object Success : Effect()
     object Error : Effect()
+    data class NavigateToPage(val page: Int) : Effect()
 }
 
 
@@ -71,25 +67,44 @@ class RestoreBackupViewModel(
     private val backupInteractor: BackupInteractor
 ) : MviViewModel<Event, State, Effect>() {
 
+
     override fun setInitialState(): State {
-        val existBackup = backupInteractor.existBackup()
-        return State.Init()
+        return State.Default(
+            words = List(12) { "" },
+            backupKey = null
+        )
     }
 
     override fun handleEvents(event: Event) {
         when (event) {
-            is Event.SelectFile -> {
-                setState {
-                    State.SelectFile(
-                        isLoading = true,
-                        selectedFileUri = event.uri
-                    )
+            is Event.GoBack -> {
+                setEffect { Effect.Navigation.Pop }
+            }
+            is Event.FileSelected -> {
+                setState { (this as? State.Default)?.copy(selectedFileUri = event.uri) ?: this }
+                setEffect { Effect.NavigateToPage(1) }
+            }
+            is Event.WordsChanged -> {
+                setState { (this as? State.Default)?.copy(words = event.words) ?: this }
+            }
+            is Event.SubmitWords -> {
+                if (backupInteractor.validateRecoveryPhrase(event.words)) {
+                    setEffect { Effect.NavigateToPage(2) }
+                } else {
+                    setEffect { Effect.Error }
                 }
             }
-
-            is Event.EnterPhrase -> TODO()
-            Event.GoBack -> TODO()
-            Event.RestoreWallet -> TODO()
+            is Event.Restore -> {
+//                val currentState = state.value as? State.Default
+//                if (currentState?.selectedFileUri != null && backupInteractor.restoreWallet(currentState.selectedFileUri.toString())) {
+//                    setEffect { Effect.Success }
+//                } else {
+//                    setEffect { Effect.Error }
+//                }
+            }
+            is Event.NextPage -> {
+                setEffect { Effect.NavigateToPage(event.page) }
+            }
         }
     }
 }

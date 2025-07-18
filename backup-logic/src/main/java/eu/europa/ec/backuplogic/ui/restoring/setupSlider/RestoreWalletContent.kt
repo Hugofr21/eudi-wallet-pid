@@ -59,13 +59,3 @@ fun RestoreWalletContent(
         )
     }
 }
-
-private fun handleNavigationEffect(
-    navigationEffect: Effect.Navigation,
-    navController: NavController
-) {
-    when (navigationEffect) {
-        is Effect.Navigation.SwitchScreen -> navController.navigate(navigationEffect.screenRoute)
-        is Effect.Navigation.Pop -> navController.popBackStack()
-    }
-}

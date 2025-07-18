@@ -33,6 +33,7 @@ interface BackupInteractor {
     fun generateQuiz(list: List<String>): Triple<List<String>, List<String>, List<Int>>
 
     fun getQuizSlots(): List<String>
+    fun validateRecoveryPhrase(words: List<String>): Boolean
 }
 
 class BackupInteractorIml (
@@ -70,6 +71,10 @@ class BackupInteractorIml (
 
     override fun getQuizSlots(): List<String> {
         return lastQuiz
+    }
+
+    override fun validateRecoveryPhrase(words: List<String>): Boolean {
+        TODO("Not yet implemented")
     }
 
     override fun generateQuiz(list: List<String>): Triple<List<String>, List<String>, List<Int>> {

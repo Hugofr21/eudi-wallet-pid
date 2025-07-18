@@ -26,6 +26,7 @@ import eu.europa.ec.commonfeature.model.PinFlow
 import eu.europa.ec.corelogic.di.getOrCreatePresentationScope
 import eu.europa.ec.corelogic.model.RevokedDocumentDataDomain
 import eu.europa.ec.dashboardfeature.interactor.DashboardInteractor
+import eu.europa.ec.dashboardfeature.ui.dashboard.Effect.Navigation.*
 import eu.europa.ec.dashboardfeature.ui.dashboard.model.SideMenuItemUi
 import eu.europa.ec.dashboardfeature.ui.dashboard.model.SideMenuTypeUi
 import eu.europa.ec.eudi.wallet.document.DocumentId
@@ -251,27 +252,31 @@ class DashboardViewModel(
                 )
 
                 hideSideMenu()
-                setEffect { Effect.Navigation.SwitchScreen(screenRoute = nextScreenRoute) }
+                setEffect { SwitchScreen(screenRoute = nextScreenRoute) }
             }
 
             SideMenuTypeUi.SETTINGS -> {
                 hideSideMenu()
-                setEffect { Effect.Navigation.SwitchScreen(screenRoute = DashboardScreens.Settings.screenRoute) }
+                setEffect { SwitchScreen(screenRoute = DashboardScreens.Settings.screenRoute) }
             }
 
             SideMenuTypeUi.BACKUP -> {
                 hideSideMenu()
-                setEffect { Effect.Navigation.SwitchScreen(screenRoute = BackupScreens.Backup.screenRoute) }
+                setEffect { SwitchScreen(screenRoute = BackupScreens.Backup.screenRoute) }
             }
             SideMenuTypeUi.LOGS -> {
                 hideSideMenu()
-                setEffect { Effect.Navigation.SwitchScreen(screenRoute = DashboardScreens.Logs.screenRoute) }
+                setEffect { SwitchScreen(screenRoute = DashboardScreens.Logs.screenRoute) }
             }
             SideMenuTypeUi.PROFILE -> {
                 hideSideMenu()
-                setEffect { Effect.Navigation.SwitchScreen(screenRoute = DashboardScreens.Profile.screenRoute) }
+                setEffect { SwitchScreen(screenRoute = DashboardScreens.Profile.screenRoute) }
             }
 
+            SideMenuTypeUi.RESTORE_BACKUP -> {
+                hideSideMenu()
+                setEffect { SwitchScreen(screenRoute = BackupScreens.Restore.screenRoute) }
+            }
         }
     }
 

@@ -234,6 +234,8 @@
     <string name="settings_intent_chooser_logs_share_title">Share logs</string>
     <string name="settings_screen_option_backup_id">BackupId</string>
     <string name="settings_screen_option_backup">Backup</string>
+    <string name="settings_screen_option_restore_backup_id">RestoreBackupId</string>
+    <string name="settings_screen_option_restore_backup">Restore Backup</string>
 
     <!-- Home Screen -->
     <string name="home_screen_title">Home</string>
@@ -511,6 +513,7 @@
     <string name="consent_backup_third_page_restore_wallet_description">When you click Restore, your identity documents, verifiable credentials, and linked resources will be recovered.</string>
     <string name="select_file_button">Select file</string>
     <string name="selected_file_label">Selected file: %1$s</string>
+    <string name="content_description_restore_backup_icon">Restore backup icon</string>
 
     <!-- Logs Screen -->
 </resources>

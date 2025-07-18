@@ -40,8 +40,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import eu.europa.ec.uilogic.component.utils.SIZE_EXTRA_LARGE
+import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
 import eu.europa.ec.uilogic.component.utils.VSpacer
-
 
 @Composable
 fun FirstPage(
@@ -74,10 +75,12 @@ fun FirstPage(
                 )
             )
         )
-        VSpacer.Custom(8)
+        VSpacer.Custom(SPACING_SMALL)
         Button(
             onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-            modifier = Modifier.fillMaxWidth().height(56.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(SIZE_EXTRA_LARGE.dp)
         ) {
             Text(
                 text = stringResource(R.string.select_file_button),
@@ -89,8 +92,8 @@ fun FirstPage(
         selectedFileName?.let {
             Text(
                 text = stringResource(R.string.selected_file_label, it),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 16.dp)
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = SPACING_SMALL.dp)
             )
         }
     }

@@ -29,9 +29,11 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.vector.ImageVector
 import eu.europa.ec.resourceslogic.R
+
 
 /**
  * Data class to be used when we want to display an Icon.
@@ -419,6 +421,12 @@ object AppIcons {
     val Backup: IconDataUi = IconDataUi(
         resourceId = null,
         contentDescriptionId = R.string.content_description_backup_icon,
+        imageVector = Icons.Default.Lock
+    )
+
+    val RestoreBackup: IconDataUi = IconDataUi(
+        resourceId = null,
+        contentDescriptionId = R.string.content_description_restore_backup_icon,
         imageVector = Icons.Default.Refresh
     )
 
@@ -431,7 +439,7 @@ object AppIcons {
     val Logs: IconDataUi = IconDataUi(
         resourceId = null,
         contentDescriptionId = R.string.logs_eid_description,
-        imageVector = Icons.Default.Lock
+        imageVector = Icons.Default.Share
     )
 
     val Fingerprint: IconDataUi = IconDataUi(

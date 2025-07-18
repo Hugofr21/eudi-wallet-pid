@@ -23,6 +23,7 @@ import androidx.navigation.compose.navigation
 import eu.europa.ec.backuplogic.ui.backup.BackupScreen
 import eu.europa.ec.backuplogic.ui.listWordsBackup.ListWordsBackupScreen
 import eu.europa.ec.backuplogic.ui.quizPhraseWords.QuizPhraseWordsScreen
+import eu.europa.ec.backuplogic.ui.restoring.RestoreBackupScreen
 import eu.europa.ec.backuplogic.ui.viewBackup.ViewBackupScreen
 import eu.europa.ec.uilogic.navigation.BackupScreens
 import eu.europa.ec.uilogic.navigation.ModuleRoute
@@ -51,7 +52,7 @@ fun NavGraphBuilder.featureBackupGraph(navController: NavController) {
         }
 
         composable(route = BackupScreens.Restore.screenRoute) {
-            QuizPhraseWordsScreen(navController, koinViewModel())
+            RestoreBackupScreen(navController, koinViewModel())
         }
     }
 }

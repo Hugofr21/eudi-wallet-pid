@@ -28,5 +28,6 @@ enum class SideMenuTypeUi {
     SETTINGS,
     BACKUP,
     PROFILE,
-    LOGS
+    LOGS,
+    RESTORE_BACKUP
 }

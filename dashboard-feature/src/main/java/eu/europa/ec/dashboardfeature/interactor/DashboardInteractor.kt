@@ -89,6 +89,22 @@ class DashboardInteractorImpl(
 
             add(
                 SideMenuItemUi(
+                    type = SideMenuTypeUi.RESTORE_BACKUP,
+                    data = ListItemDataUi(
+                        itemId = resourceProvider.getString(R.string.settings_screen_option_backup_id),
+                        mainContentData = ListItemMainContentDataUi.Text(
+                            text = resourceProvider.getString(R.string.settings_screen_option_restore_backup)
+                        ),
+                        leadingContentData = ListItemLeadingContentDataUi.Icon(
+                            iconData = AppIcons.RestoreBackup
+                        )
+                    )
+                )
+            )
+
+
+            add(
+                SideMenuItemUi(
                     type = SideMenuTypeUi.LOGS,
                     data = ListItemDataUi(
                         itemId = resourceProvider.getString(R.string.settings_screen_option_logs_id),
