@@ -17,10 +17,13 @@
 package eu.europa.ec.authenticationlogic.provider
 
 interface PassphraseStorageProvider {
-    fun getPassphrase(): String?
-    fun getHasPassphrase(): Boolean
-    fun retrievePassphrase(): String
+   fun hasPassphrase(): Boolean
+    fun getSaltAndHash(): Pair<String, String>?
+
     fun setPassphrase(passphrase: String)
-    fun isPassphraseValid(passphrase: String): Boolean
+
+    fun retrievePassphrase(): String
+
+    fun verifyPassphrase(input: String): Boolean
 
 }

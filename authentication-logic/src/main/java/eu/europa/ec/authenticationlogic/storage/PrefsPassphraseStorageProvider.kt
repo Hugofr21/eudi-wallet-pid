@@ -16,79 +16,71 @@
 
 package eu.europa.ec.authenticationlogic.storage
 
+import android.util.Base64
 import eu.europa.ec.authenticationlogic.provider.PassphraseStorageProvider
 import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import eu.europa.ec.businesslogic.controller.storage.PrefsController
 import java.security.MessageDigest
 
 class PrefsPassphraseStorageProvider(
-    private val prefsController: PrefsController,
-    private val cryptoController: CryptoController
+    private val prefs: PrefsController,
+    private val crypto: CryptoController
 ) : PassphraseStorageProvider {
 
     companion object {
-        private const val KEY_PASSPHRASE  = "DevicePassphrase"
-        private const val KEY_IV          = "DevicePassphraseIv"
+        private const val KEY_HASH = "DevicePassphraseHash"
+        private const val KEY_SALT = "DevicePassphraseSalt"
+        private const val KEY_DATA = "DevicePassphraseEncrypted"
+        private const val KEY_IV = "DevicePassphraseIv"
     }
 
-    override fun getPassphrase(): String? {
-
-        val encryptedB64 = prefsController.getString(KEY_PASSPHRASE, "")
-        val ivB64        = prefsController.getString(KEY_IV, "")
-        if (encryptedB64.isBlank() || ivB64.isBlank()) return null
-
-        val encrypted = android.util.Base64.decode(encryptedB64, android.util.Base64.DEFAULT)
-        val iv        = android.util.Base64.decode(ivB64, android.util.Base64.DEFAULT)
-
-
-        val cipher = cryptoController.getCipher(
-            encrypt = false,
-            ivBytes = iv,
-            userAuthenticationRequired = true
-        ) ?: return null
-
-        val decryptedBytes = cryptoController.encryptDecrypt(cipher, encrypted)
-        return String(decryptedBytes, Charsets.UTF_8)
+    override fun hasPassphrase(): Boolean {
+        return prefs.getString(KEY_HASH, "").isNotBlank() &&
+                prefs.getString(KEY_SALT, "").isNotBlank()
     }
 
-    override fun getHasPassphrase(): Boolean {
-
-        val hasEncrypted = prefsController.getString(KEY_PASSPHRASE, "").isBlank().not()
-        val hasIv        = prefsController.getString(KEY_IV, "").isBlank().not()
-        return hasEncrypted && hasIv
-    }
-
-    override fun retrievePassphrase(): String {
-        return getPassphrase()
-            ?: throw IllegalStateException("Passphrase não configurada.")
+    override fun getSaltAndHash(): Pair<String, String>?  {
+        val saltB64 = prefs.getString(KEY_SALT, "")
+        val hashB64 = prefs.getString(KEY_HASH, "")
+        return if (saltB64.isNotBlank() && hashB64.isNotBlank()) {
+            saltB64 to hashB64
+        } else null
     }
 
     override fun setPassphrase(passphrase: String) {
-        // Cria um cipher em modo ENCRYPT
-        val cipher = cryptoController.getCipher(
-            encrypt = true,
-            ivBytes = null,
-            userAuthenticationRequired = true
-        ) ?: throw IllegalStateException("Não foi possível inicializar cipher")
 
+        val salt = crypto.generateSalt()
+        val keyBytes = crypto.deriveKey(passphrase, salt)
 
-        val plaintextBytes = passphrase.toByteArray(Charsets.UTF_8)
-        val encryptedBytes = cryptoController.encryptDecrypt(cipher, plaintextBytes)
+        prefs.setString(KEY_HASH, Base64.encodeToString(keyBytes, Base64.NO_WRAP))
+        prefs.setString(KEY_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
 
-        val iv = cipher.iv
-
-        val encryptedB64 = android.util.Base64.encodeToString(encryptedBytes, android.util.Base64.DEFAULT)
-        val ivB64        = android.util.Base64.encodeToString(iv, android.util.Base64.DEFAULT)
-
-        prefsController.setString(KEY_PASSPHRASE, encryptedB64)
-        prefsController.setString(KEY_IV, ivB64)
+        val cipher = crypto.getCipher(encrypt = true)
+            ?: throw IllegalStateException("Cipher init failed")
+        val encrypted = crypto.encryptDecrypt(cipher, passphrase.toByteArray(Charsets.UTF_8))
+        prefs.setString(KEY_DATA, Base64.encodeToString(encrypted, Base64.NO_WRAP))
+        prefs.setString(KEY_IV, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
     }
 
-    override fun isPassphraseValid(passphrase: String): Boolean {
-        val stored = getPassphrase() ?: return false
-        return MessageDigest.isEqual(
-            passphrase.toByteArray(Charsets.UTF_8),
-            stored.toByteArray(Charsets.UTF_8)
-        )
+    override fun verifyPassphrase(input: String): Boolean {
+        val saltB64 = prefs.getString(KEY_SALT, "")
+        val hashB64 = prefs.getString(KEY_HASH, "")
+        if (saltB64.isBlank() || hashB64.isBlank()) return false
+        return crypto.verifyPin(input, saltB64, hashB64)
     }
+
+    override fun retrievePassphrase(): String {
+        val dataB64 = prefs.getString(KEY_DATA, "")
+        val ivB64 = prefs.getString(KEY_IV, "")
+        if (dataB64.isBlank() || ivB64.isBlank()) {
+            throw IllegalStateException("Encrypted passphrase not found")
+        }
+        val encrypted = Base64.decode(dataB64, Base64.NO_WRAP)
+        val iv = Base64.decode(ivB64, Base64.NO_WRAP)
+        val cipher = crypto.getCipher(encrypt = false, ivBytes = iv)
+            ?: throw IllegalStateException("Cipher init failed")
+        val plainBytes = crypto.encryptDecrypt(cipher, encrypted)
+        return String(plainBytes, Charsets.UTF_8)
+    }
+
 }

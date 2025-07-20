@@ -17,18 +17,24 @@
 package eu.europa.ec.backuplogic.di
 
 import android.content.Context
+import eu.europa.ec.authenticationlogic.controller.authentication.PassphraseAuthenticationController
 import eu.europa.ec.backuplogic.controller.BackupController
 import eu.europa.ec.backuplogic.controller.BackupControllerImpl
 import eu.europa.ec.backuplogic.controller.ListWordsController
 import eu.europa.ec.backuplogic.controller.ListWordsControllerImpl
+import eu.europa.ec.backuplogic.controller.WalletBackupLogController
+import eu.europa.ec.backuplogic.controller.WalletBackupLogControllerImpl
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
 import eu.europa.ec.backuplogic.interactor.BackupInteractorIml
+import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
+import eu.europa.ec.storagelogic.dao.BackupLogDao
 import eu.europa.ec.uilogic.serializer.UiSerializer
+import org.koin.core.annotation.Single
 
 @Module
 @ComponentScan("eu.europa.ec.backuplogic")
@@ -41,14 +47,25 @@ fun provideListWordsController(
     context
 )
 
+@Single
+fun provideWalletBackupLogController(backupLogDao: BackupLogDao): WalletBackupLogController =
+    WalletBackupLogControllerImpl(backupLogDao)
+
+
 
 @Factory
 fun provideBackupController(
     context: Context,
-    walletCoreDocumentsController: WalletCoreDocumentsController
+    walletCoreDocumentsController: WalletCoreDocumentsController,
+     cryptoController: CryptoController,
+    passphraseAuthenticationController: PassphraseAuthenticationController,
+    walletBackupLogController: WalletBackupLogController
 ): BackupController = BackupControllerImpl(
     context,
-    walletCoreDocumentsController
+    walletCoreDocumentsController,
+    cryptoController,
+    passphraseAuthenticationController,
+    walletBackupLogController
 )
 
 

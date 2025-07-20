@@ -19,18 +19,21 @@ package eu.europa.ec.authenticationlogic.controller.storage
 import eu.europa.ec.authenticationlogic.config.StorageConfig
 
 interface PassphraseStorageController {
-    fun getPassphrase(): String?
-    fun getHasPassphrase(): Boolean
-    fun retrievePassphrase(): String
+    fun hasPassphrase(): Boolean
+    fun getSaltAndHash(): Pair<String, String>?
+
     fun setPassphrase(passphrase: String)
-    fun isPassphraseValid(passphrase: String): Boolean
+
+    fun retrievePassphrase(): String
+
+    fun verifyPassphrase(input: String): Boolean
 }
 
 class PassphraseStorageControllerImpl(private val storageConfig: StorageConfig) : PassphraseStorageController {
-    override fun getPassphrase(): String? = storageConfig.passphraseStorageProvider.getPassphrase()
+    override fun getSaltAndHash(): Pair<String, String>? = storageConfig.passphraseStorageProvider.getSaltAndHash()
 
 
-    override fun getHasPassphrase(): Boolean = storageConfig.passphraseStorageProvider.getHasPassphrase()
+    override fun hasPassphrase(): Boolean = storageConfig.passphraseStorageProvider.hasPassphrase()
 
     override fun retrievePassphrase(): String = storageConfig.passphraseStorageProvider.retrievePassphrase()
 
@@ -38,5 +41,8 @@ class PassphraseStorageControllerImpl(private val storageConfig: StorageConfig) 
         storageConfig.passphraseStorageProvider.setPassphrase(passphrase)
     }
 
-    override fun isPassphraseValid(passphrase: String): Boolean = storageConfig.passphraseStorageProvider.isPassphraseValid(passphrase)
+
+    override fun verifyPassphrase(input: String): Boolean = storageConfig.passphraseStorageProvider.verifyPassphrase(input)
+
+
 }

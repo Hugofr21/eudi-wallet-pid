@@ -78,33 +78,21 @@ class CryptoControllerImpl(
     }
 
     override fun getCipher(encrypt: Boolean, ivBytes: ByteArray?, userAuthenticationRequired: Boolean): Cipher? {
-//        println("getCipher → enter; encrypt=$encrypt, ivBytes=${ivBytes?.size}, userAuthRequired=$userAuthenticationRequired")
         return try {
-//            println("getCipher → Cipher.getInstance with transformation = $AES_EXTERNAL_TRANSFORMATION")
             val cipher = Cipher.getInstance(AES_EXTERNAL_TRANSFORMATION)
             if (encrypt) {
-//                println("getCipher → init ENCRYPT_MODE")
+                println("getCipher → init ENCRYPT_MODE with ivBytes")
                 val key = keystoreController.retrieveOrGenerateSecretKey(userAuthenticationRequired)
-//                println("getCipher → obtained secret key: $key")
                 cipher.init(Cipher.ENCRYPT_MODE, key)
             } else {
                 println("getCipher → init DECRYPT_MODE with ivBytes")
                 val key = keystoreController.retrieveOrGenerateSecretKey(userAuthenticationRequired)
-//                println("getCipher → obtained secret key: $key")
-//                println(
-//                    "getCipher → GCMParameterSpec with tagSize=$GCM_TAG_SIZE_BITS, iv=${
-//                        ivBytes?.joinToString(
-//                            ","
-//                        )
-//                    }"
-//                )
                 cipher.init(
                     Cipher.DECRYPT_MODE,
                     key,
                     GCMParameterSpec(GCM_TAG_SIZE_BITS, ivBytes ?: ByteArray(0))
                 )
             }
-//            println("getCipher → init completed successfully")
             cipher
         } catch (e: Exception) {
             println("getCipher → exception during cipher init: ${e.message}")

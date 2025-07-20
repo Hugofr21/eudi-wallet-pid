@@ -19,11 +19,28 @@ package eu.europa.ec.authenticationlogic.controller.authentication
 import android.content.Context
 import eu.europa.ec.authenticationlogic.controller.storage.PassphraseStorageController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+
+enum class PassphraseAuthentication {
+    SUCCESS,
+    INVALID_PASSPHRASE,
+    STORAGE_ERROR,
+    UNKNOWN_ERROR
+}
 
 interface PassphraseAuthenticationController {
-    suspend fun authenticate(value: String): SQLCipherAuthenticate
-    fun getKey(): String
-    fun hasKey(): Boolean
+    fun hasPassphrase(): Boolean
+    fun getSaltAndHash(): Pair<String, String>?
+
+    fun setPassphrase(passphrase: String)
+
+    fun verifyPassphrase(input: String): Boolean
+
+    fun retrievePassphrase(): String
+
+    suspend fun authenticate(value: String): PassphraseAuthentication
 }
 
 class PassphraseAuthenticationControllerImpl(
@@ -32,16 +49,46 @@ class PassphraseAuthenticationControllerImpl(
     private val passphraseStorageController: PassphraseStorageController
 
 ):PassphraseAuthenticationController {
-    override suspend fun authenticate(value: String): SQLCipherAuthenticate {
-        TODO("Not yet implemented")
+    override suspend fun authenticate(value: String): PassphraseAuthentication = withContext(Dispatchers.IO) {
+        try {
+            if (value.isEmpty()) {
+                return@withContext PassphraseAuthentication.INVALID_PASSPHRASE
+            }
+            val isValid = passphraseStorageController.verifyPassphrase(value)
+            if (isValid) {
+                PassphraseAuthentication.SUCCESS
+            } else {
+                PassphraseAuthentication.INVALID_PASSPHRASE
+            }
+        } catch (e: Exception) {
+            PassphraseAuthentication.STORAGE_ERROR
+        }
     }
 
-    override fun getKey(): String {
-        TODO("Not yet implemented")
+    override fun retrievePassphrase(): String {
+        return try {
+            passphraseStorageController.retrievePassphrase()
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to retrieve passphrase: ${e.message}")
+        }
     }
 
-    override fun hasKey(): Boolean {
-        TODO("Not yet implemented")
+    override fun hasPassphrase(): Boolean {
+        return passphraseStorageController.hasPassphrase()
+    }
+
+    override fun getSaltAndHash(): Pair<String,String>? {
+        return passphraseStorageController.getSaltAndHash()
+    }
+
+
+    override fun setPassphrase(passphrase: String) {
+        passphraseStorageController.setPassphrase(passphrase)
+
+    }
+
+    override fun verifyPassphrase(input: String): Boolean {
+        return passphraseStorageController.verifyPassphrase(input)
     }
 
 }
