@@ -49,6 +49,15 @@ internal fun Project.configureKotlinAndroid(
                 excludes.add("/META-INF/{AL2.0,LGPL2.1}")
                 excludes.add("/META-INF/versions/9/OSGI-INF/MANIFEST.MF")
             }
+
+            jniLibs {
+                pickFirsts += listOf(
+                    "lib/arm64-v8a/libc++_shared.so",
+                    "lib/armeabi-v7a/libc++_shared.so",
+                    "lib/x86/libc++_shared.so",
+                    "lib/x86_64/libc++_shared.so"
+                )
+            }
         }
 
         compileOptions {
@@ -60,6 +69,8 @@ internal fun Project.configureKotlinAndroid(
         lint {
             abortOnError = false
         }
+
+
     }
 
     configureKotlin()
