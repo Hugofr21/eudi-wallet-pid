@@ -64,8 +64,9 @@ fun providePrefKeys(prefsController: PrefsController): PrefKeys =
 fun provideKeystoreController(
     prefKeys: PrefKeys,
     logController: LogController,
+    context: Context
 ): KeystoreController =
-    KeystoreControllerImpl(prefKeys, logController)
+    KeystoreControllerImpl(prefKeys, logController,context)
 
 @Factory
 fun provideCryptoController(keystoreController: KeystoreController): CryptoController =

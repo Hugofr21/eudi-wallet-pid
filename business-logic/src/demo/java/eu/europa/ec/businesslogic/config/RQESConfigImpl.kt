@@ -27,7 +27,7 @@ import eu.europa.ec.resourceslogic.R
 import java.net.URI
 
 class RQESConfigImpl(val context: Context) : EudiRQESUiConfig {
-
+// Sectigo eIDAS qualified Time Stamping Authority (TSA) Policy &  Practice Statement
     override val qtsps: List<QtspData>
         get() = listOf(
             QtspData(
@@ -53,7 +53,8 @@ class RQESConfigImpl(val context: Context) : EudiRQESUiConfig {
                 R.raw.pidissuerca02_lu,
                 R.raw.pidissuerca02_nl,
                 R.raw.pidissuerca02_pt,
-                R.raw.pidissuerca02_ut
+                R.raw.pidissuerca02_ut,
+
             )
         )
 }

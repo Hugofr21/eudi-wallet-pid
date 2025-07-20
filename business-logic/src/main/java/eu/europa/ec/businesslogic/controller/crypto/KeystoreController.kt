@@ -16,6 +16,8 @@
 
 package eu.europa.ec.businesslogic.controller.crypto
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -36,6 +38,7 @@ interface KeystoreController {
 class KeystoreControllerImpl(
     private val prefKeys: PrefKeys,
     private val logController: LogController,
+    private val context: Context
 ) : KeystoreController {
 
     companion object {
@@ -117,14 +120,16 @@ class KeystoreControllerImpl(
             }
         }
 
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-//            try {
-//                keyGenParameterSpec.setIsStrongBoxBacked(true)
-//                println("Keystore: tentando StrongBox")
-//            } catch (e: UnsupportedOperationException) {
-//                println("Keystore: não há StrongBox; fallback")
-//            }
-//        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val pm = context.packageManager
+            val hasStrongBox = pm.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+            if (hasStrongBox) {
+                keyGenParameterSpec.setIsStrongBoxBacked(true)
+            } else {
+                println("Device does NOT have StrongBox: using standard TEE")
+
+            }
+        }
         return keyGenParameterSpec.build()
     }
 
