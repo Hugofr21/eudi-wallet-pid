@@ -142,7 +142,6 @@ class QuizPhraseWordsViewModel(
                         setEffect {  Effect.Navigation.SwitchScreen(
                             screenRoute = BackupScreens.ViewRestore.screenRoute
                         ) }
-
                     } else {
                         setEffect { Effect.Error }
                     }

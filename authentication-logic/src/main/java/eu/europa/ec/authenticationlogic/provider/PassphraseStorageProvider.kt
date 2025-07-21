@@ -20,10 +20,10 @@ interface PassphraseStorageProvider {
    fun hasPassphrase(): Boolean
     fun getSaltAndHash(): Pair<String, String>?
 
-    fun setPassphrase(passphrase: String)
+    fun setPassphrase(passphrase: List<String>)
 
     fun retrievePassphrase(): String
 
-    fun verifyPassphrase(input: String): Boolean
+    fun verifyPassphrase(input: List<String>): Boolean
 
 }

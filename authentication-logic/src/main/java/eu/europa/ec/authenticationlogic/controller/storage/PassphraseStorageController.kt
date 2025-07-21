@@ -22,11 +22,11 @@ interface PassphraseStorageController {
     fun hasPassphrase(): Boolean
     fun getSaltAndHash(): Pair<String, String>?
 
-    fun setPassphrase(passphrase: String)
+    fun setPassphrase(passphrase: List<String>)
 
     fun retrievePassphrase(): String
 
-    fun verifyPassphrase(input: String): Boolean
+    fun verifyPassphrase(input: List<String>): Boolean
 }
 
 class PassphraseStorageControllerImpl(private val storageConfig: StorageConfig) : PassphraseStorageController {
@@ -37,12 +37,12 @@ class PassphraseStorageControllerImpl(private val storageConfig: StorageConfig) 
 
     override fun retrievePassphrase(): String = storageConfig.passphraseStorageProvider.retrievePassphrase()
 
-    override fun setPassphrase(passphrase: String) {
+    override fun setPassphrase(passphrase: List<String>) {
         storageConfig.passphraseStorageProvider.setPassphrase(passphrase)
     }
 
 
-    override fun verifyPassphrase(input: String): Boolean = storageConfig.passphraseStorageProvider.verifyPassphrase(input)
+    override fun verifyPassphrase(input: List<String>): Boolean = storageConfig.passphraseStorageProvider.verifyPassphrase(input)
 
 
 }

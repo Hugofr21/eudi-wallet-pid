@@ -46,8 +46,11 @@ interface CryptoController {
     fun encryptPin(pin: String): Pair<String, String>
 
     fun verifyPin( attempt: String, storedSaltB64: String, storedHashB64: String): Boolean
+    fun verifyPhrase(attempt:List<String>, storedSaltB64: String, storedHashB64: String): Boolean
 
     fun deriveKey(password: String, salt: ByteArray): ByteArray
+
+    fun deriveKeyList(password: List<String>, salt: ByteArray): ByteArray
 
     fun generateSalt():ByteArray
 }
@@ -133,6 +136,18 @@ class CryptoControllerImpl(
         return storedHash.indices.all { storedHash[it] == attemptHash[it] }
     }
 
+    override fun verifyPhrase(
+        attempt:List<String>,
+        storedSaltB64: String,
+        storedHashB64: String
+    ): Boolean {
+        val salt      = Base64.decode(storedSaltB64, Base64.NO_WRAP)
+        val storedHash = Base64.decode(storedHashB64, Base64.NO_WRAP)
+        val attemptHash = deriveKeyList(attempt, salt)
+        if (storedHash.size != attemptHash.size) return false
+        return storedHash.indices.all { storedHash[it] == attemptHash[it] }
+    }
+
 
 
     override fun generateSalt():ByteArray{
@@ -145,6 +160,18 @@ class CryptoControllerImpl(
     override fun deriveKey(password: String, salt: ByteArray): ByteArray {
         val spec = PBEKeySpec(
             password.toCharArray(),
+            salt,
+            ITERATION_COUNT,
+            KEY_LENGTH
+        )
+        val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+        return factory.generateSecret(spec).encoded
+    }
+
+    override fun deriveKeyList(password: List<String>, salt: ByteArray): ByteArray {
+        val joinedPassword = password.joinToString(" ")
+        val spec = PBEKeySpec(
+            joinedPassword.toCharArray(),
             salt,
             ITERATION_COUNT,
             KEY_LENGTH

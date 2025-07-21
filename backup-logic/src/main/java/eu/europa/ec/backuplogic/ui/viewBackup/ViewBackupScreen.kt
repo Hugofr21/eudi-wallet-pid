@@ -17,6 +17,8 @@
 package eu.europa.ec.backuplogic.ui.viewBackup
 
 import android.R.attr.onClick
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +70,7 @@ import eu.europa.ec.uilogic.component.wrap.WrapText
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
+import androidx.core.net.toUri
 
 val LightSkyBlue   = Color(0xFFCAE6FD)
 val OceanBlue      = Color(0xFF2A5ED9)
@@ -82,7 +85,7 @@ fun ViewBackupScreen(navController: NavController, viewModel: ViewBackupViewMode
 
     val configButton = ButtonConfig(
         type = ButtonType.PRIMARY,
-        onClick = {viewModel.setEvent(Event.Share)},
+        onClick = {viewModel.setEvent(Event.NewBackupBtn)},
     )
 
     ContentScreen(
@@ -135,10 +138,22 @@ private fun NavigationSlider(
             when (effect) {
                 is Effect.Navigation -> onNavigationRequested(effect)
                 Effect.Error -> {
-                    Toast.makeText(context, "Incorrect word order. Please try again.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Error generating backup", Toast.LENGTH_SHORT).show()
                 }
                 Effect.Success -> {
                     onNavigationRequested(Effect.Navigation.Pop)
+                }
+                is Effect.ShowExportedFile -> {
+                    val uri = effect.fileUri.toUri()
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        type = "*/*"
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(
+                        Intent.createChooser(shareIntent, context.getString(R.string.share_backup_title))
+                            .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    )
                 }
             }
         }.collect()
@@ -230,7 +245,7 @@ private fun MainContent(
         if (state is State.Default && state.backupKey != null) {
             LastBackupInfo(
                 backupKey = state.backupKey,
-                onClick = { viewModel.setEvent(Event.Share) }
+                onClick = { viewModel.setEvent(Event.NewBackupBtn) }
             )
         } else {
             // Optionally display a placeholder or message

@@ -20,7 +20,6 @@ import android.util.Base64
 import eu.europa.ec.authenticationlogic.provider.PassphraseStorageProvider
 import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import eu.europa.ec.businesslogic.controller.storage.PrefsController
-import java.security.MessageDigest
 
 class PrefsPassphraseStorageProvider(
     private val prefs: PrefsController,
@@ -47,26 +46,27 @@ class PrefsPassphraseStorageProvider(
         } else null
     }
 
-    override fun setPassphrase(passphrase: String) {
+    override fun setPassphrase(passphrase: List<String>) {
 
         val salt = crypto.generateSalt()
-        val keyBytes = crypto.deriveKey(passphrase, salt)
+        val keyBytes = crypto.deriveKeyList(passphrase, salt)
 
         prefs.setString(KEY_HASH, Base64.encodeToString(keyBytes, Base64.NO_WRAP))
         prefs.setString(KEY_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
 
         val cipher = crypto.getCipher(encrypt = true)
             ?: throw IllegalStateException("Cipher init failed")
-        val encrypted = crypto.encryptDecrypt(cipher, passphrase.toByteArray(Charsets.UTF_8))
+        val joinedPassphrase = passphrase.joinToString(" ")
+        val encrypted = crypto.encryptDecrypt(cipher, joinedPassphrase.toByteArray(Charsets.UTF_8))
         prefs.setString(KEY_DATA, Base64.encodeToString(encrypted, Base64.NO_WRAP))
         prefs.setString(KEY_IV, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
     }
 
-    override fun verifyPassphrase(input: String): Boolean {
+    override fun verifyPassphrase(input: List<String>): Boolean {
         val saltB64 = prefs.getString(KEY_SALT, "")
         val hashB64 = prefs.getString(KEY_HASH, "")
         if (saltB64.isBlank() || hashB64.isBlank()) return false
-        return crypto.verifyPin(input, saltB64, hashB64)
+        return crypto.verifyPhrase(input, saltB64, hashB64)
     }
 
     override fun retrievePassphrase(): String {

@@ -17,13 +17,20 @@
 package eu.europa.ec.backuplogic.ui.viewBackup
 
 
+import android.app.Application
+import android.content.Context
+import androidx.core.content.FileProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
 import eu.europa.ec.backuplogic.model.BackupKey
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
+import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
+import org.koin.core.annotation.Named
 
 sealed class State : ViewState {
     data class Default(
@@ -34,7 +41,7 @@ sealed class State : ViewState {
 }
 sealed class Event : ViewEvent {
     object GoBack : Event()
-    object Share : Event()
+    object NewBackupBtn : Event()
 }
 
 sealed class Effect : ViewSideEffect {
@@ -44,12 +51,14 @@ sealed class Effect : ViewSideEffect {
     }
     object Success : Effect()
     object Error : Effect()
+
+    data class ShowExportedFile(val fileUri: String) : Effect()
 }
 
 
 @KoinViewModel
 class ViewBackupViewModel(
-    private val backupInteractor: BackupInteractor
+    private val backupInteractor: BackupInteractor,
 ) : MviViewModel<Event, State, Effect>() {
 
     override fun setInitialState(): State {
@@ -64,8 +73,21 @@ class ViewBackupViewModel(
 
     override fun handleEvents(event: Event) {
         when (event) {
-            Event.GoBack -> TODO()
-            Event.Share -> TODO()
+            Event.GoBack -> {
+                setEffect { Effect.Navigation.Pop }
+            }
+            Event.NewBackupBtn -> {
+                setState { State.Default(isLoading = true) }
+                viewModelScope.launch {
+                    try {
+                        val file = backupInteractor.exportBackup()
+                    } catch (e: Exception) {
+                        setEffect { Effect.Error }
+                    } finally {
+                        setState { State.Default(isLoading = false) }
+                    }
+                }
+            }
         }
     }
 }

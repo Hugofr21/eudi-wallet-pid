@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,6 +68,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.translationMatrix
 import eu.europa.ec.backuplogic.ui.restoring.setupSlider.EnterPhraseContentPage
 import eu.europa.ec.backuplogic.ui.restoring.setupSlider.FirstPage
 import eu.europa.ec.backuplogic.ui.restoring.setupSlider.RestoreWalletContent
@@ -79,6 +81,11 @@ import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
 import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.WrapPageIndicator
 
+val LightSkyBlue   = Color(0xFFCAE6FD)
+val OceanBlue      = Color(0xFF2A5ED9)
+val DeepBlue       = Color(0xFF0048D2)
+val SoftYellow     = Color(0xFFFFF1BA)
+val CoralRed       = Color(0xFFFF6E70)
 
 @Composable
 fun RestoreBackupScreen(navController: NavController, viewModel: RestoreBackupViewModel) {
@@ -210,7 +217,7 @@ private fun MainContent(
         modifier = Modifier
             .fillMaxWidth()
             .padding(paddingValues)
-            .padding(horizontal = SPACING_MEDIUM.dp, vertical = SPACING_MEDIUM.dp)
+//            .padding(horizontal = SPACING_MEDIUM.dp, vertical = SPACING_MEDIUM.dp)
     ) {
         WrapText(
             text = stringResource(R.string.settings_screen_option_restore_backup),
@@ -226,11 +233,11 @@ private fun MainContent(
                 )
             )
         )
-        VSpacer.Custom(SPACING_LARGE) // 24.dp
+        VSpacer.Custom(SPACING_SMALL) // 24.dp
 
         RestoreGrid()
 
-        VSpacer.Custom(SPACING_EXTRA_LARGE) // 32.dp
+        VSpacer.Custom(SPACING_SMALL) // 32.dp
 
         HorizontalListOfPager(
             pagerState = pageSingleState,
@@ -285,7 +292,7 @@ private fun RestoreGrid() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = SPACING_SMALL.dp),
+            .padding(vertical = SPACING_SMALL.dp),
         verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
     ) {
         RestoreGridItem(
@@ -316,10 +323,10 @@ private fun RestoreGridItem(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = Color.Transparent,
                 shape = RoundedCornerShape(0.dp)
             )
-            .padding(SPACING_MEDIUM.dp),
+            .padding( horizontal = SPACING_MEDIUM.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
     ) {
@@ -333,12 +340,12 @@ private fun RestoreGridItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color =  MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )

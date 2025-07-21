@@ -30,10 +30,8 @@ import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
-import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.storagelogic.dao.BackupLogDao
-import eu.europa.ec.uilogic.serializer.UiSerializer
 import org.koin.core.annotation.Single
 
 @Module
@@ -71,15 +69,11 @@ fun provideBackupController(
 
 @Factory
 fun provideBackupInteractor(
-    uiSerializer: UiSerializer,
-    resourceProvider: ResourceProvider,
-    walletCoreDocumentsController: WalletCoreDocumentsController,
-    listWordsController: ListWordsController
+    listWordsController: ListWordsController,
+    backupController: BackupController
 ): BackupInteractor =
     BackupInteractorIml(
-    uiSerializer,
-    resourceProvider,
-    walletCoreDocumentsController,
-    listWordsController
+    listWordsController,
+        backupController
     )
 

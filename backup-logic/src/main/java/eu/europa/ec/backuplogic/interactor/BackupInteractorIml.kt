@@ -16,14 +16,16 @@
 
 package eu.europa.ec.backuplogic.interactor
 
+import eu.europa.ec.backuplogic.controller.BackupController
 import eu.europa.ec.backuplogic.controller.ListWordsController
 import eu.europa.ec.backuplogic.controller.ListWordsControllerImpl
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.uilogic.serializer.UiSerializer
+import java.io.File
 
 interface BackupInteractor {
-    suspend fun getBackupWallet(): String
+    suspend fun exportBackup(): File?
 
     fun existBackup(): Boolean
     suspend fun restoreWallet(backupData: String): Boolean
@@ -37,20 +39,32 @@ interface BackupInteractor {
 }
 
 class BackupInteractorIml (
-    private val uiSerializer: UiSerializer,
-    private val resourceProvider: ResourceProvider,
-    private val walletCoreDocumentsController: WalletCoreDocumentsController,
-    private val listWordsController: ListWordsController
+    private val listWordsController: ListWordsController,
+    private val backupController: BackupController
 ): BackupInteractor {
 
     companion object{
         private var lastQuiz: MutableList<String> = mutableListOf()
+
+        private var listPhrase: MutableList<String> = mutableListOf()
         private var countTake: Int = 12
         private var wordToGuess: Int = 4
+
+        private val myWalletnameProvide = "wallet-dev"
     }
 
-    override suspend fun getBackupWallet(): String {
-        TODO("Not yet implemented")
+    override suspend fun exportBackup(): File? {
+        print("Phrase expor tBackup $listPhrase")
+        return if (listPhrase.size == countTake) {
+            val backupFile = backupController.exportBackup(listPhrase, myWalletnameProvide)
+            lastQuiz.clear()
+            listPhrase.clear()
+            backupFile
+        } else {
+            println("Passphrase contains invalid words.")
+            null
+        }
+
     }
 
     override fun existBackup(): Boolean {
@@ -66,7 +80,9 @@ class BackupInteractorIml (
     }
 
     override fun getListWords(): List<String> {
-        return listWordsController.generateOrderByListWords(countTake)
+        listPhrase = listWordsController.generateOrderByListWords(countTake)
+                as MutableList<String>
+        return listPhrase
     }
 
     override fun getQuizSlots(): List<String> {

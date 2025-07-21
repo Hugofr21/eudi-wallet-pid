@@ -19,15 +19,19 @@ package eu.europa.ec.backuplogic.ui.restoring.setupSlider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
@@ -40,17 +44,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.europa.ec.resourceslogic.R
-import eu.europa.ec.uilogic.component.utils.ALPHA_DISABLED
-import eu.europa.ec.uilogic.component.utils.ALPHA_ENABLED
 import eu.europa.ec.uilogic.component.utils.SIZE_EXTRA_LARGE
 import eu.europa.ec.uilogic.component.utils.SIZE_MEDIUM
+import eu.europa.ec.uilogic.component.utils.SIZE_XXX_LARGE
+import eu.europa.ec.uilogic.component.utils.SIZE_XX_LARGE
 import eu.europa.ec.uilogic.component.utils.SPACING_EXTRA_SMALL
+import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
+import eu.europa.ec.uilogic.component.utils.SPACING_SMALL_12
 import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapText
-
-
 @Composable
 fun EnterPhraseContentPage(
     words: List<String>,
@@ -59,15 +63,16 @@ fun EnterPhraseContentPage(
     modifier: Modifier = Modifier
 ) {
     val wordState = remember { mutableStateListOf(*words.toTypedArray()) }
+    val indexedWords: Map<Int, String> = wordState.mapIndexed { index, word -> index to word }.toMap()
+    val allFilled = wordState.all { it.isNotBlank() }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(0.dp)
-            )
-            .padding(SIZE_MEDIUM.dp)
+            .padding(SIZE_MEDIUM.dp),
+        verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
     ) {
+
         WrapText(
             text = stringResource(R.string.consent_backup_phase_page_title),
             textConfig = TextConfig(
@@ -82,39 +87,79 @@ fun EnterPhraseContentPage(
                 )
             )
         )
-        VSpacer.Custom(SPACING_SMALL)
 
+        // Grid de inputs
         Column(
-            verticalArrangement = Arrangement.spacedBy(SPACING_EXTRA_SMALL.dp),
+            verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             wordState.chunked(3).forEachIndexed { rowIndex, rowWords ->
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(SPACING_EXTRA_SMALL.dp),
+                    horizontalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     rowWords.forEachIndexed { colIndex, _ ->
-                        val index = rowIndex * 3 + colIndex
+                        val idx = rowIndex * 3 + colIndex
                         OutlinedTextField(
-                            value = wordState[index],
+                            value = wordState[idx],
                             onValueChange = { newValue ->
-                                wordState[index] = newValue
+                                wordState[idx] = newValue
                                 onWordsChanged(wordState.toList())
                             },
-                            label = { Text(text = "${index + 1}") },
+                            label = { Text("${idx + 1}") },
                             singleLine = true,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(SIZE_EXTRA_LARGE.dp),
-                            textStyle = MaterialTheme.typography.bodySmall,
-                            enabled = true,
-                            colors = TextFieldDefaults.colors(
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedContainerColor = Color.Transparent
-                            )
+                                .height(58.dp),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 14.sp,
+                                lineHeight = 16.sp
+
+                            ),
+                            shape = RoundedCornerShape(0.dp)
                         )
                     }
                 }
+            }
+        }
+
+        if (!allFilled) {
+            Text(
+                text = stringResource(R.string.error_fill_all_words),
+                color = Color.Red,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = SPACING_SMALL.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(SPACING_SMALL.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Button(
+                onClick = {  val wordsArray: Array<String> = wordState.toTypedArray()
+                    println("List word $wordsArray")
+                              onSubmit(wordsArray.toList())
+                          },
+                enabled = allFilled,
+                modifier = Modifier
+                    .height(36.dp)
+                    .wrapContentWidth()
+                    .defaultMinSize(minWidth = 80.dp),
+                shape = RoundedCornerShape(0.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.btn_submit),
+                    style = MaterialTheme.typography.labelLarge.merge(
+                        TextStyle(
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp
+                        )
+                    )
+                )
             }
         }
     }

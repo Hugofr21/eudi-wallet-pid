@@ -507,13 +507,19 @@
     <string name="backup_recovery_phrase">Type in your recovery phrase</string>
     <string name="backup_import">Import your backup file</string>
     <string name="consent_backup_first_page_title">Select your backup</string>
-    <string name="consent_backup_first_page_description">ou can import a backup from a previously installed EUDI Wallet. The backup must be an archive file.</string>
+    <string name="consent_backup_first_page_description">Click the button on the right to select the backup file you created in your wallet.</string>
     <string name="consent_backup_phase_page_title">Recovery phrase</string>
     <string name="consent_backup_third_page_restore_wallet_title">Restore wallet</string>
     <string name="consent_backup_third_page_restore_wallet_description">When you click Restore, your identity documents, verifiable credentials, and linked resources will be recovered.</string>
     <string name="select_file_button">Select file</string>
     <string name="selected_file_label">Selected file: %1$s</string>
     <string name="content_description_restore_backup_icon">Restore backup icon</string>
+    <string name="selected_file_label_placeholder">No files selected</string>
+    <string name="no_file_selected">Selected file</string>
+    <string name="btn_submit">Submit</string>
+    <string name="error_fill_all_words">Please fill in all words.</string>
+    <string name="btn_restore">Restore</string>
+    <string name="share_backup_title">Share backup</string>
 
     <!-- Logs Screen -->
 </resources>

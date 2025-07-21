@@ -16,15 +16,28 @@
 
 package eu.europa.ec.backuplogic.ui.restoring.setupSlider
 
+import android.content.Intent
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -39,28 +52,43 @@ import eu.europa.ec.uilogic.component.wrap.WrapText
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.documentfile.provider.DocumentFile
+import eu.europa.ec.uilogic.component.ListItemLeadingContentDataUi
 import eu.europa.ec.uilogic.component.utils.SIZE_EXTRA_LARGE
+import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
 import eu.europa.ec.uilogic.component.utils.VSpacer
-
 @Composable
 fun FirstPage(
     onFileSelected: (Uri) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var selectedFileName by remember { mutableStateOf<String?>(null) }
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri: Uri? ->
             uri?.let {
-                selectedFileName = it.lastPathSegment
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
                 onFileSelected(it)
+                val doc = DocumentFile.fromSingleUri(context, it)
+                selectedFileName = doc?.name
             }
         }
     )
 
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = SPACING_MEDIUM.dp, vertical = SPACING_SMALL.dp),
+        verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
+    ) {
+
         WrapText(
             text = stringResource(R.string.consent_backup_first_page_title),
             textConfig = TextConfig(
@@ -75,26 +103,67 @@ fun FirstPage(
                 )
             )
         )
-        VSpacer.Custom(SPACING_SMALL)
-        Button(
-            onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(SIZE_EXTRA_LARGE.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.select_file_button),
-                style = MaterialTheme.typography.labelLarge.merge(
-                    TextStyle(fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+        WrapText(
+            text = stringResource(R.string.consent_backup_first_page_description),
+            textConfig = TextConfig(
+                style = MaterialTheme.typography.bodyMedium.merge(
+                    TextStyle(
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 16.sp,
+                        lineHeight = 24.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 )
             )
-        }
-        selectedFileName?.let {
-            Text(
-                text = stringResource(R.string.selected_file_label, it),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = SPACING_SMALL.dp)
-            )
+        )
+
+
+        OutlinedTextField(
+            value = selectedFileName ?: "",
+            onValueChange = { /* readonly */ },
+            readOnly = true,
+            label = { Text(stringResource(R.string.selected_file_label_placeholder)) },
+            placeholder = { Text(stringResource(R.string.no_file_selected)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            singleLine = true,
+            trailingIcon = {
+                if (selectedFileName != null) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Button(
+                onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                modifier = Modifier
+                    .height(36.dp)
+                    .wrapContentWidth()
+                    .defaultMinSize(minWidth = 80.dp),
+                shape = RoundedCornerShape(0.dp),
+                contentPadding = PaddingValues(4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.select_file_button),
+                    style = MaterialTheme.typography.labelLarge.merge(
+                        TextStyle(
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp
+                        )
+                    )
+                )
+            }
         }
     }
 }
