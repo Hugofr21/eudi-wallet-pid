@@ -743,7 +743,7 @@ class WalletCoreDocumentsControllerImpl(
                                 crypto = BiometricCrypto(cryptoObject),
                                 resultHandler = DeviceAuthenticationResult(
                                     onAuthenticationSuccess = { event.resume(keyUnlockDataMap) },
-                                    onAuthenticationError = { event.cancel(null) }
+                                    onAuthenticationError = { event.cancel(null) } as (Int, String) -> Unit
                                 )
                             )
                         )

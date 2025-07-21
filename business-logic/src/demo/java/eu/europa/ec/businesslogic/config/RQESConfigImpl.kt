@@ -28,6 +28,10 @@ import java.net.URI
 
 class RQESConfigImpl(val context: Context) : EudiRQESUiConfig {
 // Sectigo eIDAS qualified Time Stamping Authority (TSA) Policy &  Practice Statement
+
+     /**
+     * TODO: To securely encrypt and manage the clientId and clientSecret variables
+     */
     override val qtsps: List<QtspData>
         get() = listOf(
             QtspData(

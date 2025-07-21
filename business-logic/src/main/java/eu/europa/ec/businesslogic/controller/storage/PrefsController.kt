@@ -17,6 +17,8 @@
 package eu.europa.ec.businesslogic.controller.storage
 
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import androidx.core.content.edit
@@ -158,14 +160,20 @@ class PrefsControllerImpl(
     private fun getSharedPrefs(): SharedPreferences {
         val context = resourceProvider.provideContext()
 
-        val masterKey = MasterKey.Builder(context)
+        val masterKeyBuilder = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+            context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
+            masterKeyBuilder.setRequestStrongBoxBacked(true)
+        }
+
 
         return EncryptedSharedPreferences.create(
             context,
             "eudi-wallet-secure-prefs",
-            masterKey,
+            masterKeyBuilder.build(),
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )

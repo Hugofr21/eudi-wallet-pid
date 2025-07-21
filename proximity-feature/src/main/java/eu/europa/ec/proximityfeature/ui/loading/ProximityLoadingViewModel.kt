@@ -169,7 +169,7 @@ class ProximityLoadingViewModel(
                         )
                     }
                 },
-                onAuthenticationError = { setEffect { popEffect } }
+                onAuthenticationError = { setEffect { popEffect } } as (Int, String) -> Unit
             )
         )
     }

@@ -53,28 +53,30 @@ class DeviceAuthenticationControllerImpl(
         notifyOnAuthenticationFailure: Boolean,
         result: DeviceAuthenticationResult
     ) {
-        (context as? FragmentActivity)?.let { activity ->
+        val activity = context as? FragmentActivity
+        if (activity == null) {
+            result.onAuthenticationError(-1, "Invalid context: must be FragmentActivity")
+            return
+        }
 
-            activity.lifecycleScope.launch {
+        activity.lifecycleScope.launch {
+            val data = biometricAuthenticationController.authenticate(
+                activity = activity,
+                biometryCrypto = biometryCrypto,
+                promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle(resourceProvider.getString(R.string.biometric_prompt_title))
+                    .setSubtitle(resourceProvider.getString(R.string.biometric_prompt_subtitle))
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                    .build(),
+                notifyOnAuthenticationFailure = notifyOnAuthenticationFailure
+            )
 
-                val data = biometricAuthenticationController.authenticate(
-                    activity = activity,
-                    biometryCrypto = biometryCrypto,
-                    promptInfo = BiometricPrompt.PromptInfo.Builder()
-                        .setTitle(resourceProvider.getString(R.string.biometric_prompt_title))
-                        .setSubtitle(resourceProvider.getString(R.string.biometric_prompt_subtitle))
-                        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-                        .build(),
-                    notifyOnAuthenticationFailure = notifyOnAuthenticationFailure
-                )
-
-                if (data.authenticationResult != null) {
-                    result.onAuthenticationSuccess()
-                } else if (data.hasError) {
-                    result.onAuthenticationError()
-                } else {
-                    result.onAuthenticationFailure()
-                }
+            if (data.authenticationResult != null) {
+                result.onAuthenticationSuccess()
+            } else if (data.hasError) {
+                result.onAuthenticationError(data.errorCode, data.errorString.toString())
+            } else {
+                result.onAuthenticationFailure()
             }
         }
     }
@@ -86,6 +88,6 @@ class DeviceAuthenticationControllerImpl(
 
 data class DeviceAuthenticationResult(
     val onAuthenticationSuccess: suspend () -> Unit = {},
-    val onAuthenticationError: () -> Unit = {},
-    val onAuthenticationFailure: () -> Unit = {},
+    val onAuthenticationError: (errorCode: Int, errorMessage: String) -> Unit = { _, _ -> },
+    val onAuthenticationFailure: () -> Unit = {}
 )

@@ -310,8 +310,8 @@ class AddDocumentViewModel(
                                     response.resultHandler.onAuthenticationSuccess()
                                 },
                                 onAuthenticationError = {
-                                    response.resultHandler.onAuthenticationError()
-                                }
+                                    response.resultHandler.onAuthenticationError(-1, "Invalid context: must be FragmentActivity")
+                                } as (Int, String) -> Unit
                             )
                         )
                     }

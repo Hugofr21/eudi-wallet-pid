@@ -114,6 +114,13 @@ class CryptoControllerImpl(
 
     }
 
+
+
+    override fun encryptDecrypt(cipher: Cipher?, byteArray: ByteArray): ByteArray {
+        return cipher?.doFinal(byteArray) ?: ByteArray(0)
+    }
+
+
     override fun verifyPin(
         attempt: String,
         storedSaltB64: String,
@@ -126,10 +133,6 @@ class CryptoControllerImpl(
         return storedHash.indices.all { storedHash[it] == attemptHash[it] }
     }
 
-
-    override fun encryptDecrypt(cipher: Cipher?, byteArray: ByteArray): ByteArray {
-        return cipher?.doFinal(byteArray) ?: ByteArray(0)
-    }
 
 
     override fun generateSalt():ByteArray{
