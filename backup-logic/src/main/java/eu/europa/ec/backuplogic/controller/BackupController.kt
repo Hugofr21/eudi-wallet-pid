@@ -18,8 +18,10 @@ package eu.europa.ec.backuplogic.controller
 
 import android.content.Context
 import android.util.Base64
+import android.util.Base64.NO_WRAP
 import com.nimbusds.jose.shaded.gson.Gson
 import eu.europa.ec.authenticationlogic.controller.authentication.PassphraseAuthenticationController
+import eu.europa.ec.backuplogic.controller.dto.DocumentDto
 import eu.europa.ec.backuplogic.controller.dto.toDto
 import eu.europa.ec.backuplogic.controller.model.BackupBundle
 import eu.europa.ec.backuplogic.controller.model.Credential
@@ -31,28 +33,38 @@ import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.storagelogic.model.BackupLog
 import eu.europa.ec.businesslogic.util.crypto.HashUtils
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.security.SecureRandom
+import java.io.IOException
+import java.io.InputStream
+import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
+import javax.crypto.Cipher.DECRYPT_MODE
+import javax.crypto.Cipher.ENCRYPT_MODE
+import javax.crypto.CipherInputStream
+import javax.crypto.CipherOutputStream
 import javax.crypto.Mac
 import javax.crypto.SecretKey
-import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-
 interface BackupController {
     suspend fun exportBackup(passPhrase: List<String>, provider: String):File?
-    suspend fun deleteBackup(identifier: String)
-    fun restoreBackup(file: File , passPhrase: List<String>)
+    suspend fun deleteBackup(identifier: String): Boolean
+    suspend fun restoreBackup(file: InputStream , passPhrase: List<String>): List<String>
     suspend fun getLastBackup(): BackupLog?
+
+    fun existBackupMkdir(): Boolean
 
 }
 
@@ -68,14 +80,14 @@ class BackupControllerImpl(
 
 ) : BackupController  {
     companion object {
-        private const val LOG_FILE_NAME_TXT = "eudi-android-wallet-backup%g.enc.json"
+        private const val LOG_FILE_NAME_JSON = "eudi-android-wallet-backup%g.enc.json"
         private const val FILE_SIZE_LIMIT = 5242880
         private const val FILE_LIMIT = 10
         private const val SALT_BITS = 16
         private const val NONCE_LENGTH = 12
         private const val ITERATIONS = 100000
         private const val KEY_LENGTH = 256
-        private const val SALT_LENGTH = 32
+        private const val BUFFER_ARRAY = 1024
         private const val ALGORITHM = "PBKDF2WithHmacSHA256"
         private const val ALGORITHM_CREDENTIAL = "AES"
 
@@ -92,18 +104,21 @@ class BackupControllerImpl(
 
     override suspend fun exportBackup(passPhrase: List<String>, provider: String):File?{
         // save password in storage. this device
-        passphraseAuthenticationController.setPassphrase(passPhrase)
 
+        passphraseAuthenticationController.setPassphrase(passPhrase)
+        println("passphrase Authentication Controller set Passphrase")
         // created struct json file
-        val json = assembleBackupBundle() ?: throw IllegalStateException("Backup bundle is null")
+        val json = assembleBackupBundle(passPhrase) ?: throw IllegalStateException("Backup bundle is null")
+        println("Json $json")
 
         // read json file and created zip
-        val zipFile = createdFileJsonEncrypt(json)
+        val zipFile = createdFileJsonEncrypt(json, passPhrase)
 
         // created log backup
         val backupLog = BackupLog(
             identifier = HashUtils.sha256((provider + System.currentTimeMillis()).toByteArray()),
             provider = provider,
+            value =LOG_FILE_NAME_JSON ,
             createdAt = System.currentTimeMillis()
         )
         walletBackupLogController.storeBackupLog(backupLog)
@@ -115,54 +130,103 @@ class BackupControllerImpl(
     /**
      *  Delete backup before version, so current version can be restored
      */
-    override suspend fun deleteBackup(identifier: String) {
+    override suspend fun deleteBackup(identifier: String): Boolean {
         walletBackupLogController.deleteBackupLog(identifier)
         val file = File(logsDir, identifier)
         if (file.exists()) {
             file.delete()
         }
+        return false
     }
 
 
     /**
-     * Read the zip file and extract the JSON
+     * Read the zip enc file and extract the JSON
      * Check the phrase that the user is using with this JSON
      * If valid, decrypt the file en.json
      * Read the contents and add the Wallet Controller document
      */
-    override fun restoreBackup(file: File , passPhrase: List<String>) {
-        val zipInput = ZipInputStream(FileInputStream(decryptZipFile(file, passPhrase)))
+    override suspend fun restoreBackup(file: InputStream, passPhrase: List<String>): List<String> {
+        println(">>> Iniciando restoreBackup com arquivo: ${file.available()}")
+
+        val decryptedFile = decryptZipFile(file, passPhrase)
+        println(">>> Arquivo ZIP descriptografado: ${decryptedFile?.path}")
+
+        val zipInput = ZipInputStream(FileInputStream(decryptedFile))
         var entry: ZipEntry? = zipInput.nextEntry
         var jsonString: String? = null
 
         while (entry != null) {
+            println(">>> Entrada ZIP encontrada: ${entry.name}")
             if (entry.name.endsWith(".json")) {
                 jsonString = zipInput.bufferedReader().use { it.readText() }
+                println(">>> JSON encontrado e lido")
                 break
             }
             entry = zipInput.nextEntry
         }
 
+        if (jsonString == null) {
+            println("!!! Nenhum arquivo .json encontrado no ZIP")
+            throw IllegalStateException("JSON file not found in backup")
+        }
+
         val bundle = Gson().fromJson(jsonString, BackupBundle::class.java)
+        println(">>> BackupBundle carregado com sucesso")
+
         val saltB64 = bundle.securityParams.mnemonicPhrase?.salt
         val expectedHashB64 = bundle.securityParams.mnemonicPhrase?.hash
+        println(">>> Salt recebido (Base64): $saltB64")
+        println(">>> Hash esperado (Base64): $expectedHashB64")
 
         val saltBytes = Base64.decode(saltB64, Base64.NO_WRAP)
-        val derivedKeyBytes = cryptoController.deriveKeyList(passPhrase, saltBytes)
+        val derivedKeyBytes = cryptoController.deriveKeyFromMnemonic(passPhrase, saltBytes)
         val derivedHashB64 = Base64.encodeToString(derivedKeyBytes, Base64.NO_WRAP)
+        println(">>> Hash derivado (Base64): $derivedHashB64")
 
         if (!derivedHashB64.contentEquals(expectedHashB64)) {
+            println("!!! Passphrase inválida")
             throw SecurityException("Passphrase invalid!!!!")
         }
 
+        println(">>> Passphrase válida, iniciando decriptação das credenciais")
 
+        val decryptedCredentials = decryptCredentials(bundle, derivedKeyBytes)
+        decryptedCredentials.forEachIndexed { index, credentialJson ->
+            val documentDto = Gson().fromJson(credentialJson, DocumentDto::class.java)
+            println(">>> Credential #$index: $documentDto")
+        }
 
+        val result = listOfNotNull(
+            bundle.securityParams.biometric?.hash?.let { "Biometric" },
+            bundle.securityParams.pin?.hash?.let { "Pin" },
+            bundle.credentials
+                .any { it.data != null }
+                .takeIf { present -> present }
+                ?.let { "Verifiable Credentials" }
+        )
+
+        println(">>> Opções disponíveis no backup: $result")
+
+        return result
     }
+
 
     override suspend fun getLastBackup(): BackupLog? {
         val now = System.currentTimeMillis()
-        return walletBackupLogController.getClosestBackupLog(now)
+        val backupLogLast = walletBackupLogController.getClosestBackupLog(now)
+        return backupLogLast?.let { log ->
+            val sdf = SimpleDateFormat("yy-MM-dd", Locale.getDefault())
+            val formattedDate = sdf.format(Date(log.createdAt))
+            log.copy(value = formattedDate)
+        }
 
+    }
+
+    override fun existBackupMkdir(): Boolean {
+        return logsDir.exists() &&
+                logsDir.isDirectory &&
+                logsDir.listFiles()?.isNotEmpty() == true
     }
 
     /**
@@ -174,58 +238,71 @@ class BackupControllerImpl(
          * Encrypted AES file
     */
 
-    private fun assembleBackupBundle(): String?  {
+    private fun assembleBackupBundle(passPhrase: List<String>): String? {
 
         val documentsDto = walletCoreDocumentsController
             .getAllDocuments()
             .map { it.toDto() }
+//        println("Loaded ${documentsDto.size} documents")
 
-        val (saltB64, hashB64) = passphraseAuthenticationController
-             .getSaltAndHash()
-             ?: return null
+        val keyBytes = passphraseAuthenticationController.retrieveKeyBytes()
+//        println(
+//            " keyBytes (${keyBytes.size} bytes): ${
+//                Base64.encodeToString(
+//                    keyBytes,
+//                    Base64.NO_WRAP
+//                )
+//            }"
+//        )
+        val ivMaster = passphraseAuthenticationController.retrieveIv()
+//        println("Master IV (Base64): ${Base64.encodeToString(ivMaster, Base64.NO_WRAP)}")
 
-        val iv = ByteArray(NONCE_LENGTH).apply {
-            SecureRandom().nextBytes(this)
-        }
-
-        val key = Base64.decode(hashB64, Base64.NO_WRAP)
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        val secretKey: SecretKey = SecretKeySpec(key, ALGORITHM_CREDENTIAL)
-        val gcmSpec = GCMParameterSpec(128, iv)
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmSpec)
-
-        val kdf = KdfParams(
-            alg = ALGORITHM,
-            iters = ITERATIONS,
-            keyLen = KEY_LENGTH
-        )
-
-
-        val mnemonicPhrase = MnemonicPhrase(
-            salt = saltB64,
-            hash = hashB64
-        )
-
+        val kdf = KdfParams(alg = ALGORITHM, iters = ITERATIONS, keyLen = KEY_LENGTH)
+//        println("KDF params: $kdf")
         val securityParams = SecurityParams(
             requireBiometric = false,
             requirePin = false,
             authValidityDurationSeconds = 30,
-            mnemonicPhrase = mnemonicPhrase
+            mnemonicPhrase = MnemonicPhrase(
+                hash = Base64.encodeToString(keyBytes, Base64.NO_WRAP)
+            )
         )
+//        println("Security params: $securityParams")
 
-        val credentials = documentsDto.map { documentDto ->
-            val plain = documentDto.toString().toByteArray(Charsets.UTF_8)
-            val encrypted = cipher.doFinal(plain)
+        val credentials = documentsDto.map { doc ->
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
+                init(
+                    Cipher.ENCRYPT_MODE,
+                    SecretKeySpec(keyBytes, "AES"),
+                    GCMParameterSpec(128, ivMaster)
+                )
+            }
+//            println("Cipher initialized: $cipher")
+
+            val plaintext = doc.toString().toByteArray(Charsets.UTF_8)
+//            println(
+//                "Plaintext (${plaintext.size} bytes): ${
+//                    String(
+//                        plaintext,
+//                        Charsets.UTF_8
+//                    )
+//                }"
+//            )
+
+            val ciphertext = cipher.doFinal(plaintext)
+            val cipherTextB64 = Base64.encodeToString(ciphertext, Base64.NO_WRAP)
+//            println("Ciphertext (Base64, ${ciphertext.size} bytes): $cipherTextB64")
+
             Credential(
-                id = documentDto.id,
-                type = documentDto.format::class.simpleName ?: "unknown",
-                alg = ALGORITHM_CREDENTIAL,
-                iv = iv,
-                data = encrypted
+                id = doc.id,
+                type = doc.format::class.simpleName ?: "unknown",
+                alg = "AES/GCM/NoPadding",
+                iv = Base64.encodeToString(ivMaster, Base64.NO_WRAP),
+                data = cipherTextB64
             )
         }
 
-        val backupData = BackupBundle(
+        val bundleNoSig = BackupBundle(
             kdf = kdf,
             securityParams = securityParams,
             credentials = credentials,
@@ -233,20 +310,23 @@ class BackupControllerImpl(
         )
 
         val gson = Gson()
-        val jsonPartial = gson.toJson(backupData)
-        val hmacBytes = Mac.getInstance("HmacSHA256").apply {
-            init(SecretKeySpec(key, "HmacSHA256"))
+        val jsonPartial = gson.toJson(bundleNoSig)
+//        println("jsonPartial: $jsonPartial")
+
+        val hmac = Mac.getInstance("HmacSHA256").apply {
+            init(SecretKeySpec(keyBytes, "HmacSHA256"))
         }.doFinal(jsonPartial.toByteArray(Charsets.UTF_8))
-        backupData.signature = Signature(
+//        println("HMAC raw: ${hmac.contentToString()}")
+
+        bundleNoSig.signature = Signature(
             alg = "HmacSHA256",
-            sig = Base64.encodeToString(hmacBytes, Base64.NO_WRAP)
+            sig = Base64.encodeToString(hmac, Base64.NO_WRAP)
         )
+//        println("Attached signature: ${bundleNoSig.signature}")
 
-        val finalJson = gson.toJson(backupData)
-
-        return finalJson
-
+       return  gson.toJson(bundleNoSig)
     }
+
 
     /**
      * 1) Generates JSON with encrypted data and HMAC
@@ -254,8 +334,8 @@ class BackupControllerImpl(
      * @return File “backup-{timestamp}.zip.enc” in logsDir
      */
 
-    private fun createdFileJsonEncrypt(json: String): File{
-        val jsonFile = File(logsDir, LOG_FILE_NAME_TXT)
+    private fun createdFileJsonEncrypt(json: String, passPhrase: List<String>): File{
+        val jsonFile = File(logsDir, LOG_FILE_NAME_JSON)
         jsonFile.writeText(json)
 
         val now = Instant.ofEpochMilli(System.currentTimeMillis())
@@ -274,41 +354,33 @@ class BackupControllerImpl(
             }
         }
         jsonFile.delete()
-        return encryptZipFile(zipFile)
+        return encryptZipFile(zipFile, passPhrase)
             ?: throw IllegalStateException("Failed to encrypt zip file")
 
     }
 
-    private fun encryptZipFile(zipFile: File): File? {
+    private fun encryptZipFile(zipFile: File, passPhrase: List<String>): File {
+        // 1) Deriva salt, IV e chave a partir da frase mnemônica
+        val saltBytes = cryptoController.generateSaltFromMnemonic(passPhrase)
+        val ivBytes   = cryptoController.deriveIvFromMnemonic(passPhrase)
+        val keyBytes  = cryptoController.deriveKeyFromMnemonic(passPhrase, saltBytes)
 
-        val (saltB64, hashB64) = passphraseAuthenticationController
-            .getSaltAndHash()
-            ?: return null
-        val iv = ByteArray(NONCE_LENGTH).apply {
-            SecureRandom().nextBytes(this)
+        // (opcionais) logs para debug – você verá exatamente os mesmos valores no decrypt
+        println("(encryptZipFile) salt (Base64): ${Base64.encodeToString(saltBytes, NO_WRAP)}")
+        println("(encryptZipFile) iv   (Base64): ${Base64.encodeToString(ivBytes,   NO_WRAP)}")
+        println("(encryptZipFile) key  (Base64): ${Base64.encodeToString(keyBytes,  NO_WRAP)}")
+
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
+            init(ENCRYPT_MODE,
+                SecretKeySpec(keyBytes, "AES"),
+                GCMParameterSpec(128, ivBytes))
         }
-        val key = Base64.decode(hashB64, Base64.NO_WRAP)
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        val secretKey: SecretKey = SecretKeySpec(key, ALGORITHM_CREDENTIAL)
-        val gcmSpec = GCMParameterSpec(128, iv)
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmSpec)
 
         val encryptedZipFile = File(zipFile.parent, "${zipFile.name}.enc")
         FileInputStream(zipFile).use { fis ->
             FileOutputStream(encryptedZipFile).use { fos ->
-                fos.write(saltB64.toByteArray())
-                fos.write(iv)
-                val buffer = ByteArray(1024)
-                var bytesRead: Int
-                while (fis.read(buffer).also { bytesRead = it } != -1) {
-                    val encryptedBytes = cipher.update(buffer, 0, bytesRead)
-                    if (encryptedBytes != null) {
-                        fos.write(encryptedBytes)
-                    }
-                }
-                val finalBytes = cipher.doFinal()
-                if (finalBytes != null) {
-                    fos.write(finalBytes)
+                CipherOutputStream(fos, cipher).use { cos ->
+                    fis.copyTo(cos)
                 }
             }
         }
@@ -316,45 +388,59 @@ class BackupControllerImpl(
         return encryptedZipFile
     }
 
-    private fun decryptZipFile(encryptedZipFile: File, passphrase: List<String>): File? {
+    private fun decryptZipFile(encryptedStream: InputStream, passPhrase: List<String>): File {
 
-        FileInputStream(encryptedZipFile).use { fis ->
+        val saltBytes = cryptoController.generateSaltFromMnemonic(passPhrase)
+        val ivBytes   = cryptoController.deriveIvFromMnemonic(passPhrase)
+        val keyBytes  = cryptoController.deriveKeyFromMnemonic(passPhrase, saltBytes)
 
-            val salt = ByteArray(SALT_BITS)
-            if (fis.read(salt) != SALT_BITS) {
-                return null
-            }
+        println("(decryptZipFile) salt (B64): ${Base64.encodeToString(saltBytes, NO_WRAP)}")
+        println("(decryptZipFile) iv   (B64): ${Base64.encodeToString(ivBytes,   NO_WRAP)}")
+        println("(decryptZipFile) key  (B64): ${Base64.encodeToString(keyBytes,  NO_WRAP)}")
 
-            val iv = ByteArray(NONCE_LENGTH)
-            if (fis.read(iv) != NONCE_LENGTH) {
-                return null
-            }
+        val encryptedBytes = encryptedStream.readBytes()
+        println("(decryptZipFile) encryptedBytes.size = ${encryptedBytes.size}")
 
-
-            val derivedKeyBytes = cryptoController.deriveKeyList(passphrase, salt)
-
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            val secretKey: SecretKey = SecretKeySpec(derivedKeyBytes, ALGORITHM_CREDENTIAL)
-            val gcmSpec = GCMParameterSpec(128, iv)
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmSpec)
-            val decryptedZipFile =
-                File(encryptedZipFile.parent, encryptedZipFile.name.removeSuffix(".enc"))
-            FileOutputStream(decryptedZipFile).use { fos ->
-                val buffer = ByteArray(1024)
-                var bytesRead: Int
-                while (fis.read(buffer).also { bytesRead = it } != -1) {
-                    val decryptedBytes = cipher.update(buffer, 0, bytesRead)
-                    if (decryptedBytes != null) {
-                        fos.write(decryptedBytes)
-                    }
-                }
-                val finalBytes = cipher.doFinal()
-                if (finalBytes != null) {
-                    fos.write(finalBytes)
-                }
-            }
-            return decryptedZipFile
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
+            init(DECRYPT_MODE, SecretKeySpec(keyBytes, "AES"), GCMParameterSpec(128, ivBytes))
         }
+
+
+        val decryptedBytes = try {
+            cipher.doFinal(encryptedBytes)
+        } catch (badTag: AEADBadTagException) {
+            println("BackupCtl AEADBadTagException ao decrypt: ${badTag.message}")
+            throw SecurityException("Backup corrompido ou passphrase errada", badTag)
+        }
+
+        println("(decryptZipFile) decryptedBytes.size = ${decryptedBytes.size}")
+
+        val out = File.createTempFile("decrypted", ".zip", context.cacheDir)
+        FileOutputStream(out).use { it.write(decryptedBytes) }
+        println("(decryptZipFile) saída em: ${out.path}")
+        return out
+    }
+
+    fun decryptCredentials(bundle: BackupBundle, derivedKeyBytes: ByteArray): List<String> {
+        val secretKey: SecretKey = SecretKeySpec(derivedKeyBytes, "AES")
+        val decryptedCredentials = mutableListOf<String>()
+
+        for (credential in bundle.credentials) {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            val ivBytes = Base64.decode(credential.iv, Base64.NO_WRAP)
+            val gcmSpec = GCMParameterSpec(128, ivBytes)
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmSpec)
+
+            val cipherBytes = Base64.decode(
+                credential.data ?: throw IllegalArgumentException("Missing credential data"),
+                Base64.NO_WRAP
+            )
+            val plainBytes = cipher.doFinal(cipherBytes)
+            val plainText = String(plainBytes, Charsets.UTF_8)
+            decryptedCredentials.add(plainText)
+        }
+
+        return decryptedCredentials
     }
 
 }

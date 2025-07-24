@@ -24,11 +24,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
 import eu.europa.ec.backuplogic.model.BackupKey
+import eu.europa.ec.storagelogic.model.BackupLog
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.annotation.Named
 
@@ -36,7 +38,7 @@ sealed class State : ViewState {
     data class Default(
         val isLoading: Boolean = false,
         val existBackup: Boolean = false,
-        val backupKey: BackupKey? = null
+        val backupLog: BackupLog? = null
     ) : State()
 }
 sealed class Event : ViewEvent {
@@ -62,13 +64,23 @@ class ViewBackupViewModel(
 ) : MviViewModel<Event, State, Effect>() {
 
     override fun setInitialState(): State {
-//        val existBackup = backupInteractor.existBackup()
-//        val backupKey = if (existBackup) backupInteractor.getBackupKey() else null
-
-        return State.Default(
+        val initialState = State.Default(
             existBackup = false,
-            backupKey = null
+            backupLog = null
         )
+
+        viewModelScope.launch {
+            val existBackup = backupInteractor.existBackup()
+            val backupKey = if (existBackup) backupInteractor.getLastBackup() else null
+
+            setState {
+                State.Default(
+                    existBackup = existBackup,
+                    backupLog = backupKey
+                )
+            }
+        }
+        return initialState
     }
 
     override fun handleEvents(event: Event) {
@@ -81,6 +93,7 @@ class ViewBackupViewModel(
                 viewModelScope.launch {
                     try {
                         val file = backupInteractor.exportBackup()
+                        setEffect { Effect.ShowExportedFile(file?.absolutePath ?: "File not found!") }
                     } catch (e: Exception) {
                         setEffect { Effect.Error }
                     } finally {

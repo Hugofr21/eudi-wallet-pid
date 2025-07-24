@@ -18,24 +18,30 @@ package eu.europa.ec.backuplogic.interactor
 
 import eu.europa.ec.backuplogic.controller.BackupController
 import eu.europa.ec.backuplogic.controller.ListWordsController
-import eu.europa.ec.backuplogic.controller.ListWordsControllerImpl
-import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
-import eu.europa.ec.resourceslogic.provider.ResourceProvider
-import eu.europa.ec.uilogic.serializer.UiSerializer
+import eu.europa.ec.backuplogic.controller.model.RestoreStatus
+import eu.europa.ec.storagelogic.model.BackupLog
 import java.io.File
+import java.io.InputStream
 
 interface BackupInteractor {
     suspend fun exportBackup(): File?
 
-    fun existBackup(): Boolean
-    suspend fun restoreWallet(backupData: String): Boolean
-    suspend fun deleteWallet(): Boolean
-    fun getListWords(): List<String>
+    suspend fun getLastBackup(): BackupLog?
 
-    fun generateQuiz(list: List<String>): Triple<List<String>, List<String>, List<Int>>
+    fun existBackup(): Boolean
+    suspend fun restoreWallet(file: InputStream, passPhrase: List<String>): List<String>
+    suspend fun deleteWallet(identifier: String): Boolean
+    fun initListWordsPreview(): List<String>
+
+    fun generateQuiz(): Triple<List<String>, List<String>, List<Int>>
 
     fun getQuizSlots(): List<String>
-    fun validateRecoveryPhrase(words: List<String>): Boolean
+
+    fun finalizeRestore(options: List<String>): RestoreStatus
+
+    fun cacheWords(words: List<String>)
+
+    fun getCachedWords(): List<String>
 }
 
 class BackupInteractorIml (
@@ -44,66 +50,83 @@ class BackupInteractorIml (
 ): BackupInteractor {
 
     companion object{
-        private var lastQuiz: MutableList<String> = mutableListOf()
+        private const val COUNT_TAKE = 12
+        private const val WORDS_TO_GUESS = 4
+        private const val WALLET_NAME = "wallet-dev"
 
-        private var listPhrase: MutableList<String> = mutableListOf()
-        private var countTake: Int = 12
-        private var wordToGuess: Int = 4
-
-        private val myWalletnameProvide = "wallet-dev"
+        private var _cachedWords: MutableList<String>? = null
     }
 
+
+    override fun initListWordsPreview(): List<String> {
+        val generated = listWordsController.generateOrderByListWords(COUNT_TAKE)
+        _cachedWords = generated.toMutableList()
+        return _cachedWords!!
+    }
     override suspend fun exportBackup(): File? {
-        print("Phrase expor tBackup $listPhrase")
-        return if (listPhrase.size == countTake) {
-            val backupFile = backupController.exportBackup(listPhrase, myWalletnameProvide)
-            lastQuiz.clear()
-            listPhrase.clear()
+        println("Phrase to exportBackup: $_cachedWords")
+        return if (_cachedWords?.size == COUNT_TAKE) {
+            val backupFile = backupController.exportBackup(_cachedWords!!, WALLET_NAME)
+            _cachedWords?.clear()
             backupFile
         } else {
-            println("Passphrase contains invalid words.")
+            println("Passphrase incomplete or invalid.")
             null
         }
+    }
 
+    override suspend fun getLastBackup(): BackupLog? {
+        return backupController.getLastBackup()
     }
 
     override fun existBackup(): Boolean {
-        TODO("Not yet implemented")
+        return backupController.existBackupMkdir()
     }
 
-    override suspend fun restoreWallet(backupData: String): Boolean {
-        TODO("Not yet implemented")
+    override suspend fun restoreWallet(file: InputStream, passPhrase: List<String>): List<String> {
+        println("Phrase password restore wallet file $passPhrase")
+        println("Restore wallet filename: ${file.read()}")
+        if (passPhrase.isEmpty() || passPhrase.any { it.isBlank() }) {
+            return emptyList()
+        }
+        return backupController.restoreBackup(file, passPhrase)
+
     }
 
-    override suspend fun deleteWallet(): Boolean {
-        TODO("Not yet implemented")
+    override suspend fun deleteWallet(identifier: String): Boolean {
+      return backupController.deleteBackup(identifier)
     }
 
-    override fun getListWords(): List<String> {
-        listPhrase = listWordsController.generateOrderByListWords(countTake)
-                as MutableList<String>
-        return listPhrase
+    override fun cacheWords(words: List<String>) {
+        _cachedWords = words.toMutableList()
     }
+
+    override fun getCachedWords(): List<String> {
+        return _cachedWords ?: emptyList()
+    }
+
 
     override fun getQuizSlots(): List<String> {
-        return lastQuiz
+        return _cachedWords ?: emptyList()
     }
 
-    override fun validateRecoveryPhrase(words: List<String>): Boolean {
+    override fun finalizeRestore(options: List<String>): RestoreStatus {
         TODO("Not yet implemented")
     }
 
-    override fun generateQuiz(list: List<String>): Triple<List<String>, List<String>, List<Int>> {
-        println(">>> generateQuiz: list=$list")
-        val indicesToRemove = (0 until list.size).shuffled().take(wordToGuess).sorted()
-        println(">>> generateQuiz: indicesToRemove=$indicesToRemove")
+
+    override fun generateQuiz(): Triple<List<String>, List<String>, List<Int>> {
+        println(">>> generateQuiz: list=$_cachedWords")
+        val list = _cachedWords ?: throw IllegalStateException("Must call initListWordsPreview() first.")
+        val indicesToRemove = (0 until list.size).shuffled().take(WORDS_TO_GUESS).sorted()
         val slots = list.mapIndexed { index, word ->
             if (index in indicesToRemove) "" else word
         }
         val removedWords = indicesToRemove.map { list[it] }
-        lastQuiz = slots.toMutableList()
-        println(">>> generateQuiz: list=$list, indicesToRemove=$indicesToRemove, slots=$slots, removedWords=$removedWords")
-        return Triple(slots, removedWords, indicesToRemove)
+        println(">>> generateQuiz: indicesToRemove=$indicesToRemove")
+//        _cachedWords = slots.toMutableList()
+        println(">>> generateQuiz: list=$_cachedWords, indicesToRemove=$indicesToRemove, slots=$slots, removedWords=$removedWords")
+        return Triple(slots, listWordsController.shuffleRandomQuizSlots(removedWords), indicesToRemove)
     }
 
 

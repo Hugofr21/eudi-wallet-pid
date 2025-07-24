@@ -52,7 +52,7 @@ abstract class MviViewModel<Event : ViewEvent, UiState : ViewState, Effect : Vie
         viewModelScope.launch { _event.emit(event) }
     }
 
-    protected fun setState(reducer: UiState.() -> UiState) {
+    fun setState(reducer: UiState.() -> UiState) {
         val newState = viewState.value.reducer()
         _viewState.update { newState }
         notifyViewStateHistoryChanged(newState)

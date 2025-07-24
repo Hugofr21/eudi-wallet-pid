@@ -55,6 +55,7 @@ import eu.europa.ec.uilogic.component.utils.SPACING_SMALL_12
 import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapText
+
 @Composable
 fun EnterPhraseContentPage(
     words: List<String>,

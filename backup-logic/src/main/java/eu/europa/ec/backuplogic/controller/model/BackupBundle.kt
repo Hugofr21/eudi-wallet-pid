@@ -8,14 +8,29 @@ data class SecurityParams(
     val requireBiometric: Boolean,
     val requirePin: Boolean,
     val authValidityDurationSeconds: Int,
-    val mnemonicPhrase: MnemonicPhrase? = null
+    val mnemonicPhrase: MnemonicPhrase? = null,
+    val pin: Pin? = null,
+    val biometric: Biometric? = null
 )
+
+@Serializable
+data class Pin(
+    val salt: String,
+    val hash: String
+)
+
+
+@Serializable
+data class Biometric(
+    val hash: String
+)
+
 
 @Serializable
 data class MnemonicPhrase(
     val mnemonic: String? = null,
-    val salt: String,
-    val hash: String
+    val salt: String? = null,
+    val hash: String?
 )
 
 
@@ -38,9 +53,9 @@ data class FileEntry(
 data class Credential(
     val id: String,
     val type: String,
-    val iv: ByteArray,
+    val iv: String?,
     val alg: String,
-    val data: ByteArray?
+    val data: String?
 )
 
 @Serializable

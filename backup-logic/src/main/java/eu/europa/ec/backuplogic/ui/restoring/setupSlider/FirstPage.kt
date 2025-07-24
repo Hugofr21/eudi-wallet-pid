@@ -60,6 +60,7 @@ import eu.europa.ec.uilogic.component.utils.SIZE_EXTRA_LARGE
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
 import eu.europa.ec.uilogic.component.utils.VSpacer
+
 @Composable
 fun FirstPage(
     onFileSelected: (Uri) -> Unit,

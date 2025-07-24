@@ -32,15 +32,17 @@ enum class PassphraseAuthentication {
 
 interface PassphraseAuthenticationController {
     fun hasPassphrase(): Boolean
-    fun getSaltAndHash(): Pair<String, String>?
+    fun getHash(): String?
 
     fun setPassphrase(passphrase: List<String>)
 
     fun verifyPassphrase(input: List<String>): Boolean
 
-    fun retrievePassphrase(): String
-
+    fun retrieveKeyBytes(): ByteArray
+    fun retrieveIv(): ByteArray
     suspend fun authenticate(value: List<String>): PassphraseAuthentication
+
+    fun retrieveSalt(): ByteArray
 }
 
 class PassphraseAuthenticationControllerImpl(
@@ -65,9 +67,25 @@ class PassphraseAuthenticationControllerImpl(
         }
     }
 
-    override fun retrievePassphrase(): String {
+    override fun retrieveSalt(): ByteArray {
         return try {
-            passphraseStorageController.retrievePassphrase()
+            passphraseStorageController.retrieveSalt()
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to retrieve passphrase: ${e.message}")
+        }
+    }
+
+    override fun retrieveKeyBytes(): ByteArray {
+        return try {
+            passphraseStorageController.retrieveKeyBytes()
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to retrieve passphrase: ${e.message}")
+        }
+    }
+
+    override fun retrieveIv(): ByteArray {
+        return try {
+            passphraseStorageController.retrieveIv()
         } catch (e: Exception) {
             throw IllegalStateException("Failed to retrieve passphrase: ${e.message}")
         }
@@ -77,14 +95,13 @@ class PassphraseAuthenticationControllerImpl(
         return passphraseStorageController.hasPassphrase()
     }
 
-    override fun getSaltAndHash(): Pair<String,String>? {
-        return passphraseStorageController.getSaltAndHash()
+    override fun getHash(): String? {
+        return passphraseStorageController.getHash()
     }
 
 
     override fun setPassphrase(passphrase: List<String>) {
         passphraseStorageController.setPassphrase(passphrase)
-
     }
 
     override fun verifyPassphrase(input: List<String>): Boolean {

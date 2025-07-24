@@ -43,12 +43,12 @@ sealed class Effect : ViewSideEffect {
 
 @KoinViewModel
 class ListWordsBackupViewModel(
-    private val BackupInteractor: BackupInteractor
+    private val interactor: BackupInteractor
 ) : MviViewModel<Event, State, Effect>() {
 
     override fun setInitialState(): State =
         State(
-            listWords = BackupInteractor.getListWords()
+            listWords = interactor.initListWordsPreview()
         )
 
     override fun handleEvents(event: Event) {

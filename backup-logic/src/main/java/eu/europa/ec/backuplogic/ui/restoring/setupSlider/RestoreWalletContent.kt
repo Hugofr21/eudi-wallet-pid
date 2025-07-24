@@ -22,9 +22,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -42,16 +39,13 @@ import eu.europa.ec.uilogic.component.wrap.WrapText
 
 @Composable
 fun RestoreWalletContent(
+    options: List<String>,
+    selected: Set<String>,
+    onOptionToggled: (String) -> Unit,
     onRestore: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 
 ) {
-
-    val selectedOptions = remember { mutableStateMapOf<String, Boolean>() }
-    // default
-    val listOption = listOf<String>(
-        "Biometric", "Pin" , "Verifiable Credentials"
-    )
 
     Column(
         modifier = modifier
@@ -81,27 +75,31 @@ fun RestoreWalletContent(
             )
         )
 
-        listWrapCheckboxWithLabel(listOption, selectedOptions)
-
+        ListWrapCheckboxWithLabel(
+            listOption = options,
+            selectedOptions = selected,
+            onOptionToggled = onOptionToggled
+        )
 
     }
 }
 
 @Composable
-fun listWrapCheckboxWithLabel(
+fun ListWrapCheckboxWithLabel(
     listOption: List<String>,
-    selectedOptions: SnapshotStateMap<String, Boolean>,
+    selectedOptions: Set<String>,
+    onOptionToggled: (String) -> Unit,
     modifier: Modifier = Modifier
-): List<String> {
+) {
     Column(modifier = modifier) {
         listOption.forEach { option ->
-            val isChecked = selectedOptions[option] ?: false
+            val isChecked = selectedOptions.contains(option)
 
             WrapCheckboxWithLabel(
                 checkboxData = CheckboxWithTextData(
                     isChecked = isChecked,
-                    onCheckedChange = { checked ->
-                        selectedOptions[option] = checked
+                    onCheckedChange = {
+                        onOptionToggled(option)
                     },
                     text = option,
                     enabled = true
@@ -109,6 +107,4 @@ fun listWrapCheckboxWithLabel(
             )
         }
     }
-
-    return selectedOptions.filterValues { it }.keys.toList()
 }

@@ -18,9 +18,11 @@ package eu.europa.ec.backuplogic.controller
 
 import android.content.Context
 import java.security.SecureRandom
+import kotlin.random.Random
 
 interface ListWordsController{
     fun generateOrderByListWords(count: Int): List<String>
+    fun shuffleRandomQuizSlots(slots: List<String>):List<String>
 }
 
 /*
@@ -39,6 +41,20 @@ class ListWordsControllerImpl(
         return randomListWords.take(count)
     }
 
+    override  fun shuffleRandomQuizSlots(slots: List<String>): List<String> {
+        val shuffled = slots.toMutableList()
+
+        val rnd = SecureRandom.getInstanceStrong()
+
+        for (i in slots.size -1 downTo 1 ){
+            val j = rnd.nextInt(i  + 1)
+            val tmp = shuffled[i]
+            shuffled[i] = shuffled[j]
+            shuffled[j] = tmp
+
+        }
+        return shuffled.toList()
+    }
 
     private fun listWords(): List<String> {
         val fileContent = context.assets.open("words.txt").bufferedReader().use { it.readText() }

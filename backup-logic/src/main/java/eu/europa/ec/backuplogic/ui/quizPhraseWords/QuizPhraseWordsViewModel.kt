@@ -71,8 +71,8 @@ class QuizPhraseWordsViewModel(
     }
 
     override fun setInitialState(): State {
-        originalList = interactor.getListWords()
-        val (slots, removedWords, indicesRemoved) = interactor.generateQuiz(originalList)
+        originalList = interactor.getCachedWords()
+        val (slots, removedWords, indicesRemoved) = interactor.generateQuiz()
         initialSlots = slots
         initialRemovedWords = removedWords
         initialIndicesRemoved = indicesRemoved

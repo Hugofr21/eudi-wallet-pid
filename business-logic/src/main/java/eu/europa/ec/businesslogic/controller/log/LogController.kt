@@ -65,13 +65,12 @@ class LogControllerImpl(
 
     companion object {
         private const val LOG_FILE_NAME_TXT = "eudi-android-wallet-logs%g.txt"
-        private const val LOG_FILE_NAME_JSON = "eudi-android-wallet-logs%g.json"
-        private const val LOG_FILE_NAME_XML = "eudi-android-wallet-logs%g.xml"
         private const val FILE_SIZE_LIMIT = 5242880
         private const val FILE_LIMIT = 10
     }
 
     private val logsDir = File(context.filesDir.absolutePath + "/logs")
+    private val tag: String = "EUDI Wallet ${configLogic.appFlavor}-${configLogic.appBuildType}"
 
     private val fileLoggerTree: FileLoggerTree = FileLoggerTree.Builder()
         .withFileName(LOG_FILE_NAME_TXT)
@@ -85,8 +84,6 @@ class LogControllerImpl(
     init {
         Timber.plant(Timber.DebugTree(), fileLoggerTree)
     }
-
-    private val tag: String = "EUDI Wallet ${configLogic.appFlavor}-${configLogic.appBuildType}"
 
     override fun d(tag: String, message: () -> String) {
         Timber.tag(tag).d(message())

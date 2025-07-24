@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import eu.europa.ec.backuplogic.model.BackupKey
@@ -71,6 +72,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import androidx.core.net.toUri
+import eu.europa.ec.storagelogic.model.BackupLog
+import java.io.File
 
 val LightSkyBlue   = Color(0xFFCAE6FD)
 val OceanBlue      = Color(0xFF2A5ED9)
@@ -144,10 +147,15 @@ private fun NavigationSlider(
                     onNavigationRequested(Effect.Navigation.Pop)
                 }
                 is Effect.ShowExportedFile -> {
-                    val uri = effect.fileUri.toUri()
+                    val file = File(effect.fileUri)
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.provider",
+                        file
+                    )
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         putExtra(Intent.EXTRA_STREAM, uri)
-                        type = "*/*"
+                        type = "application/zip"              // or "*/*" type all
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
                     context.startActivity(
@@ -242,13 +250,12 @@ private fun MainContent(
 
         VSpacer.Large()
         VSpacer.Large()
-        if (state is State.Default && state.backupKey != null) {
+        if (state is State.Default && state.backupLog != null) {
             LastBackupInfo(
-                backupKey = state.backupKey,
+                backupLog = state.backupLog,
                 onClick = { viewModel.setEvent(Event.NewBackupBtn) }
             )
         } else {
-            // Optionally display a placeholder or message
             Text(
                 text = "No backup available",
                 style = MaterialTheme.typography.bodyMedium,
@@ -266,7 +273,7 @@ private fun MainContent(
 
 @Composable
 private fun LastBackupInfo(
-    backupKey: BackupKey,
+    backupLog: BackupLog,
     onClick: () -> Unit
 ){
 
@@ -287,7 +294,7 @@ private fun LastBackupInfo(
         )
 
         Text(
-            text = "Last backup: ${backupKey.backupDate}",
+            text = "Last backup: ${backupLog.createdAt}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface
         )

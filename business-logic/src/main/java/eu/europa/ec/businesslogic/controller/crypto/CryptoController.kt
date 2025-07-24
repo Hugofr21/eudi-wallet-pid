@@ -17,11 +17,16 @@
 package eu.europa.ec.businesslogic.controller.crypto
 
 import android.util.Base64
+import eu.europa.ec.businesslogic.util.crypto.HashUtils
+import java.security.MessageDigest
 import java.security.SecureRandom
+import java.text.Normalizer
 import javax.crypto.Cipher
+import javax.crypto.Mac
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
+import javax.crypto.spec.SecretKeySpec
 
 
 interface CryptoController {
@@ -46,13 +51,17 @@ interface CryptoController {
     fun encryptPin(pin: String): Pair<String, String>
 
     fun verifyPin( attempt: String, storedSaltB64: String, storedHashB64: String): Boolean
-    fun verifyPhrase(attempt:List<String>, storedSaltB64: String, storedHashB64: String): Boolean
+    fun verifyPhrase(attempt:List<String>, storedHashB64: String): Boolean
 
     fun deriveKey(password: String, salt: ByteArray): ByteArray
 
-    fun deriveKeyList(password: List<String>, salt: ByteArray): ByteArray
+    fun deriveKeyFromMnemonic(password: List<String>, salt: ByteArray): ByteArray
 
     fun generateSalt():ByteArray
+
+    fun generateSaltFromMnemonic(mnemonic: List<String>):ByteArray
+
+    fun deriveIvFromMnemonic(mnemonic: List<String>): ByteArray
 }
 
 class CryptoControllerImpl(
@@ -138,24 +147,15 @@ class CryptoControllerImpl(
 
     override fun verifyPhrase(
         attempt:List<String>,
-        storedSaltB64: String,
         storedHashB64: String
     ): Boolean {
-        val salt      = Base64.decode(storedSaltB64, Base64.NO_WRAP)
+        val salt      = generateSaltFromMnemonic(attempt)
         val storedHash = Base64.decode(storedHashB64, Base64.NO_WRAP)
-        val attemptHash = deriveKeyList(attempt, salt)
+        val attemptHash = deriveKeyFromMnemonic(attempt, salt)
         if (storedHash.size != attemptHash.size) return false
         return storedHash.indices.all { storedHash[it] == attemptHash[it] }
     }
 
-
-
-    override fun generateSalt():ByteArray{
-        val random = SecureRandom()
-        val salt = ByteArray(SALT_BITS)
-        random.nextBytes(salt)
-        return salt
-    }
 
     override fun deriveKey(password: String, salt: ByteArray): ByteArray {
         val spec = PBEKeySpec(
@@ -168,15 +168,54 @@ class CryptoControllerImpl(
         return factory.generateSecret(spec).encoded
     }
 
-    override fun deriveKeyList(password: List<String>, salt: ByteArray): ByteArray {
-        val joinedPassword = password.joinToString(" ")
+    override fun generateSalt():ByteArray{
+        val random = SecureRandom()
+        val salt = ByteArray(SALT_BITS)
+        random.nextBytes(salt)
+        return salt
+    }
+
+
+    /**
+     * Derivation function (KDF) based on the HMAC
+     * Normalize sentence because of unicode characters
+     * HMAC-based Extract-and-Expand Key Derivation Function (HKDF) rfc5869
+     *
+     */
+
+    override fun generateSaltFromMnemonic(mnemonic: List<String>):ByteArray{
+        val normalized = Normalizer.normalize(mnemonic.joinToString(" "), Normalizer.Form.NFKD)
+        val seed      = ("$normalized::salt").toByteArray(Charsets.UTF_8)
+        val hash      = MessageDigest.getInstance("SHA-256").digest(seed)
+        return hash.copyOfRange(0, 16)
+    }
+
+
+    override fun deriveKeyFromMnemonic(password: List<String>, salt: ByteArray): ByteArray {
+        val mnemonicString = Normalizer.normalize(
+            password.joinToString(" ").trim(),
+            Normalizer.Form.NFKD
+        )
         val spec = PBEKeySpec(
-            joinedPassword.toCharArray(),
+            mnemonicString.toCharArray(),
             salt,
             ITERATION_COUNT,
             KEY_LENGTH
         )
         val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
-        return factory.generateSecret(spec).encoded
+        val key =  factory.generateSecret(spec).encoded
+        return key
     }
+
+    override fun deriveIvFromMnemonic(mnemonic: List<String>): ByteArray {
+        val phrase = mnemonic.joinToString(" ").trim()
+        val normalized = Normalizer
+            .normalize(phrase, Normalizer.Form.NFKD)
+            .toByteArray(Charsets.UTF_8)
+        val hash = MessageDigest
+            .getInstance("SHA-256")
+            .digest(normalized)
+        return hash.copyOfRange(0, 12)
+    }
+
 }

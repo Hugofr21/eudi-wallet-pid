@@ -16,19 +16,23 @@
 
 package eu.europa.ec.backuplogic.ui.restoring
 
+import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
+import androidx.lifecycle.viewModelScope
+import eu.europa.ec.backuplogic.controller.model.RestoreStatus
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
 import eu.europa.ec.backuplogic.model.BackupKey
+import eu.europa.ec.backuplogic.ui.restoring.Effect.*
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
+import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
-
-
-enum class RestoreStatus {
-    SUCCESS, ERROR
-}
+import java.io.File
+import java.io.FileOutputStream
+import java.io.FileInputStream
 
 
 sealed class State : ViewState {
@@ -36,18 +40,21 @@ sealed class State : ViewState {
         val isLoading: Boolean = false,
         val words: List<String> = emptyList(),
         val backupKey: BackupKey? = null,
-        val selectedFileUri: Uri? = null
+        val selectedFileUri: Uri? = null,
+        val options: List<String> = emptyList(),
+        val selectedOptions: Set<String> = emptySet()
     ) : State()
 }
 
 
 sealed class Event : ViewEvent {
     object GoBack : Event()
-    object Restore : Event()
     data class FileSelected(val uri: Uri) : Event()
     data class WordsChanged(val words: List<String>) : Event()
     data class SubmitWords(val words: List<String>) : Event()
     data class NextPage(val page: Int) : Event()
+
+    data class Restore(val chosenOptions: Set<String>) : Event()
 }
 
 
@@ -59,14 +66,16 @@ sealed class Effect : ViewSideEffect {
     object Success : Effect()
     object Error : Effect()
     data class NavigateToPage(val page: Int) : Effect()
-}
 
+    data class Restore(val chosenOptions: Set<String>) : Event()
+}
 
 @KoinViewModel
 class RestoreBackupViewModel(
-    private val backupInteractor: BackupInteractor
+    private val backupInteractor: BackupInteractor,
+    private val context: Context
 ) : MviViewModel<Event, State, Effect>() {
-
+    private val contentResolver: ContentResolver = context.contentResolver
 
     override fun setInitialState(): State {
         return State.Default(
@@ -78,33 +87,96 @@ class RestoreBackupViewModel(
     override fun handleEvents(event: Event) {
         when (event) {
             is Event.GoBack -> {
-                setEffect { Effect.Navigation.Pop }
+                setEffect { Navigation.Pop }
             }
             is Event.FileSelected -> {
                 setState { (this as? State.Default)?.copy(selectedFileUri = event.uri) ?: this }
-                setEffect { Effect.NavigateToPage(1) }
+                setEffect { NavigateToPage(1) }
             }
             is Event.WordsChanged -> {
                 setState { (this as? State.Default)?.copy(words = event.words) ?: this }
             }
             is Event.SubmitWords -> {
-                if (backupInteractor.validateRecoveryPhrase(event.words)) {
-                    setEffect { Effect.NavigateToPage(2) }
-                } else {
+                val currentState = viewState.value as? State.Default
+                val uri = currentState?.selectedFileUri
+                if (uri == null) {
                     setEffect { Effect.Error }
+                    return
+                }
+                viewModelScope.launch {
+                    try {
+                        // Criar um arquivo temporário no diretório de cache
+                        val tempFile = File.createTempFile("encrypted", ".zip.enc", context.cacheDir)
+                        contentResolver.openInputStream(uri)?.use { inputStream ->
+                            FileOutputStream(tempFile).use { outputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
+                        } ?: run {
+                            setEffect { Effect.Error }
+                            return@launch
+                        }
+
+                        // Ler o arquivo temporário e processar
+                        FileInputStream(tempFile).use { inputStream ->
+                            val listOptions: List<String> = backupInteractor.restoreWallet(inputStream, event.words)
+                            if (listOptions.isNotEmpty()) {
+                                setState {
+                                    (this as? State.Default)?.copy(options = listOptions, selectedOptions = emptySet()) ?: this
+                                }
+                                setEffect { NavigateToPage(2) }
+                            } else {
+                                setEffect { Effect.Error }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        setEffect { Effect.Error }
+                        e.printStackTrace()
+                    } finally {
+
+                    }
                 }
             }
             is Event.Restore -> {
-//                val currentState = state.value as? State.Default
-//                if (currentState?.selectedFileUri != null && backupInteractor.restoreWallet(currentState.selectedFileUri.toString())) {
-//                    setEffect { Effect.Success }
-//                } else {
-//                    setEffect { Effect.Error }
-//                }
+                val current = viewState.value as? State.Default ?: run {
+                    setEffect { Effect.Error }
+                    return
+                }
+                viewModelScope.launch {
+                    val result = backupInteractor.finalizeRestore(
+                        options = event.chosenOptions.toList()
+                    )
+                    if (result == RestoreStatus.SUCCESS) {
+                        setEffect { Effect.Success }
+                    } else {
+                        setEffect { Effect.Error }
+                    }
+                }
             }
             is Event.NextPage -> {
-                setEffect { Effect.NavigateToPage(event.page) }
+                val current = viewState.value as? State.Default
+                when (event.page) {
+                    1 -> {
+                        if (current?.selectedFileUri == null) {
+                            setEffect { Effect.Error }
+                            return
+                        }
+                        setEffect { NavigateToPage(1) }
+                    }
+                    2 -> {
+                        val words = current?.words ?: emptyList()
+                        val allValid = words.size == 12 && words.none { it.isBlank() }
+                        if (!allValid) {
+                            setEffect { Effect.Error }
+                            return
+                        }
+                        setEffect { NavigateToPage(2) }
+                    }
+                    0 -> {
+                        setEffect { NavigateToPage(0) }
+                    }
+                }
             }
+            is Restore -> TODO()
         }
     }
 }

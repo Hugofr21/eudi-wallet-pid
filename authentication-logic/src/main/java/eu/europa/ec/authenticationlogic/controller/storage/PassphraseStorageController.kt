@@ -20,29 +20,32 @@ import eu.europa.ec.authenticationlogic.config.StorageConfig
 
 interface PassphraseStorageController {
     fun hasPassphrase(): Boolean
-    fun getSaltAndHash(): Pair<String, String>?
+    fun getHash(): String?
 
     fun setPassphrase(passphrase: List<String>)
 
-    fun retrievePassphrase(): String
+    fun retrieveKeyBytes(): ByteArray
+
+    fun retrieveIv(): ByteArray
 
     fun verifyPassphrase(input: List<String>): Boolean
+
+    fun retrieveSalt(): ByteArray
 }
 
 class PassphraseStorageControllerImpl(private val storageConfig: StorageConfig) : PassphraseStorageController {
-    override fun getSaltAndHash(): Pair<String, String>? = storageConfig.passphraseStorageProvider.getSaltAndHash()
-
+    override fun getHash(): String? = storageConfig.passphraseStorageProvider.getHash()
 
     override fun hasPassphrase(): Boolean = storageConfig.passphraseStorageProvider.hasPassphrase()
 
-    override fun retrievePassphrase(): String = storageConfig.passphraseStorageProvider.retrievePassphrase()
+    override fun retrieveKeyBytes(): ByteArray = storageConfig.passphraseStorageProvider.retrieveKeyBytes()
 
-    override fun setPassphrase(passphrase: List<String>) {
-        storageConfig.passphraseStorageProvider.setPassphrase(passphrase)
-    }
+    override fun retrieveIv(): ByteArray = storageConfig.passphraseStorageProvider.retrieveIv()
 
+    override fun setPassphrase(passphrase: List<String>) = storageConfig.passphraseStorageProvider.setPassphrase(passphrase)
 
     override fun verifyPassphrase(input: List<String>): Boolean = storageConfig.passphraseStorageProvider.verifyPassphrase(input)
+    override fun retrieveSalt(): ByteArray = storageConfig.passphraseStorageProvider.retrieveSalt()
 
 
 }

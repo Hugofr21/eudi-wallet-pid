@@ -18,12 +18,16 @@ package eu.europa.ec.authenticationlogic.provider
 
 interface PassphraseStorageProvider {
    fun hasPassphrase(): Boolean
-    fun getSaltAndHash(): Pair<String, String>?
+
+    fun getHash(): String?
 
     fun setPassphrase(passphrase: List<String>)
 
-    fun retrievePassphrase(): String
+    fun retrieveKeyBytes(): ByteArray
 
     fun verifyPassphrase(input: List<String>): Boolean
 
+    fun retrieveIv(): ByteArray
+
+   fun retrieveSalt(): ByteArray
 }

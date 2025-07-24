@@ -156,9 +156,13 @@ class KeystoreControllerImpl(
         try {
             androidKeyStore?.deleteEntry(alias)
             prefKeys.setAlias("")
-            logController.d(this.javaClass.simpleName, { "Key $alias deleted" })
+            println(
+                "Delete key: ${this.javaClass.simpleName}, key: $alias delete"
+            )
         }catch (e: Exception){
-            logController.e(this.javaClass.simpleName, e)
+            println(
+                "Delete key: ${this.javaClass.simpleName}, exception: ${e.message}"
+            )
         }
     }
 

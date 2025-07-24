@@ -41,6 +41,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -92,6 +96,7 @@ fun RestoreBackupScreen(navController: NavController, viewModel: RestoreBackupVi
     val state = viewModel.viewState.collectAsStateWithLifecycle()
     val effectFlow = viewModel.effect
     val pageSingleState = rememberPagerState { 3 }
+    val selected = (state as? State.Default)?.selectedOptions ?: emptySet()
 
     val configButton = ButtonConfig(
         type = ButtonType.PRIMARY,
@@ -99,7 +104,7 @@ fun RestoreBackupScreen(navController: NavController, viewModel: RestoreBackupVi
             if (pageSingleState.currentPage < 2) {
                 viewModel.setEvent(Event.NextPage(pageSingleState.currentPage + 1))
             } else {
-                viewModel.setEvent(Event.Restore)
+                viewModel.setEvent(Event.Restore(selected))
             }
         }
     )
@@ -247,18 +252,21 @@ private fun MainContent(
         WrapPageIndicator(pageSingleState)
     }
 }
+
 @Composable
 private fun HorizontalListOfPager(
     pagerState: PagerState,
     state: State,
     viewModel: RestoreBackupViewModel
 ) {
+
     HorizontalPager(
         state = pagerState,
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .defaultMinSize(minHeight = SIZE_XX_LARGE.dp)
+            .defaultMinSize(minHeight = SIZE_XX_LARGE.dp),
+        userScrollEnabled = false
     ) { page ->
         when (page) {
             0 -> FirstPage(
@@ -267,7 +275,7 @@ private fun HorizontalListOfPager(
                 },
                 modifier = Modifier.fillMaxWidth()
             )
-            1 -> EnterPhraseContentPage(
+            1 ->  EnterPhraseContentPage(
                 words = (state as? State.Default)?.words ?: emptyList(),
                 onWordsChanged = { words ->
                     viewModel.setEvent(Event.WordsChanged(words))
@@ -278,8 +286,22 @@ private fun HorizontalListOfPager(
                 modifier = Modifier.fillMaxWidth()
             )
             2 -> RestoreWalletContent(
+                options = (state as? State.Default)?.options ?: emptyList(),
+                selected = (state as? State.Default)?.selectedOptions ?: emptySet(),
+                onOptionToggled = { opt ->
+                    val current = (viewModel.viewState.value  as? State.Default) ?: return@RestoreWalletContent
+                    val newSelected = if (current.selectedOptions.contains(opt))
+                        current.selectedOptions - opt
+                    else
+                        current.selectedOptions + opt
+
+                    viewModel.setState {
+                        current.copy(selectedOptions = newSelected)
+                    }
+                },
                 onRestore = {
-                    viewModel.setEvent(Event.Restore)
+                    val chosen = (state as? State.Default)?.selectedOptions ?: emptySet()
+                    viewModel.setEvent(Event.Restore(chosen))
                 },
                 modifier = Modifier.fillMaxWidth()
             )

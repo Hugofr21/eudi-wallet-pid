@@ -24,5 +24,6 @@ data class BackupLog(
     @PrimaryKey
     val identifier: String,
     val provider: String,
+    val value: String? = null,
     val createdAt: Long
 )
