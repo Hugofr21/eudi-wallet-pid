@@ -69,34 +69,51 @@ class PresentationRequestInteractorImpl(
 
     override fun getRequestDocuments(): Flow<PresentationRequestInteractorPartialState> =
         walletCorePresentationController.events.mapNotNull { response ->
+            println("Received response: $response")
+
             when (response) {
                 is TransferEventPartialState.RequestReceived -> {
+                    println("RequestReceived from: ${response.verifierName}, Trusted: ${response.verifierIsTrusted}")
+                    println("Request data: ${response.requestData}")
+
                     if (response.requestData.all { it.requestedItems.isEmpty() }) {
+                        println("All requested items are empty")
                         PresentationRequestInteractorPartialState.NoData(
                             verifierName = response.verifierName,
                             verifierIsTrusted = response.verifierIsTrusted,
                         )
                     } else {
+                        val allDocuments = walletCoreDocumentsController.getAllIssuedDocuments()
+                        println("All issued documents: $allDocuments")
+
                         val documentsDomain = RequestTransformer.transformToDomainItems(
-                            storageDocuments = walletCoreDocumentsController.getAllIssuedDocuments(),
+                            storageDocuments = allDocuments,
                             requestDocuments = response.requestData,
                             resourceProvider = resourceProvider,
                             uuidProvider = uuidProvider
                         ).getOrThrow()
                             .filterNot {
-                                walletCoreDocumentsController.isDocumentRevoked(it.docId)
+                                val isRevoked = walletCoreDocumentsController.isDocumentRevoked(it.docId)
+                                println("DocId: ${it.docId}, isRevoked: $isRevoked")
+                                isRevoked
                             }
 
+                        println("Filtered domain documents: $documentsDomain")
+
                         if (documentsDomain.isNotEmpty()) {
+                            val uiItems = RequestTransformer.transformToUiItems(
+                                documentsDomain = documentsDomain,
+                                resourceProvider = resourceProvider,
+                            )
+                            println("UI Items: $uiItems")
+
                             PresentationRequestInteractorPartialState.Success(
                                 verifierName = response.verifierName,
                                 verifierIsTrusted = response.verifierIsTrusted,
-                                requestDocuments = RequestTransformer.transformToUiItems(
-                                    documentsDomain = documentsDomain,
-                                    resourceProvider = resourceProvider,
-                                )
+                                requestDocuments = uiItems
                             )
                         } else {
+                            println("No valid documents matched the request")
                             PresentationRequestInteractorPartialState.NoData(
                                 verifierName = response.verifierName,
                                 verifierIsTrusted = response.verifierIsTrusted,
@@ -106,20 +123,27 @@ class PresentationRequestInteractorImpl(
                 }
 
                 is TransferEventPartialState.Error -> {
+                    println("Error received: ${response.error}")
                     PresentationRequestInteractorPartialState.Failure(error = response.error)
                 }
 
                 is TransferEventPartialState.Disconnected -> {
+                    println("Disconnected from verifier")
                     PresentationRequestInteractorPartialState.Disconnect
                 }
 
-                else -> null
+                else -> {
+                    println("Unknown response type: $response")
+                    null
+                }
             }
         }.safeAsync {
+            println("Exception caught in flow: ${it.localizedMessage}")
             PresentationRequestInteractorPartialState.Failure(
                 error = it.localizedMessage ?: genericErrorMsg
             )
         }
+
 
     override fun stopPresentation() {
         walletCorePresentationController.stopPresentation()

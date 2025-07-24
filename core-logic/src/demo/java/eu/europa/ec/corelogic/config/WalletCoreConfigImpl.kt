@@ -18,14 +18,14 @@ package eu.europa.ec.corelogic.config
 
 import android.content.Context
 import eu.europa.ec.corelogic.BuildConfig
-import eu.europa.ec.eudi.wallet.EudiWallet
+import eu.europa.ec.corelogic.util.BuildConfigConstant
 import eu.europa.ec.eudi.wallet.EudiWalletConfig
-import eu.europa.ec.eudi.wallet.issue.openid4vci.OpenId4VciManager
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.ClientIdScheme
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.EncryptionAlgorithm
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.EncryptionMethod
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.Format
 import eu.europa.ec.resourceslogic.R
+
 
 internal class WalletCoreConfigImpl(
     private val context: Context
@@ -70,6 +70,8 @@ internal class WalletCoreConfigImpl(
                                 BuildConfig.OPENID4VP_SCHEME,
                                 BuildConfig.EUDI_OPENID4VP_SCHEME,
                                 BuildConfig.MDOC_OPENID4VP_SCHEME,
+                                BuildConfigConstant.AV_OPENID4VP_SCHEME,
+                                BuildConfigConstant.AVSP_SCHEME
                             )
                         )
                         withFormats(
