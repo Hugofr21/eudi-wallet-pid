@@ -25,6 +25,7 @@ import eu.europa.ec.corelogic.extension.getLocalizedDisplayName
 import eu.europa.ec.corelogic.extension.parseTransactionLog
 import eu.europa.ec.corelogic.extension.toCoreTransactionLog
 import eu.europa.ec.corelogic.extension.toTransactionLogData
+import eu.europa.ec.corelogic.model.CredentialIssuerMetadataDefault
 import eu.europa.ec.corelogic.model.DeferredDocumentDataDomain
 import eu.europa.ec.corelogic.model.DocumentCategories
 import eu.europa.ec.corelogic.model.DocumentIdentifier
@@ -32,6 +33,7 @@ import eu.europa.ec.corelogic.model.FormatType
 import eu.europa.ec.corelogic.model.ScopedDocumentDomain
 import eu.europa.ec.corelogic.model.TransactionLogDataDomain
 import eu.europa.ec.corelogic.model.toDocumentIdentifier
+import eu.europa.ec.eudi.openid4vci.CredentialConfiguration
 import eu.europa.ec.eudi.openid4vci.MsoMdocCredential
 import eu.europa.ec.eudi.openid4vci.SdJwtVcCredential
 import eu.europa.ec.eudi.statium.Status
@@ -52,7 +54,6 @@ import eu.europa.ec.eudi.wallet.issue.openid4vci.OpenId4VciManager
 import eu.europa.ec.resourceslogic.BuildConfig
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
-import eu.europa.ec.storagelogic.dao.BackupLogDao
 import eu.europa.ec.storagelogic.dao.BookmarkDao
 import eu.europa.ec.storagelogic.dao.RevokedDocumentDao
 import eu.europa.ec.storagelogic.dao.TransactionLogDao
@@ -215,17 +216,19 @@ class WalletCoreDocumentsControllerImpl(
     private val bookmarkDao: BookmarkDao,
     private val transactionLogDao: TransactionLogDao,
     private val revokedDocumentDao: RevokedDocumentDao,
-    private val backupLogDao: BackupLogDao,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : WalletCoreDocumentsController {
 
     companion object {
         val VCI_ISSUER_URLS = listOf(
             "https://issuer.eudiw.dev",
-            "https://issuer.ageverification.dev"
+            "https://issuer.ageverification.dev",
+//            "https://funke.demo.connector.lissi.io" <-- Credentials Supported Required
         )
         const val VCI_CLIENT_ID = "wallet-dev"
     }
+
+
 
     private val genericErrorMessage
         get() = resourceProvider.genericErrorMessage()
@@ -236,17 +239,19 @@ class WalletCoreDocumentsControllerImpl(
 
     private val openId4VciManager: Map<String, OpenId4VciManager> by lazy {
         VCI_ISSUER_URLS.associateWith { url ->
-            eudiWallet.createOpenId4VciManager(
-                OpenId4VciManager.Config.Builder()
-                    .withIssuerUrl(url)
-                    .withClientId(VCI_CLIENT_ID)
-                    .withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
-                    .withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-                    .withUseDPoPIfSupported(true)
-                    .build()
-            )
+            val config = OpenId4VciManager.Config.Builder()
+                .withIssuerUrl(url)
+                .withClientId(VCI_CLIENT_ID)
+                .withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
+                .withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
+                .withUseDPoPIfSupported(true)
+                .build()
+            val manager = eudiWallet.createOpenId4VciManager(config)
+//            println("[openId4VciManager] Created manager for issuer: $url -> $manager")
+            manager
         }
     }
+
 
     override fun getAllDocuments(): List<Document> =
         eudiWallet.getDocuments { it is IssuedDocument || it is DeferredDocument }
@@ -257,61 +262,61 @@ class WalletCoreDocumentsControllerImpl(
     override suspend fun getScopedDocuments(locale: Locale): FetchScopedDocumentsPartialState {
         return withContext(dispatcher) {
             runCatching {
-
-                val listsOfDomains = coroutineScope {
+                coroutineScope {
                     openId4VciManager.values.map { mgr ->
                         async {
-                            val metadata = mgr.getIssuerMetadata().getOrThrow()
-                            println(">> Metadata for ${metadata.credentialConfigurationsSupported}: ${metadata.credentialConfigurationsSupported.keys}")
-
-                            metadata.credentialConfigurationsSupported.map { (id, config) ->
+                            val scope = mgr.getScopeName()
+                            println("Issuer metadata scope: $scope")
+                            val metadataResult = mgr.getIssuerMetadata()
+                            val metadata = metadataResult.getOrThrow()
+                            metadata.credentialConfigurationsSupported.mapNotNull { (id, config) ->
                                 val name = config.display.getLocalizedDisplayName(
                                     userLocale = locale,
-                                    fallback   = id.value
+                                    fallback = id.toString()
                                 )
                                 val isPid = when (config) {
-                                    is MsoMdocCredential  -> config.docType.toDocumentIdentifier() == DocumentIdentifier.MdocPid
-                                    is SdJwtVcCredential  -> config.type.toDocumentIdentifier()    == DocumentIdentifier.SdJwtPid
-                                    else                  -> false
+                                    is MsoMdocCredential -> config.docType.toDocumentIdentifier() == DocumentIdentifier.MdocPid
+                                    is SdJwtVcCredential -> config.type.toDocumentIdentifier() == DocumentIdentifier.SdJwtPid
+                                    else -> false
                                 }
                                 val isAgeVerification = when (config) {
-                                    is MsoMdocCredential ->
-                                        config.docType.toDocumentIdentifier() in listOf(
-                                            DocumentIdentifier.MdocEUDIAgeOver18,
-                                            DocumentIdentifier.AgeOver18Pid
-                                        )
-                                    is SdJwtVcCredential ->
-                                        config.type.toDocumentIdentifier() == DocumentIdentifier.AgeOver18Pid
+                                    is MsoMdocCredential -> config.docType.toDocumentIdentifier() in listOf(
+                                        DocumentIdentifier.MdocEUDIAgeOver18,
+                                        DocumentIdentifier.AgeOver18Pid
+                                    )
+                                    is SdJwtVcCredential -> config.type.toDocumentIdentifier() == DocumentIdentifier.AgeOver18Pid
                                     else -> false
                                 }
                                 ScopedDocumentDomain(
                                     name            = name,
-                                    configurationId = id.value,
+                                    configurationId = id.toString(),
                                     isPid           = isPid,
                                     ageProof        = isAgeVerification
                                 )
+
                             }
                         }
                     }.awaitAll()
                 }
-
-
-                val allDocuments = listsOfDomains.flatten()
-                println(">> All ScopedDocuments (${allDocuments.size}): $allDocuments")
-
-                if (allDocuments.isNotEmpty()) {
-                    FetchScopedDocumentsPartialState.Success(allDocuments)
-                } else {
-                    FetchScopedDocumentsPartialState.Failure(errorMessage = genericErrorMessage)
+            }.fold(
+                onSuccess = { lists ->
+                    val all = lists.flatten()
+//
+                    if (all.isNotEmpty()) {
+                        FetchScopedDocumentsPartialState.Success(all)
+                    } else {
+                        FetchScopedDocumentsPartialState.Failure(errorMessage = genericErrorMessage)
+                    }
+                },
+                onFailure = { ex ->
+                    ex.printStackTrace()
+                    FetchScopedDocumentsPartialState.Failure(
+                        errorMessage = ex.localizedMessage ?: genericErrorMessage
+                    )
                 }
-            }.getOrElse {
-                FetchScopedDocumentsPartialState.Failure(
-                    errorMessage = it.localizedMessage ?: genericErrorMessage
-                )
-            }
+            )
         }
     }
-
 
     override fun getAllDocumentsByType(documentIdentifiers: List<DocumentIdentifier>): List<IssuedDocument> =
         getAllDocuments()
@@ -392,6 +397,7 @@ class WalletCoreDocumentsControllerImpl(
         txCode: String?,
     ): Flow<IssueDocumentsPartialState> =
         callbackFlow {
+            println("Issuing document with offerUri: $offerUri and txCode: $txCode using manager: $openId4VciManager")
             openId4VciManager.values.map { openId4VciManager ->
                 openId4VciManager.issueDocumentByOfferUri(
                     offerUri = offerUri,
@@ -492,11 +498,14 @@ class WalletCoreDocumentsControllerImpl(
     override fun resolveDocumentOffer(offerUri: String): Flow<ResolveDocumentOfferPartialState> =
         callbackFlow {
             openId4VciManager.values.forEach { openId4VciManager ->
+                println("[resolveDocumentOffer] Calling resolveDocumentOffer with offerUri: $offerUri using manager: $openId4VciManager")
+
                 openId4VciManager.resolveDocumentOffer(
                     offerUri = offerUri,
                     onResolvedOffer = { offerResult ->
                         when (offerResult) {
                             is OfferResult.Failure -> {
+                                println("[resolveDocumentOffer] OfferResult.Failure: ${offerResult.cause}")
                                 trySendBlocking(
                                     ResolveDocumentOfferPartialState.Failure(
                                         errorMessage = offerResult.cause.localizedMessage
@@ -505,6 +514,7 @@ class WalletCoreDocumentsControllerImpl(
                                 )
                             }
                             is OfferResult.Success -> {
+                                println("[resolveDocumentOffer] OfferResult.Success: ${offerResult.offer}")
                                 trySendBlocking(
                                     ResolveDocumentOfferPartialState.Success(
                                         offer = offerResult.offer
@@ -517,6 +527,7 @@ class WalletCoreDocumentsControllerImpl(
             }
             awaitClose()
         }.safeAsync {
+            println("[resolveDocumentOffer] Exception in safeAsync: ${it.localizedMessage}")
             ResolveDocumentOfferPartialState.Failure(
                 errorMessage = it.localizedMessage ?: genericErrorMessage
             )
@@ -705,6 +716,7 @@ class WalletCoreDocumentsControllerImpl(
         val listener = OpenId4VciManager.OnIssueEvent { event ->
             when (event) {
                 is IssueEvent.DocumentFailed -> {
+                    println("⚠️ DocumentFailed → docType=${event.docType}, name=${event.name}")
                     nonIssuedDocuments[event.docType] = event.name
                 }
 
@@ -751,6 +763,7 @@ class WalletCoreDocumentsControllerImpl(
                 }
 
                 is IssueEvent.Failure -> {
+                    println("IssueEvent.Failure → cause=${event.cause}")
                     trySendBlocking(
                         IssueDocumentsPartialState.Failure(
                             errorMessage = documentErrorMessage
@@ -759,7 +772,7 @@ class WalletCoreDocumentsControllerImpl(
                 }
 
                 is IssueEvent.Finished -> {
-
+                    println("IssueEvent.Finished → issuedDocuments=${event.issuedDocuments}, deferred=${deferredDocuments}")
                     if (deferredDocuments.isNotEmpty()) {
                         trySendBlocking(IssueDocumentsPartialState.DeferredSuccess(deferredDocuments))
                         return@OnIssueEvent

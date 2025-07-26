@@ -115,21 +115,35 @@ class DocumentOfferInteractorImpl(
 
     override fun resolveDocumentOffer(offerUri: String): Flow<ResolveDocumentOfferInteractorPartialState> =
         flow {
+            // Debug: log the incoming offerUri
+            println("[resolveDocumentOffer] offerUri received: $offerUri")
+
             val userLocale = resourceProvider.getLocale()
             walletCoreDocumentsController.resolveDocumentOffer(
                 offerUri = offerUri
             ).map { response ->
+                // Debug: log the raw response
+                println("[resolveDocumentOffer] raw response: $response")
+
                 when (response) {
                     is ResolveDocumentOfferPartialState.Failure -> {
-                        ResolveDocumentOfferInteractorPartialState.Failure(errorMessage = response.errorMessage)
+                        println("[resolveDocumentOffer] failure: ${response.errorMessage}")
+                        ResolveDocumentOfferInteractorPartialState.Failure(
+                            errorMessage = response.errorMessage
+                        )
                     }
 
                     is ResolveDocumentOfferPartialState.Success -> {
-                        val offerHasNoDocuments = response.offer.offeredDocuments.isEmpty()
+                        val offer = response.offer
+                        // Debug: log the resolved offer details
+                        println("[resolveDocumentOffer] offer resolved: issuer=${offer.getIssuerName(userLocale)}, documents=${offer.offeredDocuments}")
+
+                        val offerHasNoDocuments = offer.offeredDocuments.isEmpty()
                         if (offerHasNoDocuments) {
+                            println("[resolveDocumentOffer] no documents offered")
                             ResolveDocumentOfferInteractorPartialState.NoDocument(
-                                issuerName = response.offer.getIssuerName(userLocale),
-                                issuerLogo = response.offer.getIssuerLogo(userLocale),
+                                issuerName = offer.getIssuerName(userLocale),
+                                issuerLogo = offer.getIssuerLogo(userLocale),
                             )
                         } else {
 
@@ -137,11 +151,11 @@ class DocumentOfferInteractorImpl(
                             val codeMaxLength = 6
 
                             safeLet(
-                                response.offer.txCodeSpec?.inputMode,
-                                response.offer.txCodeSpec?.length
+                                offer.txCodeSpec?.inputMode,
+                                offer.txCodeSpec?.length
                             ) { inputMode, length ->
-
                                 if ((length !in codeMinLength..codeMaxLength) || inputMode == TxCodeInputMode.TEXT) {
+                                    println("[resolveDocumentOffer] invalid txCodeSpec: mode=$inputMode, length=$length")
                                     return@map ResolveDocumentOfferInteractorPartialState.Failure(
                                         errorMessage = resourceProvider.getString(
                                             R.string.issuance_document_offer_error_invalid_txcode_format,
@@ -154,28 +168,30 @@ class DocumentOfferInteractorImpl(
 
                             val hasMainPid =
                                 walletCoreDocumentsController.getMainPidDocument() != null
-
                             val hasPidInOffer =
-                                response.offer.offeredDocuments.any { offeredDocument ->
+                                offer.offeredDocuments.any { offeredDocument ->
                                     val id = offeredDocument.documentIdentifier
                                     id == DocumentIdentifier.MdocPid || id == DocumentIdentifier.SdJwtPid
                                             || id == DocumentIdentifier.MdocAgeOver18ProofPseudonym
                                             || id == DocumentIdentifier.AgeOver18Pid
                                 }
 
-                            if (hasMainPid || hasPidInOffer) {
+                            println("[resolveDocumentOffer] hasMainPid=$hasMainPid, hasPidInOffer=$hasPidInOffer")
 
+                            if (hasMainPid || hasPidInOffer) {
+                                println("[resolveDocumentOffer] proceeding with Success state")
                                 ResolveDocumentOfferInteractorPartialState.Success(
-                                    documents = response.offer.offeredDocuments.map { offeredDocument ->
+                                    documents = offer.offeredDocuments.map { offeredDocument ->
                                         DocumentOfferUi(
                                             title = offeredDocument.getName(userLocale).orEmpty(),
                                         )
                                     },
-                                    issuerName = response.offer.getIssuerName(userLocale),
-                                    issuerLogo = response.offer.getIssuerLogo(userLocale),
-                                    txCodeLength = response.offer.txCodeSpec?.length
+                                    issuerName = offer.getIssuerName(userLocale),
+                                    issuerLogo = offer.getIssuerLogo(userLocale),
+                                    txCodeLength = offer.txCodeSpec?.length
                                 )
                             } else {
+                                println("[resolveDocumentOffer] missing PID in offer and no main PID")
                                 ResolveDocumentOfferInteractorPartialState.Failure(
                                     errorMessage = resourceProvider.getString(
                                         R.string.issuance_document_offer_error_missing_pid_text
@@ -189,10 +205,12 @@ class DocumentOfferInteractorImpl(
                 emit(it)
             }
         }.safeAsync {
+            println("[resolveDocumentOffer] exception: ${it.localizedMessage}")
             ResolveDocumentOfferInteractorPartialState.Failure(
                 errorMessage = it.localizedMessage ?: genericErrorMsg
             )
         }
+
 
     override fun issueDocuments(
         offerUri: String,

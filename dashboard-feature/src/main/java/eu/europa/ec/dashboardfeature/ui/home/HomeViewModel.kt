@@ -95,6 +95,8 @@ sealed class Event : ViewEvent {
 
     data object OnShowPermissionsRational : Event()
     data class OnPermissionStateChanged(val availability: BleAvailability) : Event()
+
+    data object GoToScanQR : Event()
 }
 
 sealed class Effect : ViewSideEffect {
@@ -224,6 +226,11 @@ class HomeViewModel(
 
             is Event.BottomSheet.Bluetooth.SecondaryButtonPressed -> {
                 hideBottomSheet()
+            }
+
+            // added qr code openid4vp
+            Event.GoToScanQR -> {
+                navigateToQrScan()
             }
         }
     }

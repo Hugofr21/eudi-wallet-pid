@@ -92,4 +92,24 @@ sealed class DocumentCategory(
     data object PseudonymAGE : DocumentCategory(
         stringResId = R.string.document_category_age_over_18, id = 9, order = 9
     )
+
+    // JSON-LD Contexts for Verifiable Credentials (W3C)
+    data object W3cCredentialsV1 : DocumentCategory(
+        stringResId = R.string.document_category_w3c_credentials_v1,
+        id = 10,
+        order = 10
+    )
+
+    data object SecurityV2 : DocumentCategory(
+        stringResId = R.string.document_category_security_v2,
+        id = 11,
+        order = 11
+    )
+
+    data object DidCoreV1 : DocumentCategory(
+        stringResId = R.string.document_category_did_core_v1,
+        id = 12,
+        order = 12
+    )
+
 }

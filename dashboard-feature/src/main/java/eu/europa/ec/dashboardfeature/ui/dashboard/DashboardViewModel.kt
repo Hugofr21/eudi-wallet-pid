@@ -21,11 +21,14 @@ import android.net.Uri
 import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
 import eu.europa.ec.commonfeature.config.OfferUiConfig
 import eu.europa.ec.commonfeature.config.PresentationMode
+import eu.europa.ec.commonfeature.config.QrScanFlow
+import eu.europa.ec.commonfeature.config.QrScanUiConfig
 import eu.europa.ec.commonfeature.config.RequestUriConfig
 import eu.europa.ec.commonfeature.model.PinFlow
 import eu.europa.ec.corelogic.di.getOrCreatePresentationScope
 import eu.europa.ec.corelogic.model.RevokedDocumentDataDomain
 import eu.europa.ec.dashboardfeature.interactor.DashboardInteractor
+import eu.europa.ec.dashboardfeature.ui.dashboard.DashboardBottomSheetContent.*
 import eu.europa.ec.dashboardfeature.ui.dashboard.Effect.Navigation.*
 import eu.europa.ec.dashboardfeature.ui.dashboard.model.SideMenuItemUi
 import eu.europa.ec.dashboardfeature.ui.dashboard.model.SideMenuTypeUi
@@ -68,7 +71,6 @@ data class State(
 sealed class Event : ViewEvent {
     data class Init(val deepLinkUri: Uri?) : Event()
     data object Pop : Event()
-
     data class DocumentRevocationNotificationReceived(
         val payload: List<RevokedDocumentDataDomain>
     ) : Event()
@@ -141,7 +143,7 @@ class DashboardViewModel(
         when (event) {
             is Event.Init -> handleDeepLink(event.deepLinkUri)
 
-            is Event.Pop -> setEffect { Effect.Navigation.Pop }
+            is Event.Pop -> setEffect { Pop }
 
             is Event.SideMenu.ItemClicked -> {
                 handleSideMenuItemClicked(event.itemType)
@@ -167,7 +169,7 @@ class DashboardViewModel(
 
             is Event.DocumentRevocationNotificationReceived -> {
                 showBottomSheet(
-                    sheetContent = DashboardBottomSheetContent.DocumentRevocation(
+                    sheetContent = DocumentRevocation(
                         options = getDocumentRevocationBottomSheetOptions(event.payload)
                     )
                 )
@@ -183,7 +185,6 @@ class DashboardViewModel(
                 hideBottomSheet()
                 goToDocumentDetails(docId = event.documentId)
             }
-
         }
     }
 
@@ -202,6 +203,7 @@ class DashboardViewModel(
             )
         }
     }
+
 
     private fun showBottomSheet(sheetContent: DashboardBottomSheetContent) {
         setState {

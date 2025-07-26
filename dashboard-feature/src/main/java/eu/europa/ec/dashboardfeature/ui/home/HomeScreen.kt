@@ -82,6 +82,10 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import eu.europa.ec.dashboardfeature.ui.home.compoment.ScanButton
+import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
+import eu.europa.ec.uilogic.component.wrap.StickyBottomType
+import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 
 typealias DashboardEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event
 typealias OpenSideMenuEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event.SideMenu.Open
@@ -109,7 +113,28 @@ fun HomeScreen(
             TopBar(
                 onEventSent = onDashboardEventSent
             )
-        }
+        },
+        stickyBottom = { paddingValues ->
+            WrapStickyBottomContent(
+                stickyBottomModifier = Modifier
+                    .fillMaxWidth()
+                    .padding(paddingValues),
+                stickyBottomConfig = StickyBottomConfig(
+                    type = StickyBottomType.Generic
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    ScanButton(onEventSend = {
+                        viewModel.setEvent(
+                            it
+                        )
+                    })
+                }
+            }
+        },
     ) { paddingValues ->
         Content(
             state = state,
@@ -240,6 +265,14 @@ private fun Content(
                 )
             }
         )
+
+//        Row(
+//            modifier = Modifier.fillMaxWidth(),
+//            horizontalArrangement = Arrangement.Center
+//        ) {
+//            ScanButton(onEventSend = { event -> onEventSent(event) })
+//        }
+
     }
 
     if (state.bleAvailability == BleAvailability.NO_PERMISSION) {
@@ -341,6 +374,7 @@ private fun HomeScreenSheetContent(
                 },
                 sheetState = modalBottomSheetState
             ) {
+
                 BottomSheetWithTwoBigIcons(
                     textData = BottomSheetTextDataUi(
                         title = stringResource(R.string.home_screen_sign_document),

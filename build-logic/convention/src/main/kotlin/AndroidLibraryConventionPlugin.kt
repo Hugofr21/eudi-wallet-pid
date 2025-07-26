@@ -55,9 +55,14 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             val credentialOfferScheme = "openid-credential-offer"
             val credentialOfferHost = "*"
 
+            val avOpenid4VpScheme= "av" //age proof
+            val aspScheme= "avsp" // age proof
+            val lissiScheme = "haip" // lissi
+//            val lissiScheme2 = "https://oob.lissi.io"
+
             val openId4VciAuthorizationScheme = "eu.europa.ec.euidi"
-            val openId4VciAuthorizationSchemeAV = "eu.europa.ec.av"
             val openId4VciAuthorizationHost = "authorization"
+
 
             val rqesScheme = "rqes"
             val rqesHost = "oauth"
@@ -97,10 +102,20 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                         "ISSUE_AUTHORIZATION_DEEPLINK",
                         "$openId4VciAuthorizationScheme://$openId4VciAuthorizationHost"
                     )
+
                     addConfigField("RQES_SCHEME", rqesScheme)
                     addConfigField("RQES_HOST", rqesHost)
                     addConfigField("RQES_DEEPLINK", "$rqesScheme://$rqesHost$rqesPath")
                     addConfigField("RQES_DOC_RETRIEVAL_SCHEME", rqesDocRetrievalScheme)
+
+                    addConfigField("AGE_OPENID4VP_SCHEME", avOpenid4VpScheme)
+                    addConfigField("ASP_OPENID4VP_SCHEME", aspScheme)
+                    addConfigField("LISSI_SCHEME", lissiScheme)
+//                    addConfigField("LISSI_SCHEME2", lissiScheme2)
+//                    addConfigField(
+//                        "ISSUE_AUTHORIZATION_AV_DEEPLINK",
+//                        "$avOpenid4VpScheme://$openId4VciAuthorizationHost"
+//                    )
 
                     // Manifest placeholders for Wallet deepLink
                     manifestPlaceholders["deepLinkScheme"] = walletScheme

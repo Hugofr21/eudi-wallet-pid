@@ -17,13 +17,16 @@
 package eu.europa.ec.dashboardfeature.ui.component
 
 import androidx.annotation.StringRes
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -37,6 +40,8 @@ import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.wrap.WrapIcon
 import androidx.compose.ui.graphics.Color
+import eu.europa.ec.dashboardfeature.ui.dashboard.DashboardViewModel
+import eu.europa.ec.dashboardfeature.ui.home.compoment.ScanButton
 
 
 val LightSkyBlue   = Color(0xFFCAE6FD)
@@ -68,20 +73,14 @@ sealed class BottomNavigationItem(
         icon = AppIcons.Transactions
     )
 
-    data object Qrscanner : BottomNavigationItem(
-        route = "QRSCANNER",
-        titleRes = R.string.QR_code_screen_title,
-        icon = AppIcons.QrScanner
-    )
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavController) {
+fun BottomNavigationBar(navController: NavController, viewModel: DashboardViewModel? = null) {
     val navItems = listOf(
         BottomNavigationItem.Home,
         BottomNavigationItem.Documents,
         BottomNavigationItem.Transactions,
-        BottomNavigationItem.Qrscanner
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -91,22 +90,6 @@ fun BottomNavigationBar(navController: NavController) {
         containerColor = LightSkyBlue.copy(alpha = 0.3f),
     ) {
         navItems.forEach { screen ->
-            val itemColors = if (screen is BottomNavigationItem.Qrscanner) {
-                NavigationBarItemDefaults.colors(
-                    selectedIconColor = DeepBlue,
-                    selectedTextColor = DeepBlue,
-                    indicatorColor = DeepBlue,
-                    unselectedIconColor = DeepBlue.copy(alpha = 0.3f),
-                    unselectedTextColor = DeepBlue.copy(alpha = 0.9f)
-                )
-            } else {
-                NavigationBarItemDefaults.colors()
-                    .copy(
-                        selectedIndicatorColor = MaterialTheme.colorScheme.primary,
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimary
-                    )
-            }
-
             NavigationBarItem(
                 icon = {
                     WrapIcon(
@@ -114,7 +97,13 @@ fun BottomNavigationBar(navController: NavController) {
                     )
                 },
                 label = { Text(text = stringResource(screen.titleRes)) },
-                colors = itemColors,
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = Color.White,
+                    selectedTextColor = DeepBlue,
+                    indicatorColor = DeepBlue,
+                    unselectedIconColor = Color.White.copy(alpha = 0.5f),
+                    unselectedTextColor = DeepBlue.copy(alpha = 0.9f)
+                ),
                 selected = currentDestination?.hierarchy?.any {
                     it.route == screen.route
                 } == true,
@@ -136,6 +125,6 @@ fun BottomNavigationBar(navController: NavController) {
 @Composable
 private fun BottomNavigationBarPreview() {
     PreviewTheme {
-        BottomNavigationBar(rememberNavController())
+        BottomNavigationBar(rememberNavController(),null)
     }
 }

@@ -87,7 +87,9 @@ class ProfileViewModel(
 
     override fun handleEvents(event: Event) {
        when (event) {
-           Event.AddDocument -> TODO()
+           Event.AddDocument -> {
+
+           }
            Event.CreateQrCode -> TODO()
            Event.GoBack -> {
                setEffect { Effect.Navigation.Pop }

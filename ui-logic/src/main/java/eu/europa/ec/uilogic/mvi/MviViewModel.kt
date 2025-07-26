@@ -77,4 +77,5 @@ abstract class MviViewModel<Event : ViewEvent, UiState : ViewState, Effect : Vie
         viewModelScope.launch { _effect.send(effectValue) }
     }
 
+
 }

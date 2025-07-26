@@ -18,7 +18,6 @@ package eu.europa.ec.corelogic.config
 
 import android.content.Context
 import eu.europa.ec.corelogic.BuildConfig
-import eu.europa.ec.corelogic.util.BuildConfigConstant
 import eu.europa.ec.eudi.wallet.EudiWalletConfig
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.ClientIdScheme
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.EncryptionAlgorithm
@@ -65,13 +64,17 @@ internal class WalletCoreConfigImpl(
                         withClientIdSchemes(
                             listOf(ClientIdScheme.X509SanDns)
                         )
+                        // problems with the deeplink add scheme
                         withSchemes(
                             listOf(
                                 BuildConfig.OPENID4VP_SCHEME,
                                 BuildConfig.EUDI_OPENID4VP_SCHEME,
                                 BuildConfig.MDOC_OPENID4VP_SCHEME,
-                                BuildConfigConstant.AV_OPENID4VP_SCHEME,
-                                BuildConfigConstant.AVSP_SCHEME
+                                BuildConfig.LISSI_SCHEME,
+                                BuildConfig.ASP_OPENID4VP_SCHEME,
+                                BuildConfig.AGE_OPENID4VP_SCHEME,
+                                "https",
+                                BuildConfig.CREDENTIAL_OFFER_SCHEME,
                             )
                         )
                         withFormats(
@@ -101,6 +104,10 @@ internal class WalletCoreConfigImpl(
                         R.raw.pidissuerca02_nl,
                         R.raw.pidissuerca02_pt,
                         R.raw.pidissuerca02_ut,
+
+                        // lissi cert root
+                        R.raw.pidissuercalissi01,
+                        R.raw.pidissuercalissi02
                     )
                 }
             }

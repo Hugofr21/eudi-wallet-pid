@@ -47,8 +47,6 @@ fun <T> generateComposableArguments(arguments: Map<String, T>): String {
     }.toString()
 }
 
-fun generateComposableDeepLinkUri(screen: Screen, arguments: String): Uri =
-    generateComposableDeepLinkUri(screen.screenName, arguments)
 
 fun generateComposableDeepLinkUri(screen: String, arguments: String): Uri =
     "${BuildConfig.DEEPLINK}/${screen}$arguments".toUri()
@@ -178,14 +176,19 @@ enum class DeepLinkType(val schemas: List<String>, val host: String? = null) {
         schemas = listOf(
             BuildConfig.OPENID4VP_SCHEME,
             BuildConfig.EUDI_OPENID4VP_SCHEME,
-            BuildConfig.MDOC_OPENID4VP_SCHEME
+            BuildConfig.MDOC_OPENID4VP_SCHEME,
+            BuildConfig.LISSI_SCHEME,
+            BuildConfig.ASP_OPENID4VP_SCHEME,
+            BuildConfig.AGE_OPENID4VP_SCHEME,
         )
     ),
     CREDENTIAL_OFFER(
         schemas = listOf(BuildConfig.CREDENTIAL_OFFER_SCHEME)
     ),
     ISSUANCE(
-        schemas = listOf(BuildConfig.ISSUE_AUTHORIZATION_SCHEME),
+        schemas = listOf(
+            BuildConfig.ISSUE_AUTHORIZATION_SCHEME,
+        ),
         host = BuildConfig.ISSUE_AUTHORIZATION_HOST
     ),
     EXTERNAL(

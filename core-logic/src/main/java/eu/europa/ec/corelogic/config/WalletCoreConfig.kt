@@ -210,6 +210,24 @@ interface WalletCoreConfig {
                     numberOfCredentials = 4
                 ),
 
+                // json ld w3c
+                DocumentIdentifier.W3cCredentialsV1 to DocumentIssuanceRule(
+                    policy = CredentialPolicy.RotateUse,
+                    numberOfCredentials = 10
+                ),
+
+                DocumentIdentifier.SecurityV2 to DocumentIssuanceRule(
+                    policy = CredentialPolicy.RotateUse,
+                    numberOfCredentials = 10
+                ),
+
+                DocumentIdentifier.DidCoreV1 to DocumentIssuanceRule(
+                    policy = CredentialPolicy.RotateUse,
+                    numberOfCredentials = 10
+                ),
+
+
+
             )
         )
 }

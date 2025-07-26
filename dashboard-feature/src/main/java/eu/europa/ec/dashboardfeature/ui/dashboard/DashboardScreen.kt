@@ -42,8 +42,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import eu.europa.ec.businesslogic.extension.getParcelableArrayListExtra
-import eu.europa.ec.commonfeature.ui.qr_scan.QrScanScreen
-import eu.europa.ec.commonfeature.ui.qr_scan.QrScanViewModel
 import eu.europa.ec.corelogic.model.RevokedDocumentDataDomain
 import eu.europa.ec.corelogic.util.CoreActions
 import eu.europa.ec.dashboardfeature.ui.component.BottomNavigationBar
@@ -93,7 +91,10 @@ internal fun DashboardScreen(
     )
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(bottomNavigationController) }
+        bottomBar = {
+
+            BottomNavigationBar(bottomNavigationController, viewModel)
+        }
     ) { padding ->
         NavHost(
             modifier = Modifier
@@ -129,13 +130,6 @@ internal fun DashboardScreen(
                     }
                 )
             }
-
-//            composable(BottomNavigationItem.Qrscanner.route) {
-//                QrScanScreen(
-//                    hostNavController,
-//                    qrScanViewModel,
-//                )
-//            }
         }
 
         if (state.isBottomSheetOpen) {

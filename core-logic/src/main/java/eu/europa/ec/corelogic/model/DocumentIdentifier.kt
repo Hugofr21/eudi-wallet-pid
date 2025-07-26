@@ -51,6 +51,24 @@ sealed interface DocumentIdentifier {
             get() = "eu.europa.ec.av.1"
     }
 
+
+    // JSON-LD Contexts for Verifiable Credentials (W3C)
+    data object W3cCredentialsV1 : DocumentIdentifier {
+        override val formatType: FormatType
+            get() = "https://www.w3.org/2018/credentials/v1"
+    }
+
+    data object SecurityV2 : DocumentIdentifier {
+        override val formatType: FormatType
+            get() = "https://w3id.org/security/v2"
+    }
+
+    data object DidCoreV1 : DocumentIdentifier {
+        override val formatType: FormatType
+            get() = "https://www.w3.org/ns/did/v1"
+    }
+
+
     data class OTHER(
         override val formatType: FormatType,
     ) : DocumentIdentifier

@@ -83,7 +83,6 @@ fun provideWalletCoreDocumentsController(
     bookmarkDao: BookmarkDao,
     transactionLogDao: TransactionLogDao,
     revokedDocumentDao: RevokedDocumentDao,
-    backupLogDao: BackupLogDao
 
 ): WalletCoreDocumentsController =
     WalletCoreDocumentsControllerImpl(
@@ -93,7 +92,6 @@ fun provideWalletCoreDocumentsController(
         bookmarkDao,
         transactionLogDao,
         revokedDocumentDao,
-        backupLogDao
     )
 
 /**

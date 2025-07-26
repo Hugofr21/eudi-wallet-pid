@@ -520,6 +520,9 @@
     <string name="error_fill_all_words">Please fill in all words.</string>
     <string name="btn_restore">Restore</string>
     <string name="share_backup_title">Share backup</string>
+    <string name="document_category_w3c_credentials_v1">W3C Credentials v1</string>
+    <string name="document_category_security_v2">Security v2</string>
+    <string name="document_category_did_core_v1">DID Core v1</string>
 
     <!-- Logs Screen -->
 </resources>
