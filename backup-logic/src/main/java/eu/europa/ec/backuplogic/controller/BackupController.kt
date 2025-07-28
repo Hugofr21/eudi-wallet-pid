@@ -81,10 +81,6 @@ class BackupControllerImpl(
 ) : BackupController  {
     companion object {
         private const val LOG_FILE_NAME_JSON = "eudi-android-wallet-backup%g.enc.json"
-        private const val FILE_SIZE_LIMIT = 5242880
-        private const val FILE_LIMIT = 10
-        private const val SALT_BITS = 16
-        private const val NONCE_LENGTH = 12
         private const val ITERATIONS = 100000
         private const val KEY_LENGTH = 256
         private const val BUFFER_ARRAY = 1024
@@ -94,6 +90,7 @@ class BackupControllerImpl(
     }
 
     private val logsDir = File(context.filesDir.absolutePath + "/backup").apply { mkdirs() }
+
 
     /**
      *  Created a new backup file.

@@ -35,6 +35,7 @@ import okio.buffer
 import okio.sink
 import java.security.MessageDigest
 
+
 interface LogController {
     fun d(tag: String, message: () -> String)
     fun d(message: () -> String)
@@ -87,6 +88,7 @@ class LogControllerImpl(
     private val moshi: Moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
         .build()
+
     private val jsonAdapter: JsonAdapter<JsonLogEntry> = moshi.adapter(JsonLogEntry::class.java)
     private var lastHash: String = "0".repeat(64)
 

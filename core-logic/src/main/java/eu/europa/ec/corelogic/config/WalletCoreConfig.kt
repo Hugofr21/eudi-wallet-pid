@@ -85,6 +85,12 @@ interface WalletCoreConfig {
                     DocumentIdentifier.OTHER(
                         formatType = "eu.europa.ec.eudi.cor.1"
                     ),
+                    DocumentIdentifier.OTHER(
+                        formatType = "org.iso.18013.5.1.aamva"
+                    ),
+                    DocumentIdentifier.OTHER(
+                        formatType = "org.iso.18013.5.1"
+                    ),
                 ),
                 DocumentCategory.Travel to listOf(
                     DocumentIdentifier.OTHER(
@@ -119,6 +125,13 @@ interface WalletCoreConfig {
                     DocumentIdentifier.OTHER(
                         formatType = "urn:eu.europa.ec.eudi:ehic:1"
                     ),
+                    DocumentIdentifier.OTHER(
+                        formatType = "org.micov.attestation.1" // Object containing the metadata of the Vaccination
+                    ),
+                    DocumentIdentifier.OTHER(
+                        formatType = "org.micov.attestation.1" // Object containing the metadata of the Vaccination
+                    ),
+
                 ),
                 DocumentCategory.SocialSecurity to listOf(
                     DocumentIdentifier.OTHER(
@@ -151,6 +164,17 @@ interface WalletCoreConfig {
                     DocumentIdentifier.OTHER(
                         formatType = "eu.europa.ec.eudi.age_verification_mdoc"
                     )
+                ),
+                DocumentCategory.PhotoID to listOf(
+                    DocumentIdentifier.OTHER(
+                        formatType = "org.iso.23220.photoID.1"
+                    ),
+                    DocumentIdentifier.OTHER(
+                        formatType = "org.iso.23220.1"
+                    ),
+                    DocumentIdentifier.OTHER(
+                        formatType = "org.iso.23220.dtc.1"
+                    ),
                 )
             )
         )

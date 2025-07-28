@@ -523,6 +523,7 @@
     <string name="document_category_w3c_credentials_v1">W3C Credentials v1</string>
     <string name="document_category_security_v2">Security v2</string>
     <string name="document_category_did_core_v1">DID Core v1</string>
+    <string name="document_category_PhotoID_credentials_v1">PhotoID</string>
 
     <!-- Logs Screen -->
 </resources>
