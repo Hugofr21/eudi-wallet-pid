@@ -63,7 +63,7 @@ fun provideStorageConfig(
     biometryImpl = PrefsBiometryStorageProvider(prefsController),
     sqlCipherImpl = PrefsSQLCipherStorageProvider(prefsController, cryptoController),
     passphraseImpl = PrefsPassphraseStorageProvider(prefsController, cryptoController),
-    logStorageProvider = PrefsLogStorageProvider(prefsController, cryptoController)
+    logImpl = PrefsLogStorageProvider(prefsController, cryptoController),
 )
 
 @Factory

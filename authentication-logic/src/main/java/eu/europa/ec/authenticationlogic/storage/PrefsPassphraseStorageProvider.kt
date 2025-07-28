@@ -50,6 +50,7 @@ class PrefsPassphraseStorageProvider(
         val keyBytes  = crypto.deriveKeyFromMnemonic(passphrase, saltBytes)
         val ivBytes   = crypto.deriveIvFromMnemonic(passphrase)
 
+
         prefs.setString(KEY_SALT, Base64.encodeToString(saltBytes, Base64.NO_WRAP))
         prefs.setString(KEY_HASH, Base64.encodeToString(keyBytes, Base64.NO_WRAP))
         prefs.setString(KEY_IV,   Base64.encodeToString(ivBytes, Base64.NO_WRAP))
