@@ -17,6 +17,7 @@
 package eu.europa.ec.authenticationlogic.config
 
 import eu.europa.ec.authenticationlogic.provider.BiometryStorageProvider
+import eu.europa.ec.authenticationlogic.provider.LogStorageProvider
 import eu.europa.ec.authenticationlogic.provider.PassphraseStorageProvider
 import eu.europa.ec.authenticationlogic.provider.PinStorageProvider
 import eu.europa.ec.authenticationlogic.provider.SQLCipherStorageProvider
@@ -27,13 +28,16 @@ interface StorageConfig {
     val sqlCipherStorageProvider: SQLCipherStorageProvider
 
     val passphraseStorageProvider: PassphraseStorageProvider
+
+    val logStorageProvider: LogStorageProvider
 }
 
 class StorageConfigImpl(
     private val pinImpl: PinStorageProvider,
     private val biometryImpl: BiometryStorageProvider,
     private val sqlCipherImpl: SQLCipherStorageProvider,
-    private val passphraseImpl: PassphraseStorageProvider
+    private val passphraseImpl: PassphraseStorageProvider,
+    private val logImpl: LogStorageProvider
 
 ) : StorageConfig {
     override val pinStorageProvider: PinStorageProvider
@@ -44,5 +48,7 @@ class StorageConfigImpl(
         get() = sqlCipherImpl
     override val passphraseStorageProvider: PassphraseStorageProvider
         get() = passphraseImpl
+    override val logStorageProvider: LogStorageProvider
+        get() = logImpl
 
 }

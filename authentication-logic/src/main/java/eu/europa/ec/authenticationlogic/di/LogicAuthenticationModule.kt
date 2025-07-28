@@ -29,6 +29,8 @@ import eu.europa.ec.authenticationlogic.controller.authentication.SQLCipherAuthe
 import eu.europa.ec.authenticationlogic.controller.authentication.SQLCipherAuthenticationControllerImpl
 import eu.europa.ec.authenticationlogic.controller.storage.BiometryStorageController
 import eu.europa.ec.authenticationlogic.controller.storage.BiometryStorageControllerImpl
+import eu.europa.ec.authenticationlogic.controller.storage.LogStorageController
+import eu.europa.ec.authenticationlogic.controller.storage.LogStorageControllerImpl
 import eu.europa.ec.authenticationlogic.controller.storage.PassphraseStorageController
 import eu.europa.ec.authenticationlogic.controller.storage.PassphraseStorageControllerImpl
 import eu.europa.ec.authenticationlogic.controller.storage.PinStorageController
@@ -36,6 +38,7 @@ import eu.europa.ec.authenticationlogic.controller.storage.PinStorageControllerI
 import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherControllerImpl
 import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherStorageController
 import eu.europa.ec.authenticationlogic.storage.PrefsBiometryStorageProvider
+import eu.europa.ec.authenticationlogic.storage.PrefsLogStorageProvider
 import eu.europa.ec.authenticationlogic.storage.PrefsPassphraseStorageProvider
 import eu.europa.ec.authenticationlogic.storage.PrefsPinStorageProvider
 import eu.europa.ec.authenticationlogic.storage.PrefsSQLCipherStorageProvider
@@ -59,7 +62,8 @@ fun provideStorageConfig(
     pinImpl = PrefsPinStorageProvider(prefsController, cryptoController),
     biometryImpl = PrefsBiometryStorageProvider(prefsController),
     sqlCipherImpl = PrefsSQLCipherStorageProvider(prefsController, cryptoController),
-    passphraseImpl = PrefsPassphraseStorageProvider(prefsController, cryptoController)
+    passphraseImpl = PrefsPassphraseStorageProvider(prefsController, cryptoController),
+    logStorageProvider = PrefsLogStorageProvider(prefsController, cryptoController)
 )
 
 @Factory
@@ -128,3 +132,9 @@ fun provideSQLCipherStorageController(
 fun providePassphraseStorageController(
     storageConfig: StorageConfig
 ): PassphraseStorageController = PassphraseStorageControllerImpl(storageConfig)
+
+
+@Factory
+fun provideLogStorageController(
+    storageConfig: StorageConfig
+): LogStorageController = LogStorageControllerImpl(storageConfig)

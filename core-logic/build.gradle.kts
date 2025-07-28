@@ -38,6 +38,7 @@ dependencies {
     implementation(project(LibraryModule.AuthenticationLogic.path))
 
     implementation(libs.androidx.biometric)
+    implementation(libs.moshi.kotlin)
 
     testImplementation(project(LibraryModule.TestLogic.path))
 }

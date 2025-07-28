@@ -86,7 +86,9 @@ class CryptoControllerImpl(
         val random = SecureRandom()
         val code = ByteArray(codeLength)
         random.nextBytes(code)
-        return Base64.encodeToString(code, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+        return Base64.encodeToString(code,
+            Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+            .take(codeLength)
     }
 
     override fun getCipher(encrypt: Boolean, ivBytes: ByteArray?, userAuthenticationRequired: Boolean): Cipher? {

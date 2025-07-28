@@ -18,27 +18,81 @@ package eu.europa.ec.corelogic.controller
 
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.eudi.wallet.logging.Logger
+import kotlinx.serialization.json.Json
+import java.util.UUID
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class LogEvent(
+    val event: String,
+    val correlationId: String,
+    val component: String,
+    val payload: String
+)
 
 interface WalletCoreLogController : Logger
 
+
 class WalletCoreLogControllerImpl(
-    private val logController: LogController
+    private val logController: LogController,
+    private val json: Json = Json { encodeDefaults = true }
 ) : WalletCoreLogController {
+    private data class Rule(
+        val prefix: String,
+        val event: String,
+        val component: String
+    )
+
+    private val rules = listOf(
+        Rule("REQUEST:",  "HttpRequest", "HttpClient"),
+        Rule("RESPONSE:", "HttpResponse", "HttpClient"),
+        Rule("SYS:",      "SystemEvent", "System"),
+        Rule("SEC:",      "SecurityEvent", "Security"),
+        Rule("AUTH:",     "AuthEvent", "Authentication")
+    )
 
     override fun log(record: Logger.Record) {
-        val msg = record.message.trim()
+        val raw   = record.message.trim()
+        val level = record.level
 
-        when {
-            msg.startsWith("REQUEST")  -> logController.d { "[HTTP-REQ] $msg" }
-            msg.startsWith("RESPONSE") -> logController.d { "[HTTP-RES] $msg" }
-            record.level == Logger.LEVEL_ERROR ->
-                record.thrown?.let { logController.e(it) } ?: logController.e { msg }
-            record.level == Logger.LEVEL_INFO  ->
-                logController.i { msg }
-            record.level == Logger.LEVEL_DEBUG ->
-                logController.d { msg }
-            else ->
-                logController.d { msg }
+        println("[${levelName(level)}] $raw")
+
+        val matched = rules.firstOrNull { raw.startsWith(it.prefix) }
+
+
+        if (matched != null) {
+            val payload = raw.removePrefix(matched.prefix)
+            val corrId  = UUID.randomUUID().toString()
+            val event   = LogEvent(
+                event = matched.event,
+                correlationId = corrId,
+                component = matched.component,
+                payload = payload
+            )
+
+            logController.d(matched.component) {
+                json.encodeToString(event)
+            }
+            return
         }
+        val component = "Generic"
+
+        when (level) {
+            Logger.LEVEL_ERROR -> record.thrown
+                ?.let { logController.e(component, it) }
+                ?: logController.e(component) { raw }
+
+            Logger.LEVEL_INFO  -> logController.i(component) { raw }
+            Logger.LEVEL_DEBUG -> logController.d(component) { raw }
+            else               -> logController.d(component) { raw }
+        }
+
+    }
+
+    private fun levelName(level: Int): String = when (level) {
+        Logger.LEVEL_ERROR -> "ERROR"
+        Logger.LEVEL_INFO  -> "INFO"
+        Logger.LEVEL_DEBUG -> "DEBUG"
+        else               -> "DEBUG"
     }
 }

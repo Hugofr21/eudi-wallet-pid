@@ -584,11 +584,6 @@ class WalletCorePresentationControllerImpl(
 
 
 
-    private fun EudiWallet.startRemoteIssuance(offerUri: Uri) {
-
-    }
-
-
 //    private fun addListener(listener: EudiWalletListenerWrapper) {
 //        val config = requireInit { _config }
 //        eudiWallet.addTransferEventListener(listener)

@@ -39,6 +39,8 @@ dependencies {
     implementation(libs.timber)
     implementation(libs.treessence)
     implementation(libs.androidx.security.crypto)
+    implementation(libs.moshi.kotlin)
+    implementation(libs.moshi)
 
     testImplementation(project(LibraryModule.TestLogic.path))
     androidTestImplementation(project(LibraryModule.TestLogic.path))

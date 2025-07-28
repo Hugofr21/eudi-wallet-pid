@@ -27,10 +27,3 @@ sealed class ClaimValue {
     data class Obj(val entries: Map<String,Any?>): ClaimValue()
     data class Arr(val items: List<Any?>): ClaimValue()
 }
-
-data class UserData(
-    val firstName: String,
-    val lastName: String,
-    val claims: List<ClaimsUI>,
-    val portraitBase64: String?
-)
