@@ -132,6 +132,7 @@ class ProximityQRViewModel(
                     }
 
                     is ProximityQRPartialState.QrReady -> {
+                        println("[ProximityQRViewModel] response qr code: ${response.qrCode}")
                         setState {
                             copy(
                                 isLoading = false,

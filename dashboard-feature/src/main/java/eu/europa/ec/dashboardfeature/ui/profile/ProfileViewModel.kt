@@ -15,21 +15,13 @@
  */
 
 package eu.europa.ec.dashboardfeature.ui.profile
-
-import androidx.navigation.compose.composable
-import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
 import eu.europa.ec.dashboardfeature.interactor.PersonIdentificationDataInteractor
 import eu.europa.ec.dashboardfeature.model.ClaimsUI
-import eu.europa.ec.dashboardfeature.ui.component.BottomNavigationItem
-import eu.europa.ec.dashboardfeature.ui.documents.list.DocumentsScreen
-import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
-import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
-import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import org.koin.android.annotation.KoinViewModel
 
 data class State(

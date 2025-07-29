@@ -73,7 +73,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.component.getScopeName
 import java.util.Locale
-
+import eu.europa.ec.eudi.openid4vci.*
 enum class IssuanceMethod {
     OPENID4VCI
 }
@@ -227,7 +227,6 @@ class WalletCoreDocumentsControllerImpl(
         )
         const val VCI_CLIENT_ID = "wallet-dev"
     }
-
 
 
     private val genericErrorMessage

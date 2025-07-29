@@ -16,6 +16,7 @@
 
 package eu.europa.ec.backuplogic.interactor
 
+import android.net.Uri
 import eu.europa.ec.backuplogic.controller.BackupController
 import eu.europa.ec.backuplogic.controller.ListWordsController
 import eu.europa.ec.backuplogic.controller.model.RestoreStatus
@@ -24,7 +25,7 @@ import java.io.File
 import java.io.InputStream
 
 interface BackupInteractor {
-    suspend fun exportBackup(): File?
+    suspend fun exportBackup(): ArrayList<Uri>
 
     suspend fun getLastBackup(): BackupLog?
 
@@ -63,15 +64,17 @@ class BackupInteractorIml (
         _cachedWords = generated.toMutableList()
         return _cachedWords!!
     }
-    override suspend fun exportBackup(): File? {
+
+    override suspend fun exportBackup(): ArrayList<Uri> {
         println("Phrase to exportBackup: $_cachedWords")
-        return if (_cachedWords?.size == COUNT_TAKE) {
-            val backupFile = backupController.exportBackup(_cachedWords!!, WALLET_NAME)
-            _cachedWords?.clear()
-            backupFile
+        val words = _cachedWords
+        return if (words != null && words.size == COUNT_TAKE) {
+            val backupUris = backupController.exportBackup(words, WALLET_NAME)
+            words.clear()
+            ArrayList(backupUris)
         } else {
             println("Passphrase incomplete or invalid.")
-            null
+            throw IllegalStateException("Passphrase incomplete or invalid.")
         }
     }
 

@@ -17,6 +17,7 @@
 package eu.europa.ec.backuplogic.ui.viewBackup
 
 import android.R.attr.onClick
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -73,6 +74,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import androidx.core.net.toUri
 import eu.europa.ec.storagelogic.model.BackupLog
+import eu.europa.ec.uilogic.extension.openIntentChooser
 import java.io.File
 
 val LightSkyBlue   = Color(0xFFCAE6FD)
@@ -85,6 +87,7 @@ val CoralRed       = Color(0xFFFF6E70)
 fun ViewBackupScreen(navController: NavController, viewModel: ViewBackupViewModel) {
     val state = viewModel.viewState.collectAsStateWithLifecycle()
     val effectFlow = viewModel.effect
+    val context = LocalContext.current
 
     val configButton = ButtonConfig(
         type = ButtonType.PRIMARY,
@@ -108,7 +111,8 @@ fun ViewBackupScreen(navController: NavController, viewModel: ViewBackupViewMode
             effectFlow = effectFlow,
             onNavigationRequested = { handleNavigationEffect(it, navController) },
             state = state.value,
-            viewModel = viewModel
+            viewModel = viewModel,
+            context = context
         )
     }
 
@@ -120,7 +124,8 @@ private fun NavigationSlider(
     effectFlow: Flow<Effect>,
     onNavigationRequested: (Effect.Navigation) -> Unit,
     state: State,
-    viewModel: ViewBackupViewModel
+    viewModel: ViewBackupViewModel,
+    context: Context,
 ) {
     val context = LocalContext.current
 
@@ -146,21 +151,10 @@ private fun NavigationSlider(
                 Effect.Success -> {
                     onNavigationRequested(Effect.Navigation.Pop)
                 }
-                is Effect.ShowExportedFile -> {
-                    val file = File(effect.fileUri)
-                    val uri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.provider",
-                        file
-                    )
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        putExtra(Intent.EXTRA_STREAM, uri)
-                        type = "application/zip"              // or "*/*" type all
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    context.startActivity(
-                        Intent.createChooser(shareIntent, context.getString(R.string.share_backup_title))
-                            .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                is Effect.ShareLogFile -> {
+                    context.openIntentChooser(
+                        effect.intent,
+                        effect.chooserTitle
                     )
                 }
             }

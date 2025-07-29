@@ -19,11 +19,14 @@ package eu.europa.ec.backuplogic.ui.viewBackup
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
 import eu.europa.ec.backuplogic.model.BackupKey
+import eu.europa.ec.resourceslogic.R
+import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.storagelogic.model.BackupLog
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
@@ -54,13 +57,14 @@ sealed class Effect : ViewSideEffect {
     object Success : Effect()
     object Error : Effect()
 
-    data class ShowExportedFile(val fileUri: String) : Effect()
+    data class ShareLogFile(val intent: Intent, val chooserTitle: String) : Effect()
 }
 
 
 @KoinViewModel
 class ViewBackupViewModel(
     private val backupInteractor: BackupInteractor,
+    private val resourceProvider: ResourceProvider,
 ) : MviViewModel<Event, State, Effect>() {
 
     override fun setInitialState(): State {
@@ -91,13 +95,24 @@ class ViewBackupViewModel(
             Event.NewBackupBtn -> {
                 setState { State.Default(isLoading = true) }
                 viewModelScope.launch {
-                    try {
-                        val file = backupInteractor.exportBackup()
-                        setEffect { Effect.ShowExportedFile(file?.absolutePath ?: "File not found!") }
-                    } catch (e: Exception) {
-                        setEffect { Effect.Error }
-                    } finally {
-                        setState { State.Default(isLoading = false) }
+                    val zipEnc = backupInteractor.exportBackup()
+                    val zipToShare = zipEnc.filter { uri ->
+                        uri.path?.endsWith(".zip.enc", ignoreCase = true) == true
+                    }
+
+                    if (zipToShare.isNotEmpty()) {
+                        setEffect {
+                            Effect.ShareLogFile(
+                                intent = Intent().apply {
+                                    action = Intent.ACTION_SEND_MULTIPLE
+                                    putParcelableArrayListExtra(Intent.EXTRA_STREAM,
+                                        ArrayList(zipToShare))
+                                    type = "*/*"
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                },
+                                chooserTitle = resourceProvider.getString(R.string.settings_intent_chooser_logs_share_title)
+                            )
+                        }
                     }
                 }
             }

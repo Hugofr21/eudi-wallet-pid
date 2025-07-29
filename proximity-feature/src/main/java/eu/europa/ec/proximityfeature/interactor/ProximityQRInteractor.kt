@@ -62,6 +62,7 @@ class ProximityQRInteractorImpl(
         walletCorePresentationController.events
             .onSubscription {
                 walletCorePresentationController.startQrEngagement()
+                println("[ProximityQRInteractorImpl] qr code!")
             }.mapNotNull {
                 when (it) {
                     is TransferEventPartialState.Connected -> {

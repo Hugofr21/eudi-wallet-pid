@@ -33,6 +33,7 @@ moduleConfig {
 
 dependencies {
     implementation(project(LibraryModule.BackupLogic.path))
+    implementation(libs.zxing)
 }
 
 excludeFromKoverReport(

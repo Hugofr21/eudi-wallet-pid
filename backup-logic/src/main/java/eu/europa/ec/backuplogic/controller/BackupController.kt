@@ -17,8 +17,10 @@
 package eu.europa.ec.backuplogic.controller
 
 import android.content.Context
+import android.net.Uri
 import android.util.Base64
 import android.util.Base64.NO_WRAP
+import androidx.core.content.FileProvider
 import com.nimbusds.jose.shaded.gson.Gson
 import eu.europa.ec.authenticationlogic.controller.authentication.PassphraseAuthenticationController
 import eu.europa.ec.backuplogic.controller.dto.DocumentDto
@@ -59,7 +61,7 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 interface BackupController {
-    suspend fun exportBackup(passPhrase: List<String>, provider: String):File?
+    suspend fun exportBackup(passPhrase: List<String>, provider: String): List<Uri>
     suspend fun deleteBackup(identifier: String): Boolean
     suspend fun restoreBackup(file: InputStream , passPhrase: List<String>): List<String>
     suspend fun getLastBackup(): BackupLog?
@@ -99,7 +101,7 @@ class BackupControllerImpl(
      *  mnemonic phrase in plain text.
      */
 
-    override suspend fun exportBackup(passPhrase: List<String>, provider: String):File?{
+    override suspend fun exportBackup(passPhrase: List<String>, provider: String):List<Uri>{
         // save password in storage. this device
 
         passphraseAuthenticationController.setPassphrase(passPhrase)
@@ -109,7 +111,7 @@ class BackupControllerImpl(
         println("Json $json")
 
         // read json file and created zip
-        val zipFile = createdFileJsonEncrypt(json, passPhrase)
+        val encryptedFile = createdFileJsonEncrypt(json, passPhrase)
 
         // created log backup
         val backupLog = BackupLog(
@@ -120,7 +122,16 @@ class BackupControllerImpl(
         )
         walletBackupLogController.storeBackupLog(backupLog)
 
-        return zipFile
+
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.provider",
+            encryptedFile
+        )
+
+
+        return listOf(uri)
+
     }
 
 

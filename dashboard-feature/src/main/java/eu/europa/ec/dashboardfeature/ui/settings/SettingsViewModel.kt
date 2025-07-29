@@ -90,13 +90,22 @@ class SettingsViewModel(
 
             SettingsMenuItemType.RETRIEVE_LOGS -> {
                 val logs = settingsInteractor.retrieveLogFileUris()
-                if (logs.isNotEmpty()) {
+
+                val logsToShare = logs.filter { uri ->
+                    uri.path?.endsWith(".json", ignoreCase = true) == true ||
+                            uri.path?.endsWith(".json.enc", ignoreCase = true) == true
+                            ||  uri.path?.endsWith(".bin", ignoreCase = true) == true
+                }
+
+                if (logsToShare.isNotEmpty()) {
                     setEffect {
                         Effect.ShareLogFile(
                             intent = Intent().apply {
                                 action = Intent.ACTION_SEND_MULTIPLE
-                                putParcelableArrayListExtra(Intent.EXTRA_STREAM, logs)
-                                type = "text/*"
+                                putParcelableArrayListExtra(Intent.EXTRA_STREAM,
+                                    ArrayList(logs))
+                                type = "*/*"
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             },
                             chooserTitle = resourceProvider.getString(R.string.settings_intent_chooser_logs_share_title)
                         )

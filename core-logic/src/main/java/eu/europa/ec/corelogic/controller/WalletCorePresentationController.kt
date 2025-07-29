@@ -310,6 +310,7 @@ class WalletCorePresentationControllerImpl(
 
     override fun startQrEngagement() {
         eudiWallet.startProximityPresentation()
+        println("[WalletCorePresentationControllerImpl] startQrEngagement!")
     }
 
     override fun toggleNfcEngagement(componentActivity: ComponentActivity, toggle: Boolean) {

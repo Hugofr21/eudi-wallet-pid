@@ -70,6 +70,7 @@ sealed class Effect : ViewSideEffect {
     data class Restore(val chosenOptions: Set<String>) : Event()
 }
 
+
 @KoinViewModel
 class RestoreBackupViewModel(
     private val backupInteractor: BackupInteractor,
@@ -105,7 +106,6 @@ class RestoreBackupViewModel(
                 }
                 viewModelScope.launch {
                     try {
-                        // Criar um arquivo temporário no diretório de cache
                         val tempFile = File.createTempFile("encrypted", ".zip.enc", context.cacheDir)
                         contentResolver.openInputStream(uri)?.use { inputStream ->
                             FileOutputStream(tempFile).use { outputStream ->
@@ -116,7 +116,6 @@ class RestoreBackupViewModel(
                             return@launch
                         }
 
-                        // Ler o arquivo temporário e processar
                         FileInputStream(tempFile).use { inputStream ->
                             val listOptions: List<String> = backupInteractor.restoreWallet(inputStream, event.words)
                             if (listOptions.isNotEmpty()) {
