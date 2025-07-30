@@ -49,7 +49,15 @@ fun NavGraphBuilder.featureIssuanceGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + IssuanceScreens.AddDocument.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + IssuanceScreens.AddDocument.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + IssuanceScreens.AddDocument.screenRoute
+                },
             ),
             arguments = listOf(
                 navArgument("flowType") {
@@ -78,7 +86,15 @@ fun NavGraphBuilder.featureIssuanceGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + IssuanceScreens.DocumentOffer.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + IssuanceScreens.DocumentOffer.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + IssuanceScreens.DocumentOffer.screenRoute
+                },
             ),
             arguments = listOf(
                 navArgument(OfferUiConfig.serializedKeyName) {
@@ -105,7 +121,16 @@ fun NavGraphBuilder.featureIssuanceGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + IssuanceScreens.DocumentOfferCode.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + IssuanceScreens.DocumentOfferCode.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + IssuanceScreens.DocumentOfferCode.screenRoute
                 }
+
             ),
             arguments = listOf(
                 navArgument(OfferCodeUiConfig.serializedKeyName) {
@@ -132,7 +157,16 @@ fun NavGraphBuilder.featureIssuanceGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + IssuanceScreens.DocumentIssuanceSuccess.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + IssuanceScreens.DocumentIssuanceSuccess.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + IssuanceScreens.DocumentIssuanceSuccess.screenRoute
+                },
+
             ),
             arguments = listOf(
                 navArgument(IssuanceSuccessUiConfig.serializedKeyName) {

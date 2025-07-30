@@ -63,7 +63,7 @@ import javax.crypto.spec.SecretKeySpec
 interface BackupController {
     suspend fun exportBackup(passPhrase: List<String>, provider: String): List<Uri>
     suspend fun deleteBackup(identifier: String): Boolean
-    suspend fun restoreBackup(file: InputStream , passPhrase: List<String>): List<String>
+    suspend fun restoreBackup(file: Uri , passPhrase: List<String>): List<String>
     suspend fun getLastBackup(): BackupLog?
 
     fun existBackupMkdir(): Boolean
@@ -154,8 +154,8 @@ class BackupControllerImpl(
      * If valid, decrypt the file en.json
      * Read the contents and add the Wallet Controller document
      */
-    override suspend fun restoreBackup(file: InputStream, passPhrase: List<String>): List<String> {
-        println(">>> Iniciando restoreBackup com arquivo: ${file.available()}")
+    override suspend fun restoreBackup(file: Uri, passPhrase: List<String>): List<String> {
+        println(">>> Iniciando restoreBackup com arquivo: ${file.path}")
 
         val decryptedFile = decryptZipFile(file, passPhrase)
         println(">>> Arquivo ZIP descriptografado: ${decryptedFile?.path}")
@@ -175,7 +175,6 @@ class BackupControllerImpl(
         }
 
         if (jsonString == null) {
-            println("!!! Nenhum arquivo .json encontrado no ZIP")
             throw IllegalStateException("JSON file not found in backup")
         }
 
@@ -396,7 +395,7 @@ class BackupControllerImpl(
         return encryptedZipFile
     }
 
-    private fun decryptZipFile(encryptedStream: InputStream, passPhrase: List<String>): File {
+    private fun decryptZipFile(encryptedStream: Uri, passPhrase: List<String>): File {
 
         val saltBytes = cryptoController.generateSaltFromMnemonic(passPhrase)
         val ivBytes   = cryptoController.deriveIvFromMnemonic(passPhrase)
@@ -406,7 +405,10 @@ class BackupControllerImpl(
         println("(decryptZipFile) iv   (B64): ${Base64.encodeToString(ivBytes,   NO_WRAP)}")
         println("(decryptZipFile) key  (B64): ${Base64.encodeToString(keyBytes,  NO_WRAP)}")
 
-        val encryptedBytes = encryptedStream.readBytes()
+        val encryptedBytes = context.contentResolver.openInputStream(encryptedStream).use { inputStream ->
+            inputStream?.readBytes() ?: throw IllegalStateException("Failed to read encrypted stream")
+        }
+
         println("(decryptZipFile) encryptedBytes.size = ${encryptedBytes.size}")
 
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {

@@ -31,6 +31,7 @@ import project.convention.logic.config.LibraryModule.StorageLogic
 import project.convention.logic.config.LibraryModule.UiLogic
 import project.convention.logic.config.LibraryModule.UserConsentFeature
 import project.convention.logic.config.LibraryModule.BackupLogic
+import project.convention.logic.config.LibraryModule.VerifierFeature
 import project.convention.logic.kover.KoverExclusionRules
 import project.convention.logic.kover.excludeFromKoverReport
 import project.convention.logic.kover.koverModules
@@ -75,6 +76,7 @@ dependencies {
     api(project(ProximityFeature.path))
     api(project(IssuanceFeature.path))
     api(project(UserConsentFeature.path))
+    api(project(VerifierFeature.path))
 
     // Modules Kover Report
     koverModules.forEach {

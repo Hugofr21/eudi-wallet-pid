@@ -46,7 +46,10 @@ fun NavGraphBuilder.featureProximityGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + ProximityScreens.QR.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern = "${BuildConfig.AGE_OPENID4VP_SCHEME}://${ProximityScreens.QR.screenRoute}"
+                },
             ),
             arguments = listOf(
                 navArgument(RequestUriConfig.serializedKeyName) {
@@ -73,7 +76,8 @@ fun NavGraphBuilder.featureProximityGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + ProximityScreens.Request.screenRoute
-                }
+                },
+
             ),
             arguments = listOf(
                 navArgument(RequestUriConfig.serializedKeyName) {
@@ -110,7 +114,10 @@ fun NavGraphBuilder.featureProximityGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + ProximityScreens.Request.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern = "${BuildConfig.AGE_OPENID4VP_SCHEME}://${ProximityScreens.QR.screenRoute}"
+                },
             ),
         ) {
             ProximitySuccessScreen(

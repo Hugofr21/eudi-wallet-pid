@@ -43,6 +43,7 @@ val koverModules: Map<LibraryModule, KoverExclusionRules> = mapOf(
     LibraryModule.IssuanceFeature to KoverExclusionRules.IssuanceFeature,
     LibraryModule.UserConsentFeature to KoverExclusionRules.UserConsent,
     LibraryModule.BackupLogic to KoverExclusionRules.BackupLogic,
+    LibraryModule.VerifierFeature to KoverExclusionRules.VerifierFeature,
 )
 
 sealed interface KoverExclusionRules {
@@ -222,6 +223,16 @@ sealed interface KoverExclusionRules {
         override val packages: List<String>
             get() = commonPackages + listOf(
                 "eu.europa.ec.backuplogic"
+            )
+    }
+
+    object VerifierFeature : FeatureModule {
+        override val classes: List<String>
+            get() = commonClasses
+
+        override val packages: List<String>
+            get() = commonPackages + listOf(
+                "eu.europa.ec.verifierfeature"
             )
     }
 

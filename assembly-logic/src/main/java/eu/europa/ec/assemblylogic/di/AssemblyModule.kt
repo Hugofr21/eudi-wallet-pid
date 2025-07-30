@@ -33,6 +33,7 @@ import eu.europa.ec.resourceslogic.di.LogicResourceModule
 import eu.europa.ec.startupfeature.di.FeatureStartupModule
 import eu.europa.ec.storagelogic.di.LogicStorageModule
 import eu.europa.ec.uilogic.di.LogicUiModule
+import eu.europa.ec.verifierfeature.di.FeatureVerifierModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.KoinApplication
@@ -60,7 +61,8 @@ private val assembledModules = listOf(
     FeaturePresentationModule().module,
     FeatureProximityModule().module,
     FeatureIssuanceModule().module,
-    FeatureConsentUserModule().module
+    FeatureConsentUserModule().module,
+    FeatureVerifierModule().module
 )
 
 internal fun Application.setupKoin(): KoinApplication {

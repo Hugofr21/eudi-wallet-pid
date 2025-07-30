@@ -38,7 +38,8 @@ enum class LibraryModule(val path: String) {
     ProximityFeature(":proximity-feature"),
     IssuanceFeature(":issuance-feature"),
     UserConsentFeature(":consent-user"),
-    BackupLogic(":backup-logic");
+    BackupLogic(":backup-logic"),
+    VerifierFeature(":verifier-feature");
 
     val isLogicModule: Boolean
         get() {

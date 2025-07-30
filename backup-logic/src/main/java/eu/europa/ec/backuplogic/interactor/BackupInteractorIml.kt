@@ -30,7 +30,7 @@ interface BackupInteractor {
     suspend fun getLastBackup(): BackupLog?
 
     fun existBackup(): Boolean
-    suspend fun restoreWallet(file: InputStream, passPhrase: List<String>): List<String>
+    suspend fun restoreWallet(file: Uri, passPhrase: List<String>): List<String>
     suspend fun deleteWallet(identifier: String): Boolean
     fun initListWordsPreview(): List<String>
 
@@ -86,9 +86,9 @@ class BackupInteractorIml (
         return backupController.existBackupMkdir()
     }
 
-    override suspend fun restoreWallet(file: InputStream, passPhrase: List<String>): List<String> {
+    override suspend fun restoreWallet(file: Uri, passPhrase: List<String>): List<String> {
         println("Phrase password restore wallet file $passPhrase")
-        println("Restore wallet filename: ${file.read()}")
+        println("Restore wallet filename: ${file.path}")
         if (passPhrase.isEmpty() || passPhrase.any { it.isBlank() }) {
             return emptyList()
         }

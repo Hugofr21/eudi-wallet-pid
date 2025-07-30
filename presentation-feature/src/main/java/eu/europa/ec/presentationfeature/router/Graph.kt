@@ -45,7 +45,16 @@ fun NavGraphBuilder.presentationGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + PresentationScreens.PresentationRequest.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + PresentationScreens.PresentationRequest.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + PresentationScreens.PresentationRequest.screenRoute
+                },
+
             ),
             arguments = listOf(
                 navArgument(RequestUriConfig.serializedKeyName) {
@@ -80,7 +89,15 @@ fun NavGraphBuilder.presentationGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + PresentationScreens.PresentationSuccess.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + PresentationScreens.PresentationSuccess.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + PresentationScreens.PresentationSuccess.screenRoute
+                },
             ),
         ) {
             PresentationSuccessScreen(

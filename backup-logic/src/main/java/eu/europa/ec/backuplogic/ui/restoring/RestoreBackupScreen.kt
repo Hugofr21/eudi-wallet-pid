@@ -19,6 +19,7 @@ package eu.europa.ec.backuplogic.ui.restoring
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.viewModelScope
 import eu.europa.ec.backuplogic.controller.model.RestoreStatus
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
@@ -74,9 +75,7 @@ sealed class Effect : ViewSideEffect {
 @KoinViewModel
 class RestoreBackupViewModel(
     private val backupInteractor: BackupInteractor,
-    private val context: Context
 ) : MviViewModel<Event, State, Effect>() {
-    private val contentResolver: ContentResolver = context.contentResolver
 
     override fun setInitialState(): State {
         return State.Default(
@@ -106,26 +105,12 @@ class RestoreBackupViewModel(
                 }
                 viewModelScope.launch {
                     try {
-                        val tempFile = File.createTempFile("encrypted", ".zip.enc", context.cacheDir)
-                        contentResolver.openInputStream(uri)?.use { inputStream ->
-                            FileOutputStream(tempFile).use { outputStream ->
-                                inputStream.copyTo(outputStream)
+                        val listOptions: List<String> = backupInteractor.restoreWallet(uri, event.words)
+                        if (listOptions.isNotEmpty()) {
+                            setState {
+                                (this as? State.Default)?.copy(options = listOptions, selectedOptions = emptySet()) ?: this
                             }
-                        } ?: run {
-                            setEffect { Effect.Error }
-                            return@launch
-                        }
-
-                        FileInputStream(tempFile).use { inputStream ->
-                            val listOptions: List<String> = backupInteractor.restoreWallet(inputStream, event.words)
-                            if (listOptions.isNotEmpty()) {
-                                setState {
-                                    (this as? State.Default)?.copy(options = listOptions, selectedOptions = emptySet()) ?: this
-                                }
-                                setEffect { NavigateToPage(2) }
-                            } else {
-                                setEffect { Effect.Error }
-                            }
+                            setEffect { NavigateToPage(2) }
                         }
                     } catch (e: Exception) {
                         setEffect { Effect.Error }

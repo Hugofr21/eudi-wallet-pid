@@ -1,47 +1,23 @@
-/*
- * Copyright (c) 2023 European Commission
- *
- * Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the European
- * Commission - subsequent versions of the EUPL (the "Licence"); You may not use this work
- * except in compliance with the Licence.
- *
- * You may obtain a copy of the Licence at:
- * https://joinup.ec.europa.eu/software/page/eupl
- *
- * Unless required by applicable law or agreed to in writing, software distributed under
- * the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF
- * ANY KIND, either express or implied. See the Licence for the specific language
- * governing permissions and limitations under the Licence.
- */
-
-package eu.europa.ec.backuplogic.ui.backup
+package eu.europa.ec.verifierfeature.ui.choiseVerifier
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -62,41 +38,44 @@ import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapImage
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 import eu.europa.ec.uilogic.component.wrap.WrapText
+import eu.europa.ec.verifierfeature.ui.choiseVerifier.compoment.TrustListGrid
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 
 
 @Composable
-fun BackupScreen(navController: NavController, viewModel: BackupViewModel) {
-    val state = viewModel.viewState.collectAsStateWithLifecycle()
+fun ChoiseVerifierScreen(
+    navController: NavController,
+    viewModel: ChoiseVerifierViewModel
+) {
+    val state by viewModel.viewState.collectAsStateWithLifecycle()
     val effectFlow = viewModel.effect
 
-
     ContentScreen(
-        isLoading = state.value.isLoading,
+        isLoading = state.isLoading,
         navigatableAction = ScreenNavigateAction.BACKABLE,
         onBack = { viewModel.setEvent(Event.GoBack) },
-        stickyBottom =
-                { paddingValues ->
-                ContinueButton(
-                    paddingValues = paddingValues,
-                    config = ButtonConfig(
-                        type = ButtonType.PRIMARY,
-                        onClick = { viewModel.setEvent(Event.GoNext) },
-                        enabled = !state.value.isLoading
-                    )
-                )
-            }
-        ) { paddingValues ->
-            NavigationSlider(
+        stickyBottom = { paddingValues ->
+            ContinueButton(
                 paddingValues = paddingValues,
-                effectFlow = effectFlow,
-                onNavigationRequested = { navigationEffect ->
-                    handleNavigationEffect(navigationEffect, navController)
-                }
+                config = ButtonConfig(
+                    type = ButtonType.PRIMARY,
+                    onClick = { viewModel.setEvent(Event.SubmitSelection) },
+                    enabled = !state.isLoading
+                )
             )
-
+        }
+    ) { paddingValues ->
+        NavigationSlider(
+            paddingValues = paddingValues,
+            effectFlow = effectFlow,
+            onNavigationRequested = { navigationEffect ->
+                handleNavigationEffect(navigationEffect, navController)
+            },
+            state = state,
+            onToggle = { id, checked -> viewModel.setEvent(Event.ToggleVerifier(id, checked)) }
+        )
     }
 }
 
@@ -105,6 +84,8 @@ private fun NavigationSlider(
     paddingValues: PaddingValues,
     effectFlow: Flow<Effect>,
     onNavigationRequested: (Effect.Navigation) -> Unit,
+    state: State,
+    onToggle: (String, Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -113,17 +94,18 @@ private fun NavigationSlider(
     ) {
         MainContent(
             paddingValues = paddingValues,
+            state = state,
+            onToggle = onToggle
         )
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(effectFlow) {
         effectFlow.onEach { effect ->
-            when (effect) {
-                is Effect.Navigation -> onNavigationRequested(effect)
-            }
+            if (effect is Effect.Navigation) onNavigationRequested(effect)
         }.collect()
     }
 }
+
 
 private fun handleNavigationEffect(
     navigationEffect: Effect.Navigation,
@@ -144,6 +126,8 @@ private fun handleNavigationEffect(
 @Composable
 private fun MainContent(
     paddingValues: PaddingValues,
+    state: State? = null,
+    onToggle: ((String, Boolean) -> Unit?)?
 ) {
     Column(
         modifier = Modifier
@@ -151,7 +135,7 @@ private fun MainContent(
             .padding(paddingValues)
     ) {
         WrapText(
-            text = stringResource(R.string.consent_verifier_content_title),
+            text = stringResource(R.string.verifier_content_title),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.titleLarge.merge(
                     TextStyle(
@@ -162,9 +146,9 @@ private fun MainContent(
                         fontWeight = FontWeight.Bold
                     )
                 )
-            ),
+            )
         )
-        VSpacer.ExtraSmall()
+        VSpacer.Small()
 
         WrapImage(
             modifier = Modifier
@@ -175,40 +159,25 @@ private fun MainContent(
             contentScale = ContentScale.Fit
         )
 
-        VSpacer.ExtraSmall()
+        VSpacer.Small()
 
         WrapText(
-            text = stringResource(R.string.verifer_content_description),
+            text = stringResource(R.string.verifier_content_description),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 6
-            ),
+            )
         )
 
-        VSpacer.ExtraSmall()
+        VSpacer.Small()
 
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            WrapText(
-                text = stringResource(R.string.consent_backup_content_subtitle),
-                textConfig = TextConfig(
-                    style = MaterialTheme.typography.titleLarge.merge(
-                        TextStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 18.sp,
-                            lineHeight = 20.sp,
-                            letterSpacing = (-0.02).sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    )
-                ),
-            )
-
-
-        }
+        TrustListGrid(
+            items = state?.verifiers ?: emptyList(),
+            onCheckedChange = onToggle as (String, Boolean) -> Unit
+        )
     }
 }
+
 
 
 @Composable
@@ -251,6 +220,8 @@ private fun ContentPreview() {
         ) { paddingValues ->
             MainContent(
                 paddingValues = paddingValues,
+                state = null,
+                onToggle = null
             )
         }
     }

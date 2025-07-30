@@ -41,6 +41,9 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 extensions.create<LibraryPluginConfig>("moduleConfig", LibraryModule.Unspecified)
 
             val walletScheme = "eudi-wallet"
+            val walletScheme_age = "av"
+            val walletSchema_haip = "haip"
+
             val walletHost = "*"
 
             val eudiOpenId4VpScheme = "eudi-openid4vp"
@@ -58,9 +61,10 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             val avOpenid4VpScheme= "av" //age proof
             val aspScheme= "avsp" // age proof
             val lissiScheme = "haip" // lissi
-//            val lissiScheme2 = "https://oob.lissi.io"
+            val lissiScheme2 = "https://oob.lissi.io"
 
             val openId4VciAuthorizationScheme = "eu.europa.ec.euidi"
+            val openId4VciAuthorizationSchemeage = "eu.europa.ec.av"
             val openId4VciAuthorizationHost = "authorization"
 
 
@@ -92,6 +96,9 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     targetSdk = 34
 
                     addConfigField("DEEPLINK", "$walletScheme://")
+                    addConfigField("DEEPLINK_AGE", "$walletScheme_age://")
+                    addConfigField("DEEPLINK_HAIP", "$walletSchema_haip://")
+
                     addConfigField("EUDI_OPENID4VP_SCHEME", eudiOpenId4VpScheme)
                     addConfigField("MDOC_OPENID4VP_SCHEME", mdocOpenId4VpScheme)
                     addConfigField("OPENID4VP_SCHEME", openId4VpScheme)
@@ -101,6 +108,10 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     addConfigField(
                         "ISSUE_AUTHORIZATION_DEEPLINK",
                         "$openId4VciAuthorizationScheme://$openId4VciAuthorizationHost"
+                    )
+                    addConfigField(
+                        "ISSUE_AUTHORIZATION_DEEPLINK_AGE",
+                        "$openId4VciAuthorizationSchemeage://$openId4VciAuthorizationHost"
                     )
 
                     addConfigField("RQES_SCHEME", rqesScheme)

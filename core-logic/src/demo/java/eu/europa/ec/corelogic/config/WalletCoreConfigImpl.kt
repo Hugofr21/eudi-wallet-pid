@@ -17,6 +17,7 @@
 package eu.europa.ec.corelogic.config
 
 import android.content.Context
+import androidx.compose.foundation.layout.Box
 import eu.europa.ec.corelogic.BuildConfig
 import eu.europa.ec.eudi.wallet.EudiWalletConfig
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.ClientIdScheme

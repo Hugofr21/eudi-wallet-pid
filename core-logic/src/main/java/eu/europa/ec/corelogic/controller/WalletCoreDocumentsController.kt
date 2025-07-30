@@ -229,13 +229,6 @@ class WalletCoreDocumentsControllerImpl(
     }
 
 
-    private val genericErrorMessage
-        get() = resourceProvider.genericErrorMessage()
-
-    private val documentErrorMessage
-        get() = resourceProvider.getString(R.string.issuance_generic_error)
-
-
     private val openId4VciManager: Map<String, OpenId4VciManager> by lazy {
         VCI_ISSUER_URLS.associateWith { url ->
             val config = OpenId4VciManager.Config.Builder()
@@ -250,6 +243,13 @@ class WalletCoreDocumentsControllerImpl(
             manager
         }
     }
+
+
+    private val genericErrorMessage
+        get() = resourceProvider.genericErrorMessage()
+
+    private val documentErrorMessage
+        get() = resourceProvider.getString(R.string.issuance_generic_error)
 
 
     override fun getAllDocuments(): List<Document> =

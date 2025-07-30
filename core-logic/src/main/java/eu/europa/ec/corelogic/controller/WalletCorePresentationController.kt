@@ -533,67 +533,38 @@ class WalletCorePresentationControllerImpl(
 //        }
 //    }
 
-    private fun addListener(listener: EudiWalletListenerWrapper) {
-        val config = requireInit { _config }
-        eudiWallet.addTransferEventListener(listener)
 
-        if (config is PresentationControllerConfig.OpenId4VP) {
-            val originalUri = config.uri.toUri()
-            when (originalUri.scheme) {
-                "openid-credential-offer" -> {
-                    val fullOfferUri = config.uri.toString()
-                    println("[addListener] Detected credential-offer URI: $fullOfferUri")
-
-                    documentsController
-                        .issueDocumentsByOfferUri(
-                            offerUri = fullOfferUri,
-                            txCode   = null
-                        )
-                        .onEach { issueState -> handleIssueState(issueState) }
-                        .launchIn(coroutineScope)
-                }
-                else -> {
-                    println("[addListener] Starting presentation on $originalUri")
-                    eudiWallet.startRemotePresentation(originalUri)
-                }
-            }
-        } else {
-            println("[addListener] Config não é OpenId4VP. Pulando.")
-        }
-    }
-
-    private fun handleIssueState(state: IssueDocumentsPartialState) {
-        when (state) {
-            is IssueDocumentsPartialState.Success -> {
-                println("Issuance SUCCESS: docs = ${state.documentIds}")
-            }
-            is IssueDocumentsPartialState.DeferredSuccess -> {
-                println("Issuance DEFERRED: docs = ${state.deferredDocuments}")
-            }
-            is IssueDocumentsPartialState.UserAuthRequired -> {
-                println("Issuance USER_AUTH_REQUIRED: crypto=${state.crypto}, handler=${state.resultHandler}")
-                // state.resultHandler.onAuthenticationSuccess or .onAuthenticationError
-            }
-            is IssueDocumentsPartialState.Failure -> {
-                println("Issuance FAILED: ${state.errorMessage}")
-            }
-            else -> {
-                println("Issuance STATE: $state")
-            }
-        }
-    }
-
-
-
-//    private fun addListener(listener: EudiWalletListenerWrapper) {
-//        val config = requireInit { _config }
-//        eudiWallet.addTransferEventListener(listener)
-//        if (config is PresentationControllerConfig.OpenId4VP) {
-//            eudiWallet.startRemotePresentation(config.uri.toUri())
+//
+//    private fun handleIssueState(state: IssueDocumentsPartialState) {
+//        when (state) {
+//            is IssueDocumentsPartialState.Success -> {
+//                println("Issuance SUCCESS: docs = ${state.documentIds}")
+//            }
+//            is IssueDocumentsPartialState.DeferredSuccess -> {
+//                println("Issuance DEFERRED: docs = ${state.deferredDocuments}")
+//            }
+//            is IssueDocumentsPartialState.UserAuthRequired -> {
+//                println("Issuance USER_AUTH_REQUIRED: crypto=${state.crypto}, handler=${state.resultHandler}")
+//                // state.resultHandler.onAuthenticationSuccess or .onAuthenticationError
+//            }
+//            is IssueDocumentsPartialState.Failure -> {
+//                println("Issuance FAILED: ${state.errorMessage}")
+//            }
+//            else -> {
+//                println("Issuance STATE: $state")
+//            }
 //        }
 //    }
 
 
+
+    private fun addListener(listener: EudiWalletListenerWrapper) {
+        val config = requireInit { _config }
+        eudiWallet.addTransferEventListener(listener)
+        if (config is PresentationControllerConfig.OpenId4VP) {
+            eudiWallet.startRemotePresentation(config.uri.toUri())
+        }
+    }
 
 
     private fun removeListener(listener: EudiWalletListenerWrapper) {
