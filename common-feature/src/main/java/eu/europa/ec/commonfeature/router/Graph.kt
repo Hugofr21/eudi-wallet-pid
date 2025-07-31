@@ -49,7 +49,16 @@ fun NavGraphBuilder.featureCommonGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + CommonScreens.Biometric.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + CommonScreens.Biometric.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + CommonScreens.Biometric.screenRoute
+                },
+
             ),
             arguments = listOf(
                 navArgument(BiometricUiConfig.serializedKeyName) {
@@ -75,7 +84,16 @@ fun NavGraphBuilder.featureCommonGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + CommonScreens.Success.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + CommonScreens.Success.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + CommonScreens.Success.screenRoute
+                },
+
             ),
             arguments = listOf(
                 navArgument(SuccessUIConfig.serializedKeyName) {
@@ -107,7 +125,14 @@ fun NavGraphBuilder.featureCommonGraph(navController: NavController) {
             deepLinks = listOf(
                 navDeepLink {
                     uriPattern = BuildConfig.DEEPLINK + CommonScreens.QuickPin.screenRoute
+                },
+                navDeepLink {
+                    uriPattern = BuildConfig.DEEPLINK_AGE + CommonScreens.QuickPin.screenRoute
+                },
+                navDeepLink {
+                    uriPattern = BuildConfig.DEEPLINK_HAIP + CommonScreens.QuickPin.screenRoute
                 }
+
             ),
             arguments = listOf(
                 navArgument("pinFlow") {
@@ -135,6 +160,14 @@ fun NavGraphBuilder.featureCommonGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + CommonScreens.QrScan.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + CommonScreens.QrScan.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + CommonScreens.QrScan.screenRoute
                 }
             ),
             arguments = listOf(

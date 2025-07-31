@@ -59,8 +59,14 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             val credentialOfferHost = "*"
 
             val avOpenid4VpScheme= "av" //age proof
+            val avHost = "*"
+
             val aspScheme= "avsp" // age proof
+            val avspHost = "*"
+
             val lissiScheme = "haip" // lissi
+            val lissiHost = "*"
+
             val lissiScheme2 = "https://oob.lissi.io"
 
             val openId4VciAuthorizationScheme = "eu.europa.ec.euidi"
@@ -158,6 +164,19 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     // Manifest placeholders used for RQES Document Retrieval
                     manifestPlaceholders["rqesDocRetrievalScheme"] = rqesDocRetrievalScheme
                     manifestPlaceholders["rqesDocRetrievalHost"] = rqesDocRetrievalHost
+
+                    // Manifest placeholders used for age proof verifier
+                    manifestPlaceholders["avOpenid4VpScheme"] = avOpenid4VpScheme
+                    manifestPlaceholders["avHost"] = avHost
+
+                    // Manifest placeholders used for age proof verifier
+                    manifestPlaceholders["avspScheme"] = aspScheme
+                    manifestPlaceholders["avspHost"] = avspHost
+
+                    // Manifest placeholders used for openid4vp
+                    manifestPlaceholders["lissiScheme"] = lissiScheme
+                    manifestPlaceholders["lissiHost"] = lissiHost
+
                 }
                 configureFlavors(this)
                 configureGradleManagedDevices(this)

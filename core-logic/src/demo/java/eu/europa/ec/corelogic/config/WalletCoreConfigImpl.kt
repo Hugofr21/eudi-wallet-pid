@@ -33,11 +33,6 @@ internal class WalletCoreConfigImpl(
 
     private companion object {
         const val AUTHENTICATION_REQUIRED = false
-
-        // verifier
-        const val VERIFIER_URL = "https://verifier.eudiw.dev/home"
-        // Proof age verification
-        const val VERIFIER_URL_AGE_VERIFICATION = "https://verifier.ageverification.dev/"
     }
 
     private var _config: EudiWalletConfig? = null

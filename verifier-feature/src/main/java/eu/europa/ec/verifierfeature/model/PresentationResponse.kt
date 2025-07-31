@@ -6,5 +6,4 @@ data class PresentationResponse(
     val request: String,
     val request_uri: String? = null,
     val request_uri_method: String? = null
-
 )

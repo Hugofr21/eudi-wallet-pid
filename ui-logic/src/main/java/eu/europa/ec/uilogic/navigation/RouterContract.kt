@@ -87,6 +87,10 @@ sealed class BackupScreens {
     data object ViewRestore : Screen(name = "VIEW_RESTORE")
 }
 
+sealed class VerifierScreens{
+    data object ChoiceListTrust : Screen(name = "CHOICE_VERIFIER")
+}
+
 
 sealed class PresentationScreens {
     data object PresentationRequest : Screen(

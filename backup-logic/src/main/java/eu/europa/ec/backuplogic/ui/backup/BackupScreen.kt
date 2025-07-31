@@ -151,7 +151,7 @@ private fun MainContent(
             .padding(paddingValues)
     ) {
         WrapText(
-            text = stringResource(R.string.consent_verifier_content_title),
+            text = stringResource(R.string.consent_backup_content_title),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.titleLarge.merge(
                     TextStyle(
@@ -171,14 +171,14 @@ private fun MainContent(
                 .wrapContentSize()
                 .defaultMinSize(minHeight = DEFAULT_ACTION_CARD_HEIGHT.dp)
                 .align(Alignment.CenterHorizontally),
-            iconData = AppIcons.Verified,
+            iconData = AppIcons.Shield,
             contentScale = ContentScale.Fit
         )
 
         VSpacer.ExtraSmall()
 
         WrapText(
-            text = stringResource(R.string.verifer_content_description),
+            text = stringResource(R.string.backup_content_description),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 6
@@ -190,23 +190,58 @@ private fun MainContent(
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
-            WrapText(
-                text = stringResource(R.string.consent_backup_content_subtitle),
-                textConfig = TextConfig(
-                    style = MaterialTheme.typography.titleLarge.merge(
-                        TextStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 18.sp,
-                            lineHeight = 20.sp,
-                            letterSpacing = (-0.02).sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    )
-                ),
-            )
-
+            VerificationGrid()
+            VSpacer.Small()
 
         }
+    }
+}
+
+@Composable
+private fun VerificationGrid() {
+    Column (
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        VerificationItem(
+            icon = Icons.Default.Create,
+            description = stringResource(R.string.backup_note),
+        )
+        VerificationItem(
+            icon = Icons.Default.Refresh,
+            description = stringResource(R.string.backup_created),
+        )
+        VerificationItem(
+            icon = Icons.Default.Info,
+            description = stringResource(R.string.backup_local),
+        )
+    }
+}
+
+@Composable
+private fun VerificationItem(
+    icon: ImageVector,
+    description: String,
+) {
+    Row (
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .size(40.dp)
+                .padding(8.dp)
+        )
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        )
     }
 }
 

@@ -223,7 +223,7 @@ class WalletCoreDocumentsControllerImpl(
         val VCI_ISSUER_URLS = listOf(
             "https://issuer.eudiw.dev",
             "https://issuer.ageverification.dev",
-//            "https://funke.demo.connector.lissi.io" <-- Credentials Supported Required
+//            "https://funke.demo.connector.lissi.io" // <-- Credentials Supported Required
         )
         const val VCI_CLIENT_ID = "wallet-dev"
     }

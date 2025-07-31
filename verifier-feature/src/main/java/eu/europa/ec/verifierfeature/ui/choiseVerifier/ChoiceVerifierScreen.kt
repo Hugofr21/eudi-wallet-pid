@@ -45,9 +45,9 @@ import kotlinx.coroutines.flow.onEach
 
 
 @Composable
-fun ChoiseVerifierScreen(
+fun ChoiceVerifierScreen(
     navController: NavController,
-    viewModel: ChoiseVerifierViewModel
+    viewModel: ChoiceVerifierViewModel
 ) {
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     val effectFlow = viewModel.effect
@@ -100,12 +100,11 @@ private fun NavigationSlider(
     }
 
     LaunchedEffect(effectFlow) {
-        effectFlow.onEach { effect ->
+        effectFlow.collect { effect ->
             if (effect is Effect.Navigation) onNavigationRequested(effect)
-        }.collect()
+        }
     }
 }
-
 
 private fun handleNavigationEffect(
     navigationEffect: Effect.Navigation,
@@ -113,7 +112,11 @@ private fun handleNavigationEffect(
 ) {
     when (navigationEffect) {
         is Effect.Navigation.SwitchScreen -> {
-            navController.navigate(navigationEffect.screenRoute)
+            navController.navigate(navigationEffect.screenRoute) {
+                popUpTo(navigationEffect.popUpToScreenRoute) {
+                    inclusive = navigationEffect.inclusive
+                }
+            }
         }
 
         is Effect.Navigation.Pop -> {
@@ -122,12 +125,11 @@ private fun handleNavigationEffect(
     }
 }
 
-
 @Composable
 private fun MainContent(
     paddingValues: PaddingValues,
-    state: State? = null,
-    onToggle: ((String, Boolean) -> Unit?)?
+    state: State,
+    onToggle: (String, Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -172,13 +174,11 @@ private fun MainContent(
         VSpacer.Small()
 
         TrustListGrid(
-            items = state?.verifiers ?: emptyList(),
-            onCheckedChange = onToggle as (String, Boolean) -> Unit
+            items = state.verifiers,
+            onCheckedChange = onToggle
         )
     }
 }
-
-
 
 @Composable
 private fun ContinueButton(
@@ -197,16 +197,13 @@ private fun ContinueButton(
     }
 }
 
-
-
 @ThemeModePreviews
 @Composable
 private fun ContentPreview() {
     PreviewTheme {
-
         val buttonConfig = ButtonConfig(
             type = ButtonType.PRIMARY,
-            onClick = { },
+            onClick = {},
             enabled = true
         )
 
@@ -220,8 +217,14 @@ private fun ContentPreview() {
         ) { paddingValues ->
             MainContent(
                 paddingValues = paddingValues,
-                state = null,
-                onToggle = null
+                state = State(
+                    isLoading = false,
+                    verifiers = listOf(
+                        VerifierItem("1", "Option 1", false),
+                        VerifierItem("2", "Option 2", true)
+                    )
+                ),
+                onToggle = { _, _ -> }
             )
         }
     }

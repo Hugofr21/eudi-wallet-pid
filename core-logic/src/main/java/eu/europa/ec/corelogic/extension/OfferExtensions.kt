@@ -27,6 +27,7 @@ import java.net.URI
 import java.util.Locale
 
 fun Offer.getIssuerName(locale: Locale): String {
+    println("[OfferExtensions] issuerMetadata: $issuerMetadata")
     return issuerMetadata.display.getLocalizedString(
         userLocale = locale,
         localeExtractor = { it.locale },

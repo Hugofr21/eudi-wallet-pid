@@ -8,18 +8,16 @@ import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.verifierfeature.model.VerifierModule
 import org.koin.android.annotation.KoinViewModel
 
-
 data class VerifierItem(
     val id: String,
     val displayName: String,
     val isSelected: Boolean
 )
 
-
 data class State(
-    val isLoading: Boolean  = false,
-    val trustListVerifier: List<String>,
-    val verifiers: List<VerifierItem>? = null
+    val isLoading: Boolean = false,
+    val trustListVerifier: List<String> = emptyList(),
+    val verifiers: List<VerifierItem> = emptyList()
 ) : ViewState
 
 sealed class Event : ViewEvent {
@@ -30,47 +28,40 @@ sealed class Event : ViewEvent {
 
 sealed class Effect : ViewSideEffect {
     sealed class Navigation : Effect() {
-        data object Pop : Navigation()
+        object Pop : Navigation()
         data class SwitchScreen(
             val screenRoute: String,
             val popUpToScreenRoute: String = DashboardScreens.Profile.screenRoute,
             val inclusive: Boolean = false,
         ) : Navigation()
-
     }
-
 }
 
-
 @KoinViewModel
-class ChoiseVerifierViewModel(
-
-) : MviViewModel<Event, State, Effect>(
-
-) {
-    override fun setInitialState(): State {
-
-        return  State(
-            trustListVerifier = VerifierModule.optionsVerifierName(),
+class ChoiceVerifierViewModel(
+) : MviViewModel<Event, State, Effect>() {
+    override fun setInitialState(): State = with(VerifierModule) {
+        val options = optionsVerifierName()
+        val items = options.map { id -> VerifierItem(id = id, displayName = id, isSelected = false) }
+        return State(
+            trustListVerifier = options,
+            verifiers = items
         )
     }
 
     override fun handleEvents(event: Event) {
         when (event) {
-            Event.SubmitSelection -> {
-                val selected = viewState.value.verifiers?.filter { it.isSelected }?.map { it.id }
-            }
-            Event.GoBack -> {
-                setEffect { Effect.Navigation.Pop }
-            }
-
             is Event.ToggleVerifier -> {
+                val updated = viewState.value.verifiers.map {
+                    if (it.id == event.verifierId) it.copy(isSelected = event.isChecked) else it
+                }
+                setState { copy(verifiers = updated) }
+            }
+            Event.SubmitSelection -> {
+                val selected = viewState.value.verifiers.filter { it.isSelected }.map { it.id }
 
             }
+            Event.GoBack -> setEffect { Effect.Navigation.Pop }
         }
     }
-
-
 }
-
-

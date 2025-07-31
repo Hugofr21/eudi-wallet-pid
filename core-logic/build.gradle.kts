@@ -39,6 +39,9 @@ dependencies {
 
     implementation(libs.androidx.biometric)
     implementation(libs.moshi.kotlin)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp.logging)
+    implementation(libs.okhttp.mockwebserver)
 
     testImplementation(project(LibraryModule.TestLogic.path))
 }

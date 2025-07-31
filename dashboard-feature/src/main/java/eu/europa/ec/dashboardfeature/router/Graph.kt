@@ -48,7 +48,15 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + DashboardScreens.Dashboard.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + DashboardScreens.Dashboard.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + DashboardScreens.Dashboard.screenRoute
+                },
             )
         ) {
             DashboardScreen(
@@ -66,7 +74,15 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + DashboardScreens.Settings.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + DashboardScreens.Settings.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + DashboardScreens.Settings.screenRoute
+                },
             ),
         ) {
             SettingsScreen(
@@ -87,7 +103,15 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + DashboardScreens.DocumentDetails.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + DashboardScreens.DocumentDetails.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + DashboardScreens.DocumentDetails.screenRoute
+                },
             ),
             arguments = listOf(
                 navArgument("documentId") {
@@ -113,7 +137,15 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK + DashboardScreens.TransactionDetails.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_AGE + DashboardScreens.TransactionDetails.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.DEEPLINK_HAIP + DashboardScreens.TransactionDetails.screenRoute
+                },
             ),
             arguments = listOf(
                 navArgument("transactionId") {
