@@ -22,6 +22,7 @@ import eu.europa.ec.businesslogic.controller.storage.PrefKeys
 import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.businesslogic.validator.FilterValidator
 import eu.europa.ec.corelogic.config.WalletCoreConfig
+import eu.europa.ec.corelogic.controller.LotlController
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.dashboardfeature.interactor.DashboardInteractor
 import eu.europa.ec.dashboardfeature.interactor.DashboardInteractorImpl
@@ -75,10 +76,12 @@ fun provideHomeInteractor(
     resourceProvider: ResourceProvider,
     walletCoreDocumentsController: WalletCoreDocumentsController,
     walletCoreConfig: WalletCoreConfig,
+    lotlController: LotlController
 ): HomeInteractor = HomeInteractorImpl(
     resourceProvider,
     walletCoreDocumentsController,
     walletCoreConfig,
+    lotlController
 )
 
 @Factory

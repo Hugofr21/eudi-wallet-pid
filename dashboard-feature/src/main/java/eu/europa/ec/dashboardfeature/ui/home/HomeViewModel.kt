@@ -366,6 +366,7 @@ class HomeViewModel(
             )
         }
         viewModelScope.launch {
+            homeInteractor.intLisTrustedListProvider()
             homeInteractor.getUserNameViaMainPidDocument().collect { response ->
                 when (response) {
                     is HomeInteractorGetUserNameViaMainPidDocumentPartialState.Failure -> {

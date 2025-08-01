@@ -22,6 +22,7 @@ import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
 import eu.europa.ec.commonfeature.config.OnBackNavigationConfig
 import eu.europa.ec.commonfeature.interactor.QuickPinInteractor
 import eu.europa.ec.commonfeature.model.PinFlow
+import eu.europa.ec.corelogic.controller.LotlController
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
@@ -43,7 +44,7 @@ class SplashInteractorImpl(
     private val quickPinInteractor: QuickPinInteractor,
     private val uiSerializer: UiSerializer,
     private val resourceProvider: ResourceProvider,
-    private val walletCoreDocumentsController: WalletCoreDocumentsController
+    private val walletCoreDocumentsController: WalletCoreDocumentsController,
 ) : SplashInteractor {
 
     private val hasDocuments: Boolean

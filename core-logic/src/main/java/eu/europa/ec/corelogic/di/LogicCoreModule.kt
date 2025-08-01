@@ -17,10 +17,13 @@
 package eu.europa.ec.corelogic.di
 
 import android.content.Context
+import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.config.WalletCoreConfigImpl
+import eu.europa.ec.corelogic.controller.LotlController
+import eu.europa.ec.corelogic.controller.LotlControllerImpl
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsControllerImpl
 import eu.europa.ec.corelogic.controller.WalletCoreLogController
@@ -29,10 +32,10 @@ import eu.europa.ec.corelogic.controller.WalletCoreTransactionLogController
 import eu.europa.ec.corelogic.controller.WalletCoreTransactionLogControllerImpl
 import eu.europa.ec.eudi.wallet.EudiWallet
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
-import eu.europa.ec.storagelogic.dao.BackupLogDao
 import eu.europa.ec.storagelogic.dao.BookmarkDao
 import eu.europa.ec.storagelogic.dao.RevokedDocumentDao
 import eu.europa.ec.storagelogic.dao.TransactionLogDao
+import okhttp3.OkHttpClient
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
@@ -46,6 +49,8 @@ const val PRESENTATION_SCOPE_ID = "presentation_scope_id"
 @ComponentScan("eu.europa.ec.corelogic")
 class LogicCoreModule
 
+
+
 @Single
 fun provideEudiWallet(
     context: Context,
@@ -56,6 +61,13 @@ fun provideEudiWallet(
     withLogger(walletCoreLogController)
     withTransactionLogger(walletCoreTransactionLogController)
 }
+
+
+@Factory
+fun provideLotlController(
+    client: OkHttpClient,
+    configLogic: ConfigLogic
+): LotlController = LotlControllerImpl(client)
 
 @Single
 fun provideWalletCoreConfig(
