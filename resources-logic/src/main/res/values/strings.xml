@@ -528,6 +528,9 @@
     <string name="verifer_content_description">Here you can choose an eIDAS 2.0 compliant trust verifier from the list below.</string>
     <string name="verifier_content_description">Here you can choose an eIDAS 2.0 compliant trust verifier from the list below.</string>
     <string name="verifier_content_title">Select the Verifier</string>
+    <string name="verifier_prove_title">Prove you age</string>
+    <string name="verifier_prove_content_description">Select attributes of the attestation to be included in the request</string>
+    <string name="document_trusted_list_verifier_secondary_button_text">Verify transaction</string>
 
     <!-- Logs Screen -->
 </resources>

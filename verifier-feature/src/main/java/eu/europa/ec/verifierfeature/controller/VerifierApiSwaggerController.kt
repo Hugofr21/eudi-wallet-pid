@@ -1,12 +1,20 @@
 package eu.europa.ec.verifierfeature.controller
 
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import eu.europa.ec.verifierfeature.model.ClientMetadata
 import eu.europa.ec.verifierfeature.model.MsoDeviceResponseValidation
 import eu.europa.ec.verifierfeature.model.PresentationEvent
 import eu.europa.ec.verifierfeature.model.PresentationRequest
 import eu.europa.ec.verifierfeature.model.PresentationResponse
+import eu.europa.ec.verifierfeature.model.PresentationState
 import eu.europa.ec.verifierfeature.model.SdJwtVcRequest
+import eu.europa.ec.verifierfeature.model.TransactionEvents
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import retrofit2.Response
+import retrofit2.Retrofit
 import retrofit2.http.Body
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
@@ -32,14 +40,14 @@ interface VerifierApiSwaggerController {
     @Headers("Accept: application/json")
     suspend fun getPresentation(
         @Path("transactionId") transactionId: String
-    ): Response<PresentationResponse>
+    ): Response<PresentationState>
 
 
     @GET("/ui/presentations/{transactionId}/events")
     @Headers("Accept: application/json")
     suspend fun getPresentationEvents(
         @Path("transactionId") transactionId: String
-    ): Response<List<PresentationEvent>>
+    ): Response<List<TransactionEvents>>
 
 
     @GET("/ui/clientMetadata")
@@ -56,7 +64,6 @@ interface VerifierApiSwaggerController {
     ): Response<MsoDeviceResponseValidation>
 
 
-
     @FormUrlEncoded
     @POST("/utilities/validations/sdJwtVc")
     @Headers("Accept: application/json")
@@ -64,42 +71,50 @@ interface VerifierApiSwaggerController {
         @Field("sd_jwt_vc") sdJwtVc: String,
         @Field("nonce") nonce: String,
         @Field("issuer_chain") issuerChain: String? = null
-    ): Response<SdJwtVcRequest>
+    ): Response<JsonObject>
 
 }
 
 class VerifierApiSwaggerControllerImpl(
+    private val okHttpClient: OkHttpClient,
 
 ):VerifierApiSwaggerController{
 
-    override suspend fun createPresentation(request: PresentationRequest): Response<PresentationResponse> {
-        TODO("Not yet implemented")
+    companion object{
+        val BASE_URL  = "https://verifier-backend.ageverification.dev/"
     }
 
-    override suspend fun getPresentation(transactionId: String): Response<PresentationResponse> {
-        TODO("Not yet implemented")
-    }
+    private val json = Json { ignoreUnknownKeys = true }
+    val contentType = "application/json".toMediaType()
+    private val retrofit: Retrofit = Retrofit.Builder()
+        .baseUrl(BASE_URL)
+        .addConverterFactory(json.asConverterFactory(contentType))
+        .client(okHttpClient)
+        .build()
 
-    override suspend fun getPresentationEvents(transactionId: String): Response<List<PresentationEvent>> {
-        TODO("Not yet implemented")
-    }
+    private val api = retrofit.create(VerifierApiSwaggerController::class.java)
 
-    override suspend fun getClientMetadata(): Response<ClientMetadata> {
-        TODO("Not yet implemented")
-    }
+    override suspend fun createPresentation(request: PresentationRequest) =
+        api.createPresentation(request)
+
+    override suspend fun getPresentation(transactionId: String) =
+        api.getPresentation(transactionId)
+
+    override suspend fun getPresentationEvents(transactionId: String) =
+        api.getPresentationEvents(transactionId)
+
+    override suspend fun getClientMetadata() =
+        api.getClientMetadata()
 
     override suspend fun validateMsoDeviceResponse(
         deviceResponse: String,
         issuerChain: String?
-    ): Response<MsoDeviceResponseValidation> {
-        TODO("Not yet implemented")
-    }
+    ) = api.validateMsoDeviceResponse(deviceResponse, issuerChain)
 
     override suspend fun validateSdJwtVc(
         sdJwtVc: String,
         nonce: String,
         issuerChain: String?
-    ): Response<SdJwtVcRequest> {
-        TODO("Not yet implemented")
-    }
+    ) = api.validateSdJwtVc(sdJwtVc, nonce, issuerChain)
+
 }

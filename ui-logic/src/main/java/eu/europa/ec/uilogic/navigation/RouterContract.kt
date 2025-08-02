@@ -89,6 +89,7 @@ sealed class BackupScreens {
 
 sealed class VerifierScreens{
     data object ChoiceListTrust : Screen(name = "CHOICE_VERIFIER")
+    data object FieldsLabels : Screen(name = "CHOICE_VERIFIER_FIELDS")
 }
 
 
@@ -151,5 +152,6 @@ sealed class ModuleRoute(val route: String) : NavigatableItem {
     data object IssuanceModule : ModuleRoute("ISSUANCE_MODULE")
     data object ConsentUserModule : ModuleRoute("USER_CONSENT_MODULE")
     data object BackupModule : ModuleRoute("BACKUP_MODULE")
+    data object VerifierModule : ModuleRoute("VERIFIER_MODULE")
 
 }

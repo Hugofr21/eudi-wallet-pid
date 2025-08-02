@@ -1,14 +1,23 @@
 package eu.europa.ec.verifierfeature.model
 
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
+@Serializable
 data class ClientMetadata(
-    val vpFormats: Map<String, VpFormat> // vp_formats
+    @SerialName("vp_formats")
+    val vpFormats: Map<String, VpFormat>
 )
 
+@Serializable
 data class VpFormat(
-    // “vc+sd-jwt” e “dc+sd-jwt”
-    val sdJwtAlgValues: List<String>? = null, // sd-jwt_alg_values
-    val kbJwtAlgValues: List<String>? = null, // kb-jwt_alg_values
-    // “mso_mdoc”
-    val alg: List<String>? = null // alg
+    @SerialName("sd-jwt_alg_values")
+    val sdJwtAlgValues: List<String>? = null,
+
+    @SerialName("kb-jwt_alg_values")
+    val kbJwtAlgValues: List<String>? = null,
+
+    @SerialName("alg")
+    val alg: List<String>? = null
 )

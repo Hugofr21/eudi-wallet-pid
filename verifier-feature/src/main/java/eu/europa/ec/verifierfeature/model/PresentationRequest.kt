@@ -1,8 +1,9 @@
 package eu.europa.ec.verifierfeature.model
 
+import kotlinx.serialization.json.JsonObject
+
 data class PresentationRequest(
-    val type: String, //"id_token"
-    val id_token_type: String, //"subject_signed_id_token"
-    val jar_mode: String, //"by_value"
+    val type: String,
+    val dcqlQuery: JsonObject,
     val nonce: String
 )

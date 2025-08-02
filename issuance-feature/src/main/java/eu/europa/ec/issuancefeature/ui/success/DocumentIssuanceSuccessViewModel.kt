@@ -36,7 +36,6 @@ class DocumentIssuanceSuccessViewModel(
 
     override fun getNextScreenConfigNavigation(): ConfigNavigation {
         val deserializedIssuanceSuccessUiConfig = getDeserializedIssuanceSuccessUiConfig()
-
         return deserializedIssuanceSuccessUiConfig.onSuccessNavigation
     }
 

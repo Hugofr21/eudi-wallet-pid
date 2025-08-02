@@ -1,5 +1,6 @@
-package eu.europa.ec.verifierfeature.ui.choiseVerifier
+package eu.europa.ec.verifierfeature.ui.fieldLabelsPrrofAge
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
@@ -7,6 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +28,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.AppIcons
+import eu.europa.ec.uilogic.component.CheckboxWithTextData
+import eu.europa.ec.uilogic.component.WrapCheckboxWithLabel
 import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
 import eu.europa.ec.uilogic.component.preview.PreviewTheme
@@ -38,16 +44,15 @@ import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapImage
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 import eu.europa.ec.uilogic.component.wrap.WrapText
-import eu.europa.ec.verifierfeature.ui.choiseVerifier.compoment.TrustListGrid
+import eu.europa.ec.verifierfeature.model.FieldLabel
+import eu.europa.ec.verifierfeature.model.fieldLabels
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.onEach
 
 
 @Composable
-fun ChoiceVerifierScreen(
+fun FieldLabelsProofAgeScreen(
     navController: NavController,
-    viewModel: ChoiceVerifierViewModel
+    viewModel: FieldLabelsProofAgeViewModel
 ) {
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     val effectFlow = viewModel.effect
@@ -74,7 +79,7 @@ fun ChoiceVerifierScreen(
                 handleNavigationEffect(navigationEffect, navController)
             },
             state = state,
-            onToggle = { id, checked -> viewModel.setEvent(Event.ToggleVerifier(id, checked)) }
+            onToggle = { id, checked -> viewModel.setEvent(Event.ToggleFieldLabel(id, checked)) }
         )
     }
 }
@@ -137,7 +142,7 @@ private fun MainContent(
             .padding(paddingValues)
     ) {
         WrapText(
-            text = stringResource(R.string.verifier_content_title),
+            text = stringResource(R.string.verifier_prove_title),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.titleLarge.merge(
                     TextStyle(
@@ -157,14 +162,14 @@ private fun MainContent(
                 .wrapContentSize()
                 .defaultMinSize(minHeight = DEFAULT_ACTION_CARD_HEIGHT.dp)
                 .align(Alignment.CenterHorizontally),
-            iconData = AppIcons.Verified,
+            iconData = AppIcons.Info,
             contentScale = ContentScale.Fit
         )
 
         VSpacer.Small()
 
         WrapText(
-            text = stringResource(R.string.verifier_content_description),
+            text = stringResource(R.string.verifier_prove_content_description),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 6
@@ -173,12 +178,47 @@ private fun MainContent(
 
         VSpacer.Small()
 
-        TrustListGrid(
-            items = state.verifiers,
+        ListAgeGrid(
+            items = state.options,
+            selectedKeys = state.selectedKeys,
             onCheckedChange = onToggle
         )
     }
 }
+
+@Composable
+fun ListAgeGrid(
+    items: List<FieldLabel>,
+    selectedKeys: Set<String>,
+    onCheckedChange: (String, Boolean) -> Unit
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(items) { item ->
+            val checked = item.key in selectedKeys
+
+            WrapCheckboxWithLabel(
+                checkboxData = CheckboxWithTextData(
+                    isChecked = checked,
+                    enabled = true,
+                    onCheckedChange = { isChecked ->
+                        onCheckedChange(item.key, isChecked)
+                    },
+                    text = item.label,
+                    textPadding = PaddingValues(8.dp)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(4.dp)
+            )
+        }
+    }
+}
+
 
 @Composable
 private fun ContinueButton(
@@ -193,7 +233,7 @@ private fun ContinueButton(
             type = StickyBottomType.OneButton(config = config), showDivider = false
         )
     ) {
-        Text(text = stringResource(R.string.backup_screen_skip_button))
+        Text(text = stringResource(R.string.backup_screen_confirm_button))
     }
 }
 
@@ -219,10 +259,7 @@ private fun ContentPreview() {
                 paddingValues = paddingValues,
                 state = State(
                     isLoading = false,
-                    verifiers = listOf(
-                        VerifierItem("1", "Option 1", false),
-                        VerifierItem("2", "Option 2", true)
-                    )
+                    options = fieldLabels,
                 ),
                 onToggle = { _, _ -> }
             )

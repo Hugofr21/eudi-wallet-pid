@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -642,6 +643,26 @@ private fun ButtonsSection(onEventSend: (Event) -> Unit) {
         ) {
             Text(
                 text = stringResource(id = R.string.document_details_secondary_button_text),
+                style = MaterialTheme.typography.labelLarge
+            )
+        }
+
+        WrapButton(
+            modifier = Modifier.fillMaxWidth(),
+            buttonConfig = ButtonConfig(
+                type = ButtonType.PRIMARY,
+                onClick = { onEventSend(Event.NavigateToVerifier) },
+                isWarning = true,
+                buttonColors = ButtonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                    disabledContainerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
+                    disabledContentColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.3f)
+                )
+            )
+        ) {
+            Text(
+                text = stringResource(id = R.string.document_trusted_list_verifier_secondary_button_text),
                 style = MaterialTheme.typography.labelLarge
             )
         }

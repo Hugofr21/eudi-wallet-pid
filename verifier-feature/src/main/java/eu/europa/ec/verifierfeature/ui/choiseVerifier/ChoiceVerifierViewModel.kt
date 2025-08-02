@@ -5,6 +5,7 @@ import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
+import eu.europa.ec.uilogic.navigation.VerifierScreens
 import eu.europa.ec.verifierfeature.model.VerifierModule
 import org.koin.android.annotation.KoinViewModel
 
@@ -52,15 +53,29 @@ class ChoiceVerifierViewModel(
     override fun handleEvents(event: Event) {
         when (event) {
             is Event.ToggleVerifier -> {
+                val currentSelection = viewState.value.verifiers.firstOrNull { it.isSelected }
+                val isSame = currentSelection?.id == event.verifierId
+
                 val updated = viewState.value.verifiers.map {
-                    if (it.id == event.verifierId) it.copy(isSelected = event.isChecked) else it
+                    when {
+                        it.id == event.verifierId -> it.copy(isSelected = event.isChecked)
+                        else -> it.copy(isSelected = false)
+                    }
                 }
                 setState { copy(verifiers = updated) }
             }
             Event.SubmitSelection -> {
                 val selected = viewState.value.verifiers.filter { it.isSelected }.map { it.id }
-
+                if ("Age Verification Testing Verifier" in selected) {
+                    setEffect {
+                        Effect.Navigation.SwitchScreen(
+                            screenRoute = VerifierScreens.FieldsLabels.screenRoute,
+                            inclusive = true
+                        )
+                    }
+                }
             }
+
             Event.GoBack -> setEffect { Effect.Navigation.Pop }
         }
     }

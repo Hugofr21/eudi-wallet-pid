@@ -27,6 +27,7 @@ import eu.europa.ec.presentationfeature.router.presentationGraph
 import eu.europa.ec.proximityfeature.router.featureProximityGraph
 import eu.europa.ec.startupfeature.router.featureStartupGraph
 import eu.europa.ec.uilogic.container.EudiComponentActivity
+import eu.europa.ec.verifierfeature.router.featureVerifierGraph
 
 class MainActivity : EudiComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,15 +35,14 @@ class MainActivity : EudiComponentActivity() {
         setContent {
             Content(intent) {
                 featureStartupGraph(it)
-                // added consent user module
                 featureConsentUserGraph(it)
                 featureCommonGraph(it)
                 featureDashboardGraph(it)
                 presentationGraph(it)
                 featureProximityGraph(it)
                 featureIssuanceGraph(it)
-                // added backup module
                 featureBackupGraph(it)
+                featureVerifierGraph(it)
             }
         }
     }

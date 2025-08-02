@@ -92,4 +92,16 @@ class LotlControllerImpl(
         return list
     }
 
+    private fun mapCategory(uri: String): ProviderCategory = when (uri) {
+        "http://uri.etsi.org/TrstSvc/Svctype/QCertESig"   -> ProviderCategory.SIGNATURE
+        "http://uri.etsi.org/TrstSvc/Svctype/QCertESeal"  -> ProviderCategory.SEAL
+        "http://uri.etsi.org/TrstSvc/Svctype/QWAC"        -> ProviderCategory.WEBSITE_AUTH
+        "http://uri.etsi.org/TrstSvc/Svctype/QESigRemote" -> ProviderCategory.REMOTE_SIGNATURE
+        "http://uri.etsi.org/TrstSvc/Svctype/WalletIssuer"-> ProviderCategory.WALLETS
+        "http://uri.etsi.org/TrstSvc/Svctype/PIDIssuer"   -> ProviderCategory.PID
+        "http://uri.etsi.org/TrstSvc/Svctype/QEAAIssuer"  -> ProviderCategory.EAA
+        "http://uri.etsi.org/TrstSvc/Svctype/RelyingParty"-> ProviderCategory.RELYING_PARTY
+        else                                               -> ProviderCategory.OTHER
+    }
+
 }

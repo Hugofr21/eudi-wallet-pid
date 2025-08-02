@@ -120,7 +120,8 @@ class PresentationLoadingViewModel(
     private fun sendRequestedDocuments(event: Event) {
 
         when (val result = interactor.sendRequestedDocuments()) {
-            is PresentationLoadingSendRequestedDocumentPartialState.Success -> { /*no op*/
+            is PresentationLoadingSendRequestedDocumentPartialState.Success -> {
+
             }
 
             is PresentationLoadingSendRequestedDocumentPartialState.Failure -> {

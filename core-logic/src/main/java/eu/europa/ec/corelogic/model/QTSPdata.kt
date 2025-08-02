@@ -18,7 +18,7 @@ data class QtspInfo(
     val serviceType: String,
     val status: String,
     val category: ProviderCategory,
-    val digitalIdentityBase64: String?
+    val digitalIdentityBase64: String? = null,
 )
 
 data class TslLocationInfo(

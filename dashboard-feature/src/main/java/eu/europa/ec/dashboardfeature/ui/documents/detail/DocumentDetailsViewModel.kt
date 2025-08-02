@@ -22,6 +22,8 @@ import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractorDeleteB
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractorDeleteDocumentPartialState
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractorPartialState
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractorStoreBookmarkPartialState
+import eu.europa.ec.dashboardfeature.ui.documents.detail.DocumentDetailsBottomSheetContent.*
+import eu.europa.ec.dashboardfeature.ui.documents.detail.Effect.Navigation.*
 import eu.europa.ec.dashboardfeature.ui.documents.detail.model.DocumentDetailsUi
 import eu.europa.ec.dashboardfeature.ui.documents.detail.transformer.DocumentDetailsTransformer.transformToDocumentDetailsUi
 import eu.europa.ec.dashboardfeature.ui.documents.model.DocumentCredentialsInfoUi
@@ -37,6 +39,7 @@ import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.StartupScreens
+import eu.europa.ec.uilogic.navigation.VerifierScreens
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.annotation.InjectedParam
@@ -60,7 +63,7 @@ data class State(
     val isDocumentBookmarked: Boolean = false,
     val hideSensitiveContent: Boolean = true,
 
-    val sheetContent: DocumentDetailsBottomSheetContent = DocumentDetailsBottomSheetContent.DeleteDocumentConfirmation,
+    val sheetContent: DocumentDetailsBottomSheetContent = DeleteDocumentConfirmation,
 ) : ViewState
 
 sealed class Event : ViewEvent {
@@ -87,6 +90,7 @@ sealed class Event : ViewEvent {
     data object IssuerCardPressed : Event()
     data class OnRevocationStatusChanged(val revokedIds: List<String>) : Event()
     data object ToggleExpansionStateOfDocumentCredentialsSection : Event()
+    object NavigateToVerifier : Event()
 }
 
 sealed class Effect : ViewSideEffect {
@@ -104,6 +108,7 @@ sealed class Effect : ViewSideEffect {
 
     data object BookmarkStored : Effect()
     data object BookmarkRemoved : Effect()
+
 }
 
 sealed class DocumentDetailsBottomSheetContent {
@@ -140,13 +145,13 @@ class DocumentDetailsViewModel(
 
             is Event.Pop -> {
                 setState { copy(error = null) }
-                setEffect { Effect.Navigation.Pop }
+                setEffect { Pop }
             }
 
             is Event.ClaimClicked -> onClaimClicked(event.itemId)
 
             is Event.SecondaryButtonPressed -> {
-                showBottomSheet(sheetContent = DocumentDetailsBottomSheetContent.DeleteDocumentConfirmation)
+                showBottomSheet(sheetContent = DeleteDocumentConfirmation)
             }
 
             is Event.BottomSheet.UpdateBottomSheetState -> {
@@ -182,7 +187,7 @@ class DocumentDetailsViewModel(
 
             is Event.OnBookmarkStored -> {
                 showBottomSheet(
-                    sheetContent = DocumentDetailsBottomSheetContent.BookmarkStoredInfo(
+                    sheetContent = BookmarkStoredInfo(
                         bottomSheetTextData = getBookmarkStoredBottomSheetTextData()
                     )
                 )
@@ -190,7 +195,7 @@ class DocumentDetailsViewModel(
 
             is Event.OnBookmarkRemoved -> {
                 showBottomSheet(
-                    sheetContent = DocumentDetailsBottomSheetContent.BookmarkRemovedInfo(
+                    sheetContent = BookmarkRemovedInfo(
                         bottomSheetTextData = getBookmarkRemovedBottomSheetTextData()
                     )
                 )
@@ -198,7 +203,7 @@ class DocumentDetailsViewModel(
 
             is Event.IssuerCardPressed -> {
                 showBottomSheet(
-                    sheetContent = DocumentDetailsBottomSheetContent.TrustedRelyingPartyInfo(
+                    sheetContent = TrustedRelyingPartyInfo(
                         bottomSheetTextData = getTrustedRelyingPartyBottomSheetTextData()
                     )
                 )
@@ -213,6 +218,15 @@ class DocumentDetailsViewModel(
             }
 
             is Event.ToggleExpansionStateOfDocumentCredentialsSection -> toggleExpansionStateOfDocumentCredentialsSection()
+
+
+            Event.NavigateToVerifier ->  setEffect {
+                SwitchScreen(
+                    screenRoute = VerifierScreens.ChoiceListTrust .screenRoute,
+                    popUpToScreenRoute = VerifierScreens.ChoiceListTrust.screenRoute,
+                    inclusive = true,
+                )
+            }
         }
     }
 
@@ -302,7 +316,7 @@ class DocumentDetailsViewModel(
                         }
 
                         setEffect {
-                            Effect.Navigation.SwitchScreen(
+                            SwitchScreen(
                                 screenRoute = StartupScreens.Splash.screenRoute,
                                 popUpToScreenRoute = DashboardScreens.Dashboard.screenRoute,
                                 inclusive = true
@@ -319,7 +333,7 @@ class DocumentDetailsViewModel(
                         }
 
                         setEffect {
-                            Effect.Navigation.Pop
+                            Pop
                         }
                     }
 
