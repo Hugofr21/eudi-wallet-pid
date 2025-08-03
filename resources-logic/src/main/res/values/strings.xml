@@ -531,6 +531,10 @@
     <string name="verifier_prove_title">Prove you age</string>
     <string name="verifier_prove_content_description">Select attributes of the attestation to be included in the request</string>
     <string name="document_trusted_list_verifier_secondary_button_text">Verify transaction</string>
+    <string name="sharing_data_title">Why do we need your data?</string>
+    <string name="sharing_data_description">The Trusted Reviewer is requesting certain attributes of your document to verify that you meet the service requirements\n  Only the strictly necessary data will be shared, and this sharing will be done with your explicit consent.</string>
+    <string name="sharing_data_footer_title">The control is yours</string>
+    <string name="sharing_data_footer_description">You have complete control over what data you share. No information will be shared without your permission.</string>
 
     <!-- Logs Screen -->
 </resources>

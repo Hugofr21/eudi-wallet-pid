@@ -17,6 +17,7 @@
 package eu.europa.ec.dashboardfeature.ui.documents.detail
 
 import androidx.lifecycle.viewModelScope
+import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractor
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractorDeleteBookmarkPartialState
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractorDeleteDocumentPartialState
@@ -40,6 +41,8 @@ import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.StartupScreens
 import eu.europa.ec.uilogic.navigation.VerifierScreens
+import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
+import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.annotation.InjectedParam
@@ -222,13 +225,25 @@ class DocumentDetailsViewModel(
 
             Event.NavigateToVerifier ->  setEffect {
                 SwitchScreen(
-                    screenRoute = VerifierScreens.ChoiceListTrust .screenRoute,
+                    screenRoute = generateComposableNavigationLink(
+                        screen = VerifierScreens.ChoiceListTrust.screenRoute,
+                        arguments = generateComposableArguments(
+                            mapOf(
+                                "detailsType" to IssuanceFlowUiConfig.EXTRA_DOCUMENT,
+                                "documentId" to documentId
+                            )
+                        ),
+                    ),
                     popUpToScreenRoute = VerifierScreens.ChoiceListTrust.screenRoute,
                     inclusive = true,
                 )
             }
         }
     }
+
+
+
+
 
     private fun getDocumentDetails(event: Event) {
         setState {

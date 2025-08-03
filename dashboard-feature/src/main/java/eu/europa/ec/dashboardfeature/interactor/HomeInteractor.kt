@@ -22,7 +22,6 @@ import eu.europa.ec.businesslogic.extension.safeAsync
 import eu.europa.ec.commonfeature.util.DocumentJsonKeys
 import eu.europa.ec.commonfeature.util.extractValueFromDocumentOrEmpty
 import eu.europa.ec.corelogic.config.WalletCoreConfig
-import eu.europa.ec.corelogic.controller.LotlController
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.flow.Flow
@@ -39,7 +38,6 @@ sealed class HomeInteractorGetUserNameViaMainPidDocumentPartialState {
 }
 
 interface HomeInteractor {
-    suspend fun intLisTrustedListProvider()
     fun isBleAvailable(): Boolean
     fun isBleCentralClientModeEnabled(): Boolean
     fun getUserNameViaMainPidDocument(): Flow<HomeInteractorGetUserNameViaMainPidDocumentPartialState>
@@ -50,14 +48,9 @@ class HomeInteractorImpl(
     private val resourceProvider: ResourceProvider,
     private val walletCoreDocumentsController: WalletCoreDocumentsController,
     private val walletCoreConfig: WalletCoreConfig,
-    private val lotlController: LotlController
 ) : HomeInteractor {
     private val genericErrorMsg
         get() = resourceProvider.genericErrorMessage()
-
-    override suspend  fun intLisTrustedListProvider() {
-        lotlController.fetchAllQtsp()
-    }
 
     override fun isBleAvailable(): Boolean {
         val bluetoothManager: BluetoothManager? = resourceProvider.provideContext()

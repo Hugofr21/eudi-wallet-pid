@@ -233,7 +233,7 @@ private fun ContinueButton(
             type = StickyBottomType.OneButton(config = config), showDivider = false
         )
     ) {
-        Text(text = stringResource(R.string.backup_screen_confirm_button))
+        Text(text = stringResource(R.string.backup_screen_skip_button))
     }
 }
 

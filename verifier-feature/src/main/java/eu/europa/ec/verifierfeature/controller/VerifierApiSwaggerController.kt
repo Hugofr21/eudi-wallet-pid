@@ -1,6 +1,7 @@
 package eu.europa.ec.verifierfeature.controller
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.verifierfeature.model.ClientMetadata
 import eu.europa.ec.verifierfeature.model.MsoDeviceResponseValidation
 import eu.europa.ec.verifierfeature.model.PresentationEvent
@@ -73,6 +74,9 @@ interface VerifierApiSwaggerController {
         @Field("issuer_chain") issuerChain: String? = null
     ): Response<JsonObject>
 
+    @GET("/wallet/public-keys.json")
+    suspend fun getPublicKeys(): Response<JWKSet>
+
 }
 
 class VerifierApiSwaggerControllerImpl(
@@ -116,5 +120,9 @@ class VerifierApiSwaggerControllerImpl(
         nonce: String,
         issuerChain: String?
     ) = api.validateSdJwtVc(sdJwtVc, nonce, issuerChain)
+
+    override suspend fun getPublicKeys(): Response<JWKSet> =
+        api.getPublicKeys()
+
 
 }

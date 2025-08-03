@@ -28,7 +28,7 @@ import eu.europa.ec.corelogic.controller.WalletCorePresentationController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
-import eu.europa.ec.eudi.wallet.presentation.PresentationManager
+
 
 sealed class PresentationRequestInteractorPartialState {
     data class Success(

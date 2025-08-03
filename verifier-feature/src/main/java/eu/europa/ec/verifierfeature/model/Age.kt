@@ -1,5 +1,8 @@
 package eu.europa.ec.verifierfeature.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class FieldLabel(
     val key: String,
     val label: String

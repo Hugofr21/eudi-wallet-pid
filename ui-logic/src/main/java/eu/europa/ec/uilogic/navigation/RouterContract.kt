@@ -88,8 +88,21 @@ sealed class BackupScreens {
 }
 
 sealed class VerifierScreens{
-    data object ChoiceListTrust : Screen(name = "CHOICE_VERIFIER")
-    data object FieldsLabels : Screen(name = "CHOICE_VERIFIER_FIELDS")
+    data object ChoiceListTrust : Screen(
+        name = "CHOICE_VERIFIER",
+        parameters = "?documentId={documentId}"
+    )
+
+    data object FieldsLabels : Screen(
+        name = "CHOICE_VERIFIER_FIELDS",
+        parameters = "?documentId={documentId}"
+    )
+
+    data object RequestVerifier : Screen(
+        name       = "REQUEST_VERIFIER_FIELDS",
+        parameters = "?args={args}"
+    )
+
 }
 
 

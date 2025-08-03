@@ -1,13 +1,18 @@
 package eu.europa.ec.verifierfeature.ui.choiseVerifier
 
+import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
+import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.VerifierScreens
+import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
+import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import eu.europa.ec.verifierfeature.model.VerifierModule
 import org.koin.android.annotation.KoinViewModel
+import org.koin.core.annotation.InjectedParam
 
 data class VerifierItem(
     val id: String,
@@ -40,6 +45,7 @@ sealed class Effect : ViewSideEffect {
 
 @KoinViewModel
 class ChoiceVerifierViewModel(
+    @InjectedParam private val documentId: DocumentId,
 ) : MviViewModel<Event, State, Effect>() {
     override fun setInitialState(): State = with(VerifierModule) {
         val options = optionsVerifierName()
@@ -69,8 +75,16 @@ class ChoiceVerifierViewModel(
                 if ("Age Verification Testing Verifier" in selected) {
                     setEffect {
                         Effect.Navigation.SwitchScreen(
-                            screenRoute = VerifierScreens.FieldsLabels.screenRoute,
-                            inclusive = true
+                            screenRoute = generateComposableNavigationLink(
+                                screen = VerifierScreens.FieldsLabels.screenRoute,
+                                arguments = generateComposableArguments(
+                                    mapOf(
+                                        "detailsType" to IssuanceFlowUiConfig.EXTRA_DOCUMENT,
+                                        "documentId" to documentId
+                                    )
+                                ),
+                            ),
+                            inclusive = false,
                         )
                     }
                 }

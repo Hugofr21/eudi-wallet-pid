@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.mockwebserver)
+    implementation(libs.timber)
 
     testImplementation(project(LibraryModule.TestLogic.path))
 }

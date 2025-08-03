@@ -21,6 +21,7 @@ data class QtspInfo(
     val digitalIdentityBase64: String? = null,
 )
 
+@kotlinx.serialization.Serializable
 data class TslLocationInfo(
     val country: String,
     val tslUrl: String,

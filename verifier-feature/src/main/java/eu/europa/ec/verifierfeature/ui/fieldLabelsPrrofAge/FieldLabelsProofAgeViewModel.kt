@@ -1,16 +1,24 @@
 package eu.europa.ec.verifierfeature.ui.fieldLabelsPrrofAge
 
+import android.net.Uri
 import androidx.lifecycle.viewModelScope
+import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
+import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
+import eu.europa.ec.uilogic.navigation.VerifierScreens
+import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
+import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import eu.europa.ec.verifierfeature.model.FieldLabel
-import eu.europa.ec.verifierfeature.model.VerifierModule
 import eu.europa.ec.verifierfeature.model.fieldLabels
+import eu.europa.ec.verifierfeature.ui.fieldLabelsPrrofAge.model.RequestArgs
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import org.koin.android.annotation.KoinViewModel
+import org.koin.core.annotation.InjectedParam
 
 
 data class State(
@@ -42,9 +50,11 @@ sealed class Effect : ViewSideEffect {
 
 @KoinViewModel
 class FieldLabelsProofAgeViewModel(
+    @InjectedParam private val documentId: DocumentId,
 ) : MviViewModel<Event, State, Effect>() {
 
     override fun setInitialState(): State {
+        println("[FieldLabelsProofAgeViewModel] document $documentId")
         return State(
             options = fieldLabels
         )
@@ -69,7 +79,22 @@ class FieldLabelsProofAgeViewModel(
                 val selected = viewState.value.options
                     .filter { it.key in viewState.value.selectedKeys }
                 viewModelScope.launch {
+                    setEffect {
 
+                        val requestArgs = RequestArgs(
+                            detailsType = IssuanceFlowUiConfig.EXTRA_DOCUMENT,
+                            documentId = documentId,
+                            fieldLabels = selected
+                        )
+
+                        val json = Json.encodeToString(requestArgs)
+                        val encodedJson = Uri.encode(json)
+
+
+                        Effect.Navigation.SwitchScreen(
+                            screenRoute = "${VerifierScreens.RequestVerifier.screenRoute}?args=$encodedJson"
+                        )
+                    }
                 }
             }
 
