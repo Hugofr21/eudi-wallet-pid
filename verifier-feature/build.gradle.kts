@@ -19,6 +19,8 @@ moduleConfig {
 dependencies {
     implementation(project(LibraryModule.CoreLogic.path))
     implementation(project(LibraryModule.DashboardFeature.path))
+    implementation(libs.eudi.lib.jvm.siop.openid4vp.kt)
+    implementation(libs.eudi.lib.jvm.sdjwt.kt)
     implementation(libs.jsoup)
     implementation(libs.kotlinx.serialization.json.v151)
     implementation(libs.retrofit.v290)
