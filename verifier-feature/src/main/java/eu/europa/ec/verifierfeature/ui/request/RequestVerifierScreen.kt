@@ -1,6 +1,7 @@
 package eu.europa.ec.verifierfeature.ui.request
 
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,12 +9,20 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,11 +31,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.navigation.NavController
+import eu.europa.ec.commonfeature.ui.biometricCofing.BiometricSetupViewModel
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.ClickableArea
 import eu.europa.ec.uilogic.component.ListItem
@@ -35,8 +48,14 @@ import eu.europa.ec.uilogic.component.ListItemTrailingContentDataUi
 import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
 import eu.europa.ec.uilogic.component.utils.VSpacer
+import eu.europa.ec.uilogic.component.wrap.ButtonConfig
+import eu.europa.ec.uilogic.component.wrap.ButtonType
+import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
+import eu.europa.ec.uilogic.component.wrap.StickyBottomType
 import eu.europa.ec.uilogic.component.wrap.SwitchDataUi
+import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 import kotlinx.coroutines.flow.Flow
+
 
 @Composable
 fun RequestVerifierScreen(
@@ -49,21 +68,31 @@ fun RequestVerifierScreen(
     ContentScreen(
         isLoading = state.isLoading,
         navigatableAction = ScreenNavigateAction.BACKABLE,
-        onBack = { viewModel.setEvent(Event.GoBack) }
+        onBack = { viewModel.setEvent(Event.GoBack) },
+        // **Aqui definimos o stickyBottom**:
+        stickyBottom = { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(innerPadding)
+            ) {
+                AlertFooter()
+                DoubleBtn(
+                    onCancel = { viewModel.setEvent(Event.GoBack) },
+                    onShare = { viewModel.setEvent(Event.SubmitSelection) }
+                )
+            }
+        }
     ) { paddingValues ->
-        RequestVerifierContent(
+        RequestVerifierBody(
             paddingValues = paddingValues,
             state = state,
             effectFlow = effectFlow,
             onToggle = { id, checked -> viewModel.setEvent(Event.ToggleFieldLabel(id, checked)) },
-            onCancel = { viewModel.setEvent(Event.GoBack) },
-            onShare = { viewModel.setEvent(Event.SubmitSelection) }
-        ) { effect ->
-            handleNavigationEffect(effect, navController)
-        }
+            onNavigationRequested = { effect -> handleNavigationEffect(effect, navController) }
+        )
     }
 }
-
 
 private fun handleNavigationEffect(
     navigationEffect: Effect.Navigation,
@@ -86,13 +115,11 @@ private fun handleNavigationEffect(
 
 
 @Composable
-private fun RequestVerifierContent(
+private fun RequestVerifierBody(
     paddingValues: PaddingValues,
     state: State,
     effectFlow: Flow<Effect>,
     onToggle: (String, Boolean) -> Unit,
-    onCancel: () -> Unit,
-    onShare: () -> Unit,
     onNavigationRequested: (Effect.Navigation) -> Unit
 ) {
     Column(
@@ -102,26 +129,90 @@ private fun RequestVerifierContent(
     ) {
         Text(
             style = MaterialTheme.typography.headlineSmall,
-            text = stringResource(R.string.sharing_data_title)
+            text = stringResource(R.string.sharing_data_title),
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
         VSpacer.Small()
         Text(
             style = MaterialTheme.typography.bodyMedium,
-            text = stringResource(R.string.sharing_data_description)
+            text = stringResource(R.string.sharing_data_description),
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
         VSpacer.Small()
-        ListSharingData(
-            items = state.availableFields,
-            selectedIds = state.selectedFieldLabels,
-            onToggle = onToggle,
-            modifier = Modifier.weight(1f)
-        )
 
-        // Footer popup with actions
-        Alert(
-            onCancel = onCancel,
-            onShare = onShare
-        )
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 180.dp),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 0.dp)
+        ) {
+            items(state.availableFields, key = { it.itemId }) { item ->
+                val isChecked = item.itemId in state.selectedFieldLabels || item.isMandatory
+
+                Card(
+                    onClick = {
+                        if (!item.isMandatory) onToggle(item.itemId, !isChecked)
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp)
+                ) {
+                    Box(Modifier.fillMaxSize()) {
+                        Column(
+                            modifier = Modifier
+                                .padding(12.dp)
+                                .align(Alignment.TopStart)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = item.title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            item.subtitle?.let {
+                             VSpacer.ExtraSmall()
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            if (item.isMandatory) {
+                                VSpacer.ExtraSmall()
+                                Text(
+                                    text = "(Mandatory)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+
+                        Checkbox(
+                            checked = isChecked,
+                            onCheckedChange = {
+                                if (!item.isMandatory) onToggle(item.itemId, it)
+                            },
+                            enabled = !item.isMandatory,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp)
+                        )
+                    }
+                }
+            }
+
+        }
     }
 
     LaunchedEffect(effectFlow) {
@@ -132,77 +223,56 @@ private fun RequestVerifierContent(
 }
 
 @Composable
-fun ListSharingData(
-    items: List<ListItemDataUi>,
-    selectedIds: Set<String>,
-    onToggle: (String, Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier
+private fun AlertFooter() {
+    Card(
+        modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        items(items, key = { it.itemId }) { item ->
-            val isChecked = item.itemId in selectedIds
-            ListItem(
-                item = item.copy(
-                    trailingContentData = ListItemTrailingContentDataUi.Switch(
-                        switchData = SwitchDataUi(
-                            isChecked = isChecked
-                        )
-                    )
-                ),
-                onItemClick = { onToggle(item.itemId, !isChecked) },
-                clickableAreas = listOf(ClickableArea.TRAILING_CONTENT)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                style = MaterialTheme.typography.titleMedium,
+                text = stringResource(R.string.sharing_data_footer_title)
             )
             VSpacer.Small()
+            Text(
+                style = MaterialTheme.typography.bodySmall,
+                text = stringResource(R.string.sharing_data_footer_description)
+            )
         }
     }
 }
 
 @Composable
-fun Alert(
+private fun DoubleBtn(
     onCancel: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
 ) {
-    Popup(
-        alignment = Alignment.BottomCenter,
-        offset = IntOffset(x = 0, y = -16)
+    val buttons = StickyBottomType.TwoButtons(
+        primaryButtonConfig = ButtonConfig(
+            type = ButtonType.SECONDARY,
+            onClick = { onCancel() } ),
+        secondaryButtonConfig = ButtonConfig(
+            type = ButtonType.PRIMARY,
+            onClick = {onShare() })
+    )
+    WrapStickyBottomContent(
+        stickyBottomModifier = Modifier
+            .fillMaxWidth()
+        ,
+        stickyBottomConfig = StickyBottomConfig(type = buttons, showDivider = false)
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    style = MaterialTheme.typography.titleMedium,
-                    text = stringResource(R.string.sharing_data_footer_title)
-                )
-                VSpacer.Small()
-                Text(
-                    style = MaterialTheme.typography.bodySmall,
-                    text = stringResource(R.string.sharing_data_footer_description)
-                )
-                VSpacer.Small()
-                Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    TextButton(onClick = onCancel) {
-                        Text(text = stringResource(R.string.generic_cancel_capitalized))
-                    }
-                    Button(onClick = onShare) {
-                        Text(text = stringResource(R.string.generic_confirm_capitalized))
-                    }
-                }
-            }
+        when (it?.type) {
+            ButtonType.PRIMARY -> Text(text = stringResource(id = R.string.generic_confirm_capitalized))
+            ButtonType.SECONDARY -> Text(text = stringResource(id = R.string.generic_cancel_capitalized))
+            else -> {}
         }
     }
 }

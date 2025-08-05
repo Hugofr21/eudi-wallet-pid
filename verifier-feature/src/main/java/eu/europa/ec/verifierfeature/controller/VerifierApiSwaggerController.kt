@@ -10,6 +10,7 @@ import eu.europa.ec.verifierfeature.model.PresentationResponse
 import eu.europa.ec.verifierfeature.model.PresentationState
 import eu.europa.ec.verifierfeature.model.SdJwtVcRequest
 import eu.europa.ec.verifierfeature.model.TransactionEvents
+import eu.europa.ec.verifierfeature.model.WalletResponse
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import okhttp3.MediaType.Companion.toMediaType
@@ -23,6 +24,7 @@ import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 
 interface VerifierApiSwaggerController {
@@ -75,7 +77,22 @@ interface VerifierApiSwaggerController {
     ): Response<JsonObject>
 
     @GET("/wallet/public-keys.json")
-    suspend fun getPublicKeys(): Response<JWKSet>
+    suspend fun getPublicKeysJson(): Response<JsonObject>
+
+    @GET("/ui/presentations/{presentationId}")
+    @Headers("Accept: application/json")
+    suspend fun getWalletResponse(
+        @Path("presentationId") presentationId: String,
+        @Query("response_code") responseCode: String
+    ): Response<WalletResponse>
+
+    @GET("/wallet/request.jwt/{requestId}")
+    @Headers(
+        "Accept: application/jwt"
+    )
+    suspend fun getAuthorizationRequest(
+        @Path("requestId") requestId: String
+    ): Response<String>
 
 }
 
@@ -121,8 +138,16 @@ class VerifierApiSwaggerControllerImpl(
         issuerChain: String?
     ) = api.validateSdJwtVc(sdJwtVc, nonce, issuerChain)
 
-    override suspend fun getPublicKeys(): Response<JWKSet> =
-        api.getPublicKeys()
+    override suspend fun getPublicKeysJson(): Response<JsonObject> =
+        api.getPublicKeysJson()
+
+    override suspend fun getWalletResponse(
+        presentationId: String,
+        responseCode: String
+    ): Response<WalletResponse> = api.getWalletResponse(presentationId, responseCode)
+
+    override suspend fun getAuthorizationRequest(requestId: String): Response<String> =
+        api.getAuthorizationRequest(requestId)
 
 
 }

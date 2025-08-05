@@ -1,6 +1,7 @@
 package eu.europa.ec.verifierfeature.di
 
 import eu.europa.ec.businesslogic.provider.UuidProvider
+import eu.europa.ec.commonfeature.interactor.DeviceAuthenticationInteractor
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.controller.WalletCorePresentationController
 import eu.europa.ec.corelogic.di.PRESENTATION_SCOPE_ID
@@ -34,13 +35,9 @@ fun provideVerifierApiSwaggerController(
 @Single
 fun provideVerifierAgeProofController(
     api: VerifierApiSwaggerController,
-    uuidProvider: UuidProvider
 ): VerifierAgeProofController = VerifierAgeProofControllerImpl(
     api = api,
-    uuidProvider = uuidProvider
-
 )
-
 
 @Factory
 fun providerAgeProofInteractor(
@@ -48,11 +45,13 @@ fun providerAgeProofInteractor(
     walletCoreDocumentsController: WalletCoreDocumentsController,
     resourceProvider: ResourceProvider,
     documentDetailsInteractor: DocumentDetailsInteractor,
+    deviceAuthenticationInteractor: DeviceAuthenticationInteractor
 
 ): AgeProofInteractor = AgeProofInteractorImpl(
     verifierAgeProofController = verifierAgeProofController,
     walletCoreDocumentsController =  walletCoreDocumentsController,
     resourceProvider = resourceProvider,
-    documentDetailsInteractor = documentDetailsInteractor
+    documentDetailsInteractor = documentDetailsInteractor,
+    deviceAuthenticationInteractor = deviceAuthenticationInteractor
 )
 

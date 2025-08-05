@@ -1,5 +1,6 @@
 package eu.europa.ec.verifierfeature.controller
 
+import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jwt.JWTClaimsSet
@@ -19,21 +20,24 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import retrofit2.Response
 import com.nimbusds.openid.connect.sdk.Nonce
+import eu.europa.ec.eudi.openid4vci.Issuer
+import eu.europa.ec.eudi.openid4vp.JwkSetSource
+import eu.europa.ec.eudi.openid4vp.PreregisteredClient
 
 interface  VerifierAgeProofController{
     suspend fun metadataVerifier(): Response<ClientMetadata>
     suspend fun createPresentationRequest(fields: List<FieldLabel>): PresentationResponse
     suspend fun getPresentationState(transactionID: String): PresentationState
     suspend fun getTransactionEventsLogs(transactionID: String): List<TransactionEvents>
-    suspend fun validateSdJwtVc(sdJwtVc: String, nonce: String): JsonObject
+    suspend fun validateSdJwtVc(sdJwtVc: String, nonce: String, issuerChain: String?): JsonObject
+    fun getLastNonce(): String
 
-    suspend fun fetchAndVerifyJwt(jwtString: String): JWTClaimsSet
+    suspend fun asPreregisteredClient(): PreregisteredClient
 }
 
 
 class VerifierAgeProofControllerImpl(
     private val api: VerifierApiSwaggerController,
-    private val uuidProvider: UuidProvider
 ):VerifierAgeProofController {
 
     private var lastNonce: String? = null
@@ -46,8 +50,29 @@ class VerifierAgeProofControllerImpl(
         return api.getClientMetadata()
     }
 
+
+   override suspend fun asPreregisteredClient(): PreregisteredClient {
+       val resp = api.getPublicKeysJson()
+       if (!resp.isSuccessful) {
+           throw RuntimeException("Failed to get public JWKs: HTTP ${resp.code()}")
+       }
+       val jwksJson = resp.body()!!
+
+       val jwkSource = JwkSetSource.ByValue(jwksJson)
+
+       val jwsAlg = JWSAlgorithm.ES256
+
+       return PreregisteredClient(
+           clientId = "verifier-backend.eudiw.dev",
+           legalName = "verifier age proof age",
+           jarConfig = jwsAlg to jwkSource
+       )
+
+    }
+
+
     override suspend fun createPresentationRequest(
-        fields: List<FieldLabel>
+        fields: List<FieldLabel>,
     ): PresentationResponse {
         val nonce = randomNonce()
         val credentialsArray = buildJsonArray {
@@ -75,6 +100,34 @@ class VerifierAgeProofControllerImpl(
             putJsonArray("credentials") {
                 credentialsArray.forEach { add(it) }
             }
+            put("jar_mode", JsonPrimitive("by_reference"))
+            put("request_uri_method", JsonPrimitive("post"))
+            put(
+                "issuer_chain",
+                JsonPrimitive(
+                    """
+                -----BEGIN CERTIFICATE-----
+                MIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw
+                XDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ
+                IFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X
+                DTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz
+                c3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug
+                SW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID
+                YgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh
+                sF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa
+                O8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR
+                FxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E
+                PDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk
+                X0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD
+                VR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k
+                aWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j
+                ZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf
+                M1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe
+                hxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs
+                -----END CERTIFICATE-----
+                """.trimIndent()
+                )
+            )
         }
 
         val request = PresentationRequest(
@@ -87,11 +140,13 @@ class VerifierAgeProofControllerImpl(
         if (!response.isSuccessful) {
             throw RuntimeException("Error ${response.code()}: ${response.errorBody()?.string()}")
         }
+        println("Response presentation state: ${response.body()}")
         return response.body()!!
     }
 
     override suspend fun getPresentationState(transactionID: String): PresentationState {
         val response = api.getPresentation(transactionID)
+        println("getPresentationState ${response}")
 
         if (!response.isSuccessful) {
             val errorBody = response.errorBody()?.string().orEmpty()
@@ -111,9 +166,9 @@ class VerifierAgeProofControllerImpl(
         return response.body()!!
     }
 
-    override suspend fun validateSdJwtVc(sdJwtVc: String, nonce: String): JsonObject {
+    override suspend fun validateSdJwtVc(sdJwtVc: String, nonce: String, issuerChain: String?): JsonObject {
 
-        val response = api.validateSdJwtVc(sdJwtVc, nonce, issuerChain = null)
+        val response = api.validateSdJwtVc(sdJwtVc, nonce, issuerChain = issuerChain)
 
         if (response.isSuccessful) {
             return response.body()!!
@@ -129,25 +184,9 @@ class VerifierAgeProofControllerImpl(
     }
 
 
-    override suspend fun fetchAndVerifyJwt(jwtString: String): JWTClaimsSet {
-        val jwkResponse = api.getPublicKeys()
-        if (!jwkResponse.isSuccessful) {
-            throw RuntimeException("Falha ao obter JWKs públicas: HTTP ${jwkResponse.code()}")
-        }
-        val jwkSet: JWKSet = jwkResponse.body()!!
 
-        val signedJwt = SignedJWT.parse(jwtString)
+    override fun getLastNonce(): String =
+        lastNonce
+            ?: throw IllegalStateException("No nonce has been generated yet. Call createPresentationRequest() first.")
 
-        val keyId = signedJwt.header.keyID
-            ?: throw IllegalArgumentException("JWT sem keyID no header")
-        val jwk = jwkSet.keys.find { it.keyID == keyId }
-            ?: throw IllegalArgumentException("Nenhuma JWK encontrada para keyID=$keyId")
-
-        val verifier = RSASSAVerifier(jwk.toRSAKey())
-        if (!signedJwt.verify(verifier)) {
-            throw IllegalArgumentException("Assinatura JWT inválida")
-        }
-
-        return signedJwt.jwtClaimsSet
-    }
 }

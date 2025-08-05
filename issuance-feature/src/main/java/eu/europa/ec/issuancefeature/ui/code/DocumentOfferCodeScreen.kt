@@ -17,25 +17,37 @@
 package eu.europa.ec.issuancefeature.ui.code
 
 import android.content.Context
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import eu.europa.ec.commonfeature.config.OfferCodeUiConfig
+import eu.europa.ec.issuancefeature.utils.codePlaceholder.PinPlaceholderTransformation
 import eu.europa.ec.uilogic.component.AppIconAndText
 import eu.europa.ec.uilogic.component.AppIconAndTextDataUi
 import eu.europa.ec.uilogic.component.content.ContentScreen
@@ -122,6 +134,13 @@ private fun Content(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             )
+
+            Text(
+                text = "Code transaction open time helps attackers know when a user is most active, making phishing attempts more timely and convincing",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
         }
 
         Column(
@@ -160,18 +179,42 @@ private fun CodeFieldLayout(
     state: State,
     onPinInput: (String) -> Unit,
 ) {
-    WrapPinTextField(
-        modifier = modifier,
-        onPinUpdate = {
-            onPinInput(it)
+    var pin by remember { mutableStateOf("") }
+    val len = state.offerCodeUiConfig.txCodeLength
+
+    OutlinedTextField(
+        value = pin,
+        onValueChange = { input ->
+            val digits = input.filter { it.isDigit() }.take(len)
+            pin = digits
+            onPinInput(digits)
         },
-        length = state.offerCodeUiConfig.txCodeLength,
-        visualTransformation = PasswordVisualTransformation(),
-        pinWidth = 42.dp,
-        focusOnCreate = true,
-        shouldHideKeyboardOnCompletion = true
+        modifier = modifier
+            .height(56.dp)
+            .border(
+                width = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(0.dp)
+            ),
+        singleLine = true,
+        visualTransformation = PinPlaceholderTransformation(len),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(0.dp),
+        placeholder = {
+
+        }
     )
 }
+
+
+
+
 
 private fun handleNavigationEffect(
     navigationEffect: Effect.Navigation,

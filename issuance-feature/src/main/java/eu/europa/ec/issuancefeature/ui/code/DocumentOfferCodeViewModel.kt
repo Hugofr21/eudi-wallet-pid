@@ -43,11 +43,10 @@ private typealias PinCode = String
 
 data class State(
     val offerCodeUiConfig: OfferCodeUiConfig,
-
     val isLoading: Boolean = false,
     val error: ContentErrorConfig? = null,
     val notifyOnAuthenticationFailure: Boolean = false,
-
+    val failedAttempts: Int = 0,
     val screenTitle: String,
     val screenSubtitle: String
 ) : ViewState
@@ -102,10 +101,9 @@ class DocumentOfferCodeViewModel(
 
             is Event.OnPinChange -> {
                 if (event.code.isPinValid()) {
-                    issueDocuments(
-                        event.context,
-                        event.code
-                    )
+                    issueDocuments(event.context, event.code)
+                } else {
+                    println("Invalid PIN (expected length) ${viewState.value.offerCodeUiConfig.txCodeLength})")
                 }
             }
         }
@@ -113,65 +111,59 @@ class DocumentOfferCodeViewModel(
 
     private fun issueDocuments(context: Context, pinCode: PinCode) {
         viewModelScope.launch {
-
-            setState {
-                copy(
-                    isLoading = true,
-                    error = null
+            setState { copy(isLoading = true, error = null) }
+            documentOfferInteractor
+                .issueDocuments(
+                    offerUri = viewState.value.offerCodeUiConfig.offerURI,
+                    issuerName = viewState.value.offerCodeUiConfig.issuerName,
+                    navigation = viewState.value.offerCodeUiConfig.onSuccessNavigation,
+                    txCode = pinCode
                 )
-            }
+                .collect { response ->
+                    when (response) {
+                        is IssueDocumentsInteractorPartialState.Failure -> {
+                            val newAttempts = viewState.value.failedAttempts + 1
+                            if (newAttempts >= 3) {
+                                setEffect { Effect.Navigation.Pop }
+                            } else {
+                                setState {
+                                    copy(
+                                        isLoading = false,
+                                        failedAttempts = newAttempts,
+                                        error = ContentErrorConfig(
+                                            errorSubTitle = response.errorMessage,
+                                            onCancel = { setEvent(Event.DismissError) }
+                                        )
+                                    )
+                                }
+                            }
+                        }
 
-            documentOfferInteractor.issueDocuments(
-                offerUri = viewState.value.offerCodeUiConfig.offerURI,
-                issuerName = viewState.value.offerCodeUiConfig.issuerName,
-                navigation = viewState.value.offerCodeUiConfig.onSuccessNavigation,
-                txCode = pinCode
-            ).collect { response ->
-                when (response) {
-                    is IssueDocumentsInteractorPartialState.Failure -> setState {
-                        copy(
-                            isLoading = false,
-                            error = ContentErrorConfig(
-                                errorSubTitle = response.errorMessage,
-                                onCancel = { setEvent(Event.DismissError) }
-                            )
-                        )
-                    }
-
-                    is IssueDocumentsInteractorPartialState.Success -> {
-                        setState {
-                            copy(
-                                isLoading = false,
-                                error = null,
+                        is IssueDocumentsInteractorPartialState.Success -> {
+                            setState {
+                                copy(isLoading = false, error = null, failedAttempts = 0)
+                            }
+                            goToDocumentIssuanceSuccessScreen(
+                                documentIds = response.documentIds,
+                                onSuccessNavigation = viewState.value.offerCodeUiConfig.onSuccessNavigation
                             )
                         }
 
-                        goToDocumentIssuanceSuccessScreen(
-                            documentIds = response.documentIds,
-                            onSuccessNavigation = viewState.value.offerCodeUiConfig.onSuccessNavigation,
-                        )
-                    }
+                        is IssueDocumentsInteractorPartialState.DeferredSuccess -> {
+                            setState { copy(isLoading = false, error = null) }
+                            goToSuccessScreen(route = response.successRoute)
+                        }
 
-                    is IssueDocumentsInteractorPartialState.DeferredSuccess -> {
-                        setState {
-                            copy(
-                                isLoading = false,
-                                error = null,
+                        is IssueDocumentsInteractorPartialState.UserAuthRequired -> {
+                            documentOfferInteractor.handleUserAuthentication(
+                                context = context,
+                                crypto = response.crypto,
+                                notifyOnAuthenticationFailure = viewState.value.notifyOnAuthenticationFailure,
+                                resultHandler = response.resultHandler
                             )
                         }
-                        goToSuccessScreen(route = response.successRoute)
-                    }
-
-                    is IssueDocumentsInteractorPartialState.UserAuthRequired -> {
-                        documentOfferInteractor.handleUserAuthentication(
-                            context = context,
-                            crypto = response.crypto,
-                            notifyOnAuthenticationFailure = viewState.value.notifyOnAuthenticationFailure,
-                            resultHandler = response.resultHandler
-                        )
                     }
                 }
-            }
         }
     }
 

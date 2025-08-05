@@ -143,7 +143,9 @@ abstract class LoadingViewModel : MviViewModel<Event, State, Effect>() {
                 }
             }
 
-            is NavigationType.Deeplink -> {}
+            is NavigationType.Deeplink -> {
+                println("[LoadingViewModel] NavigationType.Deeplink")
+            }
 
             is NavigationType.PushRoute -> setEffect {
                 Effect.Navigation.SwitchScreen(navigationType.route)
