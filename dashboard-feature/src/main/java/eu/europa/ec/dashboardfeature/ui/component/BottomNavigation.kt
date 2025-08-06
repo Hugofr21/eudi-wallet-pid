@@ -73,6 +73,12 @@ sealed class BottomNavigationItem(
         icon = AppIcons.Transactions
     )
 
+    data object WifiAware : BottomNavigationItem(
+        route = "WIFIAWARE",
+        titleRes = R.string.wifi_screen_title,
+        icon = AppIcons.Search
+    )
+
 }
 
 @Composable
@@ -81,6 +87,7 @@ fun BottomNavigationBar(navController: NavController, viewModel: DashboardViewMo
         BottomNavigationItem.Home,
         BottomNavigationItem.Documents,
         BottomNavigationItem.Transactions,
+        BottomNavigationItem.WifiAware
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()

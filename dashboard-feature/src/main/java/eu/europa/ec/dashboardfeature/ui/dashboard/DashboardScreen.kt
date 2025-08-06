@@ -53,6 +53,8 @@ import eu.europa.ec.dashboardfeature.ui.home.HomeScreen
 import eu.europa.ec.dashboardfeature.ui.home.HomeViewModel
 import eu.europa.ec.dashboardfeature.ui.transactions.list.TransactionsScreen
 import eu.europa.ec.dashboardfeature.ui.transactions.list.TransactionsViewModel
+import eu.europa.ec.dashboardfeature.ui.wifi.WifiAwareScreen
+import eu.europa.ec.dashboardfeature.ui.wifi.WifiAwareViewModel
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.SystemBroadcastReceiver
 import eu.europa.ec.uilogic.component.utils.LifecycleEffect
@@ -78,7 +80,7 @@ internal fun DashboardScreen(
     documentsViewModel: DocumentsViewModel,
     homeViewModel: HomeViewModel,
     transactionsViewModel: TransactionsViewModel,
-//    qrScanViewModel: QrScanViewModel,
+    wifiAwareViewModel: WifiAwareViewModel
 ) {
     val context = LocalContext.current
 
@@ -125,6 +127,16 @@ internal fun DashboardScreen(
                 TransactionsScreen(
                     hostNavController,
                     transactionsViewModel,
+                    onDashboardEventSent = { event ->
+                        viewModel.setEvent(event)
+                    }
+                )
+            }
+
+            composable(BottomNavigationItem.WifiAware.route) {
+                WifiAwareScreen(
+                    hostNavController,
+                    wifiAwareViewModel,
                     onDashboardEventSent = { event ->
                         viewModel.setEvent(event)
                     }

@@ -34,6 +34,7 @@ moduleConfig {
 dependencies {
     implementation(project(LibraryModule.BackupLogic.path))
     implementation(libs.zxing)
+    implementation(libs.androidx.material.icons.extended)
 }
 
 excludeFromKoverReport(

@@ -62,29 +62,39 @@ class PresentationLoadingInteractorImpl(
 ) : PresentationLoadingInteractor {
 
     override fun observeResponse(): Flow<PresentationLoadingObserveResponsePartialState> =
-        walletCorePresentationController.observeSentDocumentsRequest().mapNotNull { response ->
-            when (response) {
-                is WalletCorePartialState.Failure -> PresentationLoadingObserveResponsePartialState.Failure(
-                    error = response.error,
-                )
+        walletCorePresentationController.observeSentDocumentsRequest()
+            .mapNotNull { response ->
+                println("[PresentationLoadingInteractorImpl] raw response → $response")
 
-                is WalletCorePartialState.Redirect -> PresentationLoadingObserveResponsePartialState.Redirect(
-                    uri = response.uri
-                )
-
-                is WalletCorePartialState.Success -> {
-                    PresentationLoadingObserveResponsePartialState.Success
+                when (response) {
+                    is WalletCorePartialState.Failure -> {
+                        println("Failure(error=${response.error})")
+                        PresentationLoadingObserveResponsePartialState.Failure(
+                            error = response.error,
+                        )
+                    }
+                    is WalletCorePartialState.Redirect -> {
+                        println("Redirect(uri=${response.uri})")
+                        PresentationLoadingObserveResponsePartialState.Redirect(
+                            uri = response.uri
+                        )
+                    }
+                    is WalletCorePartialState.Success -> {
+                        println("Success")
+                        PresentationLoadingObserveResponsePartialState.Success
+                    }
+                    is WalletCorePartialState.UserAuthenticationRequired -> {
+                        println("UserAuthenticationRequired(authData=${response.authenticationData})")
+                        PresentationLoadingObserveResponsePartialState.UserAuthenticationRequired(
+                            response.authenticationData
+                        )
+                    }
+                    is WalletCorePartialState.RequestIsReadyToBeSent -> {
+                        println("RequestIsReadyToBeSent")
+                        PresentationLoadingObserveResponsePartialState.RequestReadyToBeSent
+                    }
                 }
-
-                is WalletCorePartialState.UserAuthenticationRequired -> {
-                    PresentationLoadingObserveResponsePartialState.UserAuthenticationRequired(
-                        response.authenticationData
-                    )
-                }
-
-                is WalletCorePartialState.RequestIsReadyToBeSent -> PresentationLoadingObserveResponsePartialState.RequestReadyToBeSent
             }
-        }
 
     override fun sendRequestedDocuments(): PresentationLoadingSendRequestedDocumentPartialState {
         return when (val result = walletCorePresentationController.sendRequestedDocuments()) {

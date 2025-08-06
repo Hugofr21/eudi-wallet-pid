@@ -19,6 +19,9 @@ package eu.europa.ec.corelogic.controller
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationResult
 import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
 import eu.europa.ec.businesslogic.extension.safeAsync
+import eu.europa.ec.corelogic.config.Issuer
+import eu.europa.ec.corelogic.config.OpenId4VciManagerRegistry
+import eu.europa.ec.corelogic.config.OpenId4VciModule
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.extension.documentIdentifier
 import eu.europa.ec.corelogic.extension.getLocalizedDisplayName
@@ -209,6 +212,7 @@ interface WalletCoreDocumentsController {
     suspend fun deleteBookmark(bookmarkId: DocumentId)
 }
 
+
 class WalletCoreDocumentsControllerImpl(
     private val resourceProvider: ResourceProvider,
     private val eudiWallet: EudiWallet,
@@ -216,34 +220,16 @@ class WalletCoreDocumentsControllerImpl(
     private val bookmarkDao: BookmarkDao,
     private val transactionLogDao: TransactionLogDao,
     private val revokedDocumentDao: RevokedDocumentDao,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : WalletCoreDocumentsController {
 
-    companion object {
-        val VCI_ISSUER_URLS = listOf(
-            "https://issuer.eudiw.dev",
-            "https://issuer.ageverification.dev",
-//            "https://funke.demo.connector.lissi.io" // <-- Credentials Supported Required
+    private val vciRegistry: OpenId4VciManagerRegistry by lazy {
+        OpenId4VciManagerRegistry(
+            eudiWallet = eudiWallet,
+            issuers    = OpenId4VciModule.issuersList,
+            clientId   = OpenId4VciModule.clientId
         )
-        const val VCI_CLIENT_ID = "wallet-dev"
     }
-
-
-    private val openId4VciManager: Map<String, OpenId4VciManager> by lazy {
-        VCI_ISSUER_URLS.associateWith { url ->
-            val config = OpenId4VciManager.Config.Builder()
-                .withIssuerUrl(url)
-                .withClientId(VCI_CLIENT_ID)
-                .withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
-                .withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-                .withUseDPoPIfSupported(true)
-                .build()
-            val manager = eudiWallet.createOpenId4VciManager(config)
-//            println("[openId4VciManager] Created manager for issuer: $url -> $manager")
-            manager
-        }
-    }
-
 
     private val genericErrorMessage
         get() = resourceProvider.genericErrorMessage()
@@ -262,7 +248,7 @@ class WalletCoreDocumentsControllerImpl(
         return withContext(dispatcher) {
             runCatching {
                 coroutineScope {
-                    openId4VciManager.values.map { mgr ->
+                    vciRegistry.allManagers().values.map { mgr ->
                         async {
                             val scope = mgr.getScopeName()
                             println("Issuer metadata scope: $scope")
@@ -396,8 +382,8 @@ class WalletCoreDocumentsControllerImpl(
         txCode: String?,
     ): Flow<IssueDocumentsPartialState> =
         callbackFlow {
-            println("Issuing document with offerUri: $offerUri and txCode: $txCode using manager: $openId4VciManager")
-            openId4VciManager.values.map { openId4VciManager ->
+            println("Issuing document with offerUri: $offerUri and txCode: $txCode using manager: ${vciRegistry.allManagers()}")
+            vciRegistry.allManagers().values.map { openId4VciManager ->
                 openId4VciManager.issueDocumentByOfferUri(
                     offerUri = offerUri,
                     onIssueEvent = issuanceCallback(),
@@ -496,7 +482,7 @@ class WalletCoreDocumentsControllerImpl(
 
     override fun resolveDocumentOffer(offerUri: String): Flow<ResolveDocumentOfferPartialState> =
         callbackFlow {
-            openId4VciManager.values.forEach { openId4VciManager ->
+            vciRegistry.allManagers().values.forEach { openId4VciManager ->
                 println("[resolveDocumentOffer] Calling resolveDocumentOffer with offerUri: $offerUri using manager: $openId4VciManager")
 
                 openId4VciManager.resolveDocumentOffer(
@@ -536,7 +522,7 @@ class WalletCoreDocumentsControllerImpl(
     override fun issueDeferredDocument(docId: DocumentId): Flow<IssueDeferredDocumentPartialState> =
         callbackFlow {
             (getDocumentById(docId) as? DeferredDocument)?.let { deferredDoc ->
-                openId4VciManager.values.forEach { openId4VciManager ->
+                vciRegistry.allManagers().values.forEach { openId4VciManager ->
 
                     openId4VciManager.issueDeferredDocument(
                         deferredDocument = deferredDoc,
@@ -625,7 +611,7 @@ class WalletCoreDocumentsControllerImpl(
 
         var resumed = false
 
-        openId4VciManager.values.forEach { manager ->
+        vciRegistry.allManagers().values.forEach { manager ->
             println(">> Trying OpenID4VCI Manager: ${manager.getScopeName()}")
 
             try {
@@ -690,7 +676,7 @@ class WalletCoreDocumentsControllerImpl(
     private fun issueDocumentWithOpenId4VCI(configId: String): Flow<IssueDocumentsPartialState> =
         callbackFlow {
 
-            openId4VciManager.values.map { openId4VciManager ->
+            vciRegistry.allManagers().values.map { openId4VciManager ->
                 openId4VciManager.issueDocumentByConfigurationIdentifier(
                     credentialConfigurationId = configId,
                     onIssueEvent = issuanceCallback()
@@ -715,7 +701,7 @@ class WalletCoreDocumentsControllerImpl(
         val listener = OpenId4VciManager.OnIssueEvent { event ->
             when (event) {
                 is IssueEvent.DocumentFailed -> {
-                    println("⚠️ DocumentFailed → docType=${event.docType}, name=${event.name}")
+                    println("DocumentFailed  docType=${event.docType}, name=${event.name}")
                     nonIssuedDocuments[event.docType] = event.name
                 }
 

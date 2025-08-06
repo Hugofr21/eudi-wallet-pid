@@ -11,16 +11,14 @@ class PinPlaceholderTransformation(
     override fun filter(text: AnnotatedString): TransformedText {
         val entered = text.text.length
         val masked = "•".repeat(entered)
-        val placeholder = "•".repeat((length - entered).coerceAtLeast(0))
-        val outText = masked + placeholder
 
         val offsetMap = object : OffsetMapping {
             override fun originalToTransformed(offset: Int) =
-                (offset).coerceIn(0, outText.length)
+                offset.coerceIn(0, masked.length)
             override fun transformedToOriginal(offset: Int) =
                 offset.coerceIn(0, entered)
         }
 
-        return TransformedText(AnnotatedString(outText), offsetMap)
+        return TransformedText(AnnotatedString(masked), offsetMap)
     }
 }

@@ -535,6 +535,12 @@
     <string name="sharing_data_description">The Trusted Reviewer is requesting certain attributes of your document to verify that you meet the service requirements\n  Only the strictly necessary data will be shared, and this sharing will be done with your explicit consent.</string>
     <string name="sharing_data_footer_title">The control is yours</string>
     <string name="sharing_data_footer_description">You have complete control over what data you share. No information will be shared without your permission.</string>
+    <string name="wifi_screen_title">Wi-Fi Aware</string>
+    <string name="wifi_aware_intit_title">Discover Nearby Wi-Fi Networks</string>
+    <string name="wifi_aware_intit_description">Easily scan for available Wi-Fi networks around you. Make sure your Wi-Fi is enabled to get the most accurate results.</string>
+    <string name="wifi_disconnected">Wi-Fi disconnected</string>
+    <string name="wifi_disconnected_title">Wi-Fi Aware Not Available</string>
+    <string name="wifi_disconnected_description">Your device doesn’t support Wi-Fi Aware. Please try on a compatible device.</string>
 
     <!-- Logs Screen -->
 </resources>

@@ -17,9 +17,12 @@
 package eu.europa.ec.corelogic.di
 
 import android.content.Context
+import com.google.android.datatransport.runtime.dagger.Provides
 import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.provider.UuidProvider
+import eu.europa.ec.corelogic.config.Issuer
+import eu.europa.ec.corelogic.config.OpenId4VciManagerRegistry
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.config.WalletCoreConfigImpl
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
@@ -46,6 +49,7 @@ import org.koin.mp.KoinPlatform
 
 
 const val PRESENTATION_SCOPE_ID = "presentation_scope_id"
+
 
 @Module
 @ComponentScan("eu.europa.ec.corelogic")
@@ -81,6 +85,7 @@ fun provideWalletCoreConfig(
     context: Context,
 ): WalletCoreConfig = WalletCoreConfigImpl(context)
 
+
 @Single
 fun provideWalletCoreLogController(logController: LogController): WalletCoreLogController =
     WalletCoreLogControllerImpl(logController)
@@ -103,7 +108,7 @@ fun provideWalletCoreDocumentsController(
     transactionLogDao: TransactionLogDao,
     revokedDocumentDao: RevokedDocumentDao,
 
-): WalletCoreDocumentsController =
+    ): WalletCoreDocumentsController =
     WalletCoreDocumentsControllerImpl(
         resourceProvider,
         eudiWallet,

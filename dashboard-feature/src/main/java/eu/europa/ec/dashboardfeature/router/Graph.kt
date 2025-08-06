@@ -65,6 +65,7 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 documentsViewModel = koinViewModel(),
                 homeViewModel = koinViewModel(),
                 transactionsViewModel = koinViewModel(),
+                wifiAwareViewModel = koinViewModel(),
             )
         }
 

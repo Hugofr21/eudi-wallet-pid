@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.mockwebserver)
     implementation(libs.timber)
+    implementation(libs.transport.runtime)
 
     testImplementation(project(LibraryModule.TestLogic.path))
 }

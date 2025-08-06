@@ -17,6 +17,7 @@ import okhttp3.OkHttpClient
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
+import org.koin.core.annotation.ScopeId
 import org.koin.core.annotation.Single
 
 

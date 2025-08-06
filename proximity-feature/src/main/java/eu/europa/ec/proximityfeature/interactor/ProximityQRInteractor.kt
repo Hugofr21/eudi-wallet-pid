@@ -55,6 +55,7 @@ class ProximityQRInteractorImpl(
         get() = resourceProvider.genericErrorMessage()
 
     override fun setConfig(config: RequestUriConfig) {
+        println("[ProximityQRInteractorImpl] setConfig")
         walletCorePresentationController.setConfig(config.toDomainConfig())
     }
 

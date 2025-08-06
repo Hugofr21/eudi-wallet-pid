@@ -103,7 +103,7 @@ class ProximityQRViewModel(
             RequestUriConfig::class.java,
             RequestUriConfig.Parser
         ) ?: throw RuntimeException("RequestUriConfig:: is Missing or invalid")
-
+        println("initializeConfig $requestUriConfig")
         interactor.setConfig(requestUriConfig)
     }
 

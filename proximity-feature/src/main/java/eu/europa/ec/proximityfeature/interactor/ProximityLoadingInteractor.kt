@@ -60,24 +60,42 @@ class ProximityLoadingInteractorImpl(
 ) : ProximityLoadingInteractor {
 
     override fun observeResponse(): Flow<ProximityLoadingObserveResponsePartialState> =
-        walletCorePresentationController.observeSentDocumentsRequest().mapNotNull { response ->
-            when (response) {
-                is WalletCorePartialState.Failure -> ProximityLoadingObserveResponsePartialState.Failure(
-                    error = response.error
-                )
+        walletCorePresentationController
+            .observeSentDocumentsRequest()
+            .mapNotNull { response ->
+                println("[ProximityLoadingInteractor] raw response → $response")
+                when (response) {
+                    is WalletCorePartialState.Failure -> {
+                        println("  ↳ Failure(error=${response.error})")
+                        ProximityLoadingObserveResponsePartialState.Failure(
+                            error = response.error
+                        )
+                    }
 
-                is WalletCorePartialState.Redirect -> null
+                    is WalletCorePartialState.Redirect -> {
+                        println("  ↳ Redirect(uri=${response.uri}) — ignorando aqui")
+                        null
+                    }
 
-                is WalletCorePartialState.Success -> ProximityLoadingObserveResponsePartialState.Success
-                is WalletCorePartialState.UserAuthenticationRequired -> {
-                    ProximityLoadingObserveResponsePartialState.UserAuthenticationRequired(
-                        response.authenticationData
-                    )
+                    is WalletCorePartialState.Success -> {
+                        println("  ↳ Success")
+                        ProximityLoadingObserveResponsePartialState.Success
+                    }
+
+                    is WalletCorePartialState.UserAuthenticationRequired -> {
+                        println("  ↳ UserAuthenticationRequired(authData=${response.authenticationData})")
+                        ProximityLoadingObserveResponsePartialState.UserAuthenticationRequired(
+                            response.authenticationData
+                        )
+                    }
+
+                    is WalletCorePartialState.RequestIsReadyToBeSent -> {
+                        println("  ↳ RequestIsReadyToBeSent")
+                        ProximityLoadingObserveResponsePartialState.RequestReadyToBeSent
+                    }
                 }
-
-                is WalletCorePartialState.RequestIsReadyToBeSent -> ProximityLoadingObserveResponsePartialState.RequestReadyToBeSent
             }
-        }
+
 
     override fun handleUserAuthentication(
         context: Context,

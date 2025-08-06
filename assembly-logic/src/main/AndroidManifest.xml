@@ -38,6 +38,9 @@
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
 
+    <uses-feature android:name="android.hardware.wifi.aware"
+        android:required="true"/>
+
 
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
 

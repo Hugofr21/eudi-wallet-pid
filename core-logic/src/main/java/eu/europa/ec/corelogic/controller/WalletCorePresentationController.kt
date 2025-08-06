@@ -16,7 +16,7 @@
 
 package eu.europa.ec.corelogic.controller
 
-import android.net.Uri
+
 import androidx.activity.ComponentActivity
 import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
 import eu.europa.ec.businesslogic.extension.addOrReplace
@@ -54,7 +54,6 @@ import org.koin.core.annotation.Scoped
 import java.net.URI
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.launchIn
 
 sealed class PresentationControllerConfig(val initiatorRoute: String) {
     data class OpenId4VP(val uri: String, val initiator: String) :
@@ -235,8 +234,8 @@ class WalletCorePresentationControllerImpl(
 
     override val events: SharedFlow<TransferEventPartialState> =
         callbackFlow<TransferEventPartialState> {
-            // 1) Cria o listener DENTRO do callbackFlow, assim trySendBlocking() funciona
             val eventListenerWrapper = EudiWalletListenerWrapper(
+
                 onQrEngagementReady = { qrCode ->
                     println("[WalletCorePresentationControllerImpl events] onQrEngagementReady: $qrCode")
                     trySendBlocking(TransferEventPartialState.QrEngagementReady(qrCode))
@@ -263,7 +262,6 @@ class WalletCorePresentationControllerImpl(
                     println("[WalletCorePresentationControllerImpl events] onRequestReceived: $requestedDocumentData")
                     trySendBlocking(
                         requestedDocumentData.getOrNull()?.let { requestedDocuments ->
-                            // … seu processamento …
                             println("[WalletCorePresentationControllerImpl events] verifierName: $verifierName, isTrusted: $verifierIsTrusted")
                             TransferEventPartialState.RequestReceived(
                                 requestData = requestedDocuments.requestedDocuments,
@@ -285,7 +283,7 @@ class WalletCorePresentationControllerImpl(
                 }
             )
 
-
+            println("eventListenerWrapper ${eventListenerWrapper}")
             addListener(eventListenerWrapper)
             println("[WalletCorePresentationControllerImpl events] Listener added")
 
@@ -498,94 +496,18 @@ class WalletCorePresentationControllerImpl(
         }
     }
 
-    /**
-     *If you have problems with the schemas, the function consists of viewing records and comparing
-     * them with what you receive, go to Corelogic WalletCoreConfigImpl and then add new records.
-     */
-//
-//    private fun addListener(listener: EudiWalletListenerWrapper) {
-//        val config = requireInit { _config }
-//        eudiWallet.addTransferEventListener(listener)
-//
-//        if (config is PresentationControllerConfig.OpenId4VP) {
-//            val originalUri = config.uri.toUri()
-//            when (originalUri.scheme) {
-//                "openid-credential-offer" -> {
-//                    val fullOfferUri = config.uri.toString()
-//                    println("[addListener] Detected credential-offer URI: $fullOfferUri")
-//
-//                    documentsController
-//                        .resolveDocumentOffer(fullOfferUri)
-//                        .onEach { resolveState ->
-//                            when (resolveState) {
-//                                is ResolveDocumentOfferPartialState.Success -> {
-//                                    val offer = resolveState.offer
-//                                    println("[addListener] Offer resolved: issuer=${resolveState.offer.credentialOffer}, " +
-//                                            "configs=${resolveState.offer.offeredDocuments}," +
-//                                            " txCodeSpec=${resolveState.offer.txCodeSpec} " +
-//                                            "issuerMetadata ${resolveState.offer.issuerMetadata}")
-//
-//                                    val rawHttps = originalUri.getQueryParameter("credential_offer_uri")
-//                                        ?: throw IllegalStateException("credential_offer_uri missing")
-//
-//                                    documentsController
-//                                        .issueDocumentsByOfferUri(
-//                                            offerUri = rawHttps,
-//                                            txCode   = (offer.txCodeSpec ?: null) as String?
-//                                        )
-//                                        .onEach { issueState -> handleIssueState(issueState) }
-//                                        .launchIn(coroutineScope)
-//                                }
-//                                is ResolveDocumentOfferPartialState.Failure -> {
-//                                    println("[addListener] Failed to resolve offer: ${resolveState.errorMessage}")
-//                                    println("[addListener] originalUri : ${originalUri.host}")
-//                                }
-//                            }
-//                        }
-//                        .launchIn(coroutineScope)
-//                }
-//                else -> {
-//                    println("[addListener] Starting presentation on $originalUri")
-//                    eudiWallet.startRemotePresentation(originalUri)
-//                }
-//            }
-//        } else {
-//            println("[addListener] Config não é OpenId4VP. Pulando.")
-//        }
-//    }
-//
-//
-//
-//    private fun handleIssueState(state: IssueDocumentsPartialState) {
-//        when (state) {
-//            is IssueDocumentsPartialState.Success -> {
-//                println("Issuance SUCCESS: docs = ${state.documentIds}")
-//            }
-//            is IssueDocumentsPartialState.DeferredSuccess -> {
-//                println("Issuance DEFERRED: docs = ${state.deferredDocuments}")
-//            }
-//            is IssueDocumentsPartialState.UserAuthRequired -> {
-//                println("Issuance USER_AUTH_REQUIRED: crypto=${state.crypto}, handler=${state.resultHandler}")
-//                // state.resultHandler.onAuthenticationSuccess or .onAuthenticationError
-//            }
-//            is IssueDocumentsPartialState.Failure -> {
-//                println("Issuance FAILED: ${state.errorMessage}")
-//            }
-//            else -> {
-//                println("Issuance STATE: $state")
-//            }
-//        }
-//    }
-//
-
-
     private fun addListener(listener: EudiWalletListenerWrapper) {
         val config = requireInit { _config }
         eudiWallet.addTransferEventListener(listener)
+
         if (config is PresentationControllerConfig.OpenId4VP) {
-            eudiWallet.startRemotePresentation(config.uri.toUri())
+            val originalUri = config.uri.toUri()
+            eudiWallet.startRemotePresentation(originalUri)
         }
+        println("Added EudiWalletListenerWrapper: $listener with config: $config")
     }
+
+
 
 
     private fun removeListener(listener: EudiWalletListenerWrapper) {

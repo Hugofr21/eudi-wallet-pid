@@ -1,20 +1,4 @@
-/*
- * Copyright (c) 2023 European Commission
- *
- * Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the European
- * Commission - subsequent versions of the EUPL (the "Licence"); You may not use this work
- * except in compliance with the Licence.
- *
- * You may obtain a copy of the Licence at:
- * https://joinup.ec.europa.eu/software/page/eupl
- *
- * Unless required by applicable law or agreed to in writing, software distributed under
- * the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF
- * ANY KIND, either express or implied. See the Licence for the specific language
- * governing permissions and limitations under the Licence.
- */
-
-package eu.europa.ec.dashboardfeature.ui.profile.compoment
+package eu.europa.ec.dashboardfeature.ui.wifi.compoment
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,12 +17,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import eu.europa.ec.dashboardfeature.ui.profile.Event
-import eu.europa.ec.dashboardfeature.ui.profile.ProfileViewModel
+import eu.europa.ec.dashboardfeature.ui.wifi.Event
 import eu.europa.ec.dashboardfeature.ui.wifi.WifiAwareViewModel
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
+import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.ButtonConfig
 import eu.europa.ec.uilogic.component.wrap.ButtonType
 import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
@@ -47,10 +31,9 @@ import eu.europa.ec.uilogic.component.wrap.WrapIconButton
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 
 
-
 @Composable
 fun ActionButtons(
-    viewModel: ProfileViewModel?,
+    viewModel: WifiAwareViewModel?,
     paddingValues: PaddingValues,
     isLoading: Boolean,
     onShowQrCode: () -> Unit
@@ -58,13 +41,13 @@ fun ActionButtons(
     val buttons = StickyBottomType.TwoButtons(
         primaryButtonConfig = ButtonConfig(
             type = ButtonType.SECONDARY,
-            onClick = { viewModel?.setEvent(Event.AddDocument) }
+            onClick = { viewModel?.setEvent(Event.GoBack) }
         ),
         secondaryButtonConfig = ButtonConfig(
             type = ButtonType.PRIMARY,
             enabled = !isLoading,
             onClick = {
-                viewModel?.setEvent(Event.CreateQrCode)
+                viewModel?.setEvent(Event.StartDiscovery)
                 onShowQrCode()
             }
         )
@@ -86,9 +69,9 @@ fun ActionButtons(
                         modifier = Modifier.size(32.dp),
                         iconData = AppIcons.Add,
                         enabled = !isLoading,
-                        onClick = { viewModel?.setEvent(Event.AddDocument) }
+                        onClick = { viewModel?.setEvent(Event.GoBack) }
                     )
-                    Spacer(Modifier.width(SPACING_SMALL.dp))
+                    VSpacer.Small()
                     Text(
                         text = stringResource(R.string.string_document),
                         style = MaterialTheme.typography.labelSmall,
@@ -108,11 +91,11 @@ fun ActionButtons(
                         iconData = AppIcons.QrScanner,
                         enabled = !isLoading,
                         onClick = {
-                            viewModel?.setEvent(Event.CreateQrCode)
+                            viewModel?.setEvent(Event.StartDiscovery)
                             onShowQrCode()
                         }
                     )
-                    Spacer(Modifier.width(SPACING_SMALL.dp))
+                    VSpacer.Small()
                     Text(
                         text = stringResource(R.string.create_qr_code),
                         style = MaterialTheme.typography.labelSmall,
