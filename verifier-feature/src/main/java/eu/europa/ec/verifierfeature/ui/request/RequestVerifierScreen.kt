@@ -69,7 +69,6 @@ fun RequestVerifierScreen(
         isLoading = state.isLoading,
         navigatableAction = ScreenNavigateAction.BACKABLE,
         onBack = { viewModel.setEvent(Event.GoBack) },
-        // **Aqui definimos o stickyBottom**:
         stickyBottom = { innerPadding ->
             Column(
                 modifier = Modifier

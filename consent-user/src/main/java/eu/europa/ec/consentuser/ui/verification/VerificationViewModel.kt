@@ -22,6 +22,7 @@ import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.CommonScreens
+import eu.europa.ec.uilogic.navigation.ConsentUserScreens
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import org.koin.android.annotation.KoinViewModel
@@ -53,7 +54,7 @@ class VerificationViewModel : MviViewModel<Event, State, Effect>() {
     override fun handleEvents(event: Event) {
         when (event) {
             Event.GoNext -> {
-                val nextRoute = getQuickPinConfig()
+                val nextRoute = getVerificationLayout()
                 setEffect { Effect.Navigation.SwitchScreen(nextRoute) }
             }
             Event.GoBack -> setEffect { Effect.Navigation.Pop }
@@ -72,10 +73,7 @@ class VerificationViewModel : MviViewModel<Event, State, Effect>() {
         val enabled = viewState.value.tosAccepted && viewState.value.dataProtectionAccepted
         setState { copy(isButtonEnabled = enabled) }
     }
-
-    private fun getQuickPinConfig(): String =
-        generateComposableNavigationLink(
-            screen = CommonScreens.QuickPin,
-            arguments = generateComposableArguments(mapOf("pinFlow" to PinFlow.CREATE))
-        )
+    private fun getVerificationLayout(): String {
+        return ConsentUserScreens.Restore.screenRoute
+    }
 }

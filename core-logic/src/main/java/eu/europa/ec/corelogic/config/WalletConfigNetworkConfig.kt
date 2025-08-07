@@ -66,17 +66,4 @@ class WalletConfigNetworkConfigImpl(
                 context.packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_AWARE)
     }
 
-    companion object {
-        fun getIP(context: Context, useIPv4: Boolean = true): String? {
-            return WalletConfigNetworkConfigImpl(context).getDeviceIpAddress(useIPv4)
-        }
-
-        fun getMAC(context: Context, useIPv4: Boolean = true): String? {
-            return WalletConfigNetworkConfigImpl(context).getDeviceMacAddress(useIPv4)
-        }
-
-        fun isWifiAwareAvailable(context: Context): Boolean {
-            return WalletConfigNetworkConfigImpl(context).isWifiAwareAvailable()
-        }
-    }
 }

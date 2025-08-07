@@ -27,6 +27,7 @@ sealed class ConsentUserScreens {
     data object Welcome : Screen(name = "WELCOME")
     data object Consent : Screen(name = "CONSENT")
     data object Verification : Screen(name = "VERIFICATION")
+    data object Restore : Screen(name = "CONSENT_RESTORE")
 }
 
 

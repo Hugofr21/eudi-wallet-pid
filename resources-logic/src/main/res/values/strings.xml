@@ -450,8 +450,8 @@
     <!-- Welcome slider setup -->
     <string name="user_consent_step_1_title">Welcome</string>
     <string name="user_consent_step_2_title">Consent</string>
-    <string name="user_consent_step_3_title">Security</string>
-    <string name="user_consent_step_4_title">Verification</string>
+    <string name="user_consent_step_3_title">Verification</string>
+    <string name="user_consent_step_4_title">Restore</string>
     <string name="user_consent_step_1_description">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</string>
     <string name="user_consent_step_2_description">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</string>
     <string name="user_consent_step_3_description">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</string>
@@ -541,6 +541,7 @@
     <string name="wifi_disconnected">Wi-Fi disconnected</string>
     <string name="wifi_disconnected_title">Wi-Fi Aware Not Available</string>
     <string name="wifi_disconnected_description">Your device doesn’t support Wi-Fi Aware. Please try on a compatible device.</string>
+    <string name="consent_screen_restore_button">Continue without restore</string>
 
     <!-- Logs Screen -->
 </resources>

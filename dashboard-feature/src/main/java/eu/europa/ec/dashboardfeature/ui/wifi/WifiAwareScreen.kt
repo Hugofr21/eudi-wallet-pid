@@ -53,6 +53,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WifiFind
 import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -160,7 +162,7 @@ private fun Content(
     effectFlow: Flow<Effect>,
     onNavigationRequested: (navigationEffect: Effect.Navigation) -> Unit,
     paddingValues: PaddingValues,
-    state: State,
+    state: State?,
     viewModel: WifiAwareViewModel? = null
 ) {
     // collect navigation effects
@@ -172,7 +174,6 @@ private fun Content(
         }
     }
 
-    // Main container
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -182,7 +183,7 @@ private fun Content(
                 end = paddingValues.calculateEndPadding(LayoutDirection.Ltr)
             )
     ) {
-        if (state.isWifiAwareSupported) {
+        if (state?.isWifiAwareSupported ?: false) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -230,21 +231,35 @@ private fun Content(
 @Composable
 fun InitWifiAware(viewModel: WifiAwareViewModel?) {
     Text(
-        stringResource(R.string.wifi_aware_intit_title)
+        text = stringResource(R.string.wifi_aware_intit_title),
+        style = MaterialTheme.typography.titleLarge.copy(
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.2.sp,
+            fontSize = 14.sp
+        )
     )
-    VSpacer.Small()
     Text(
-        stringResource(R.string.wifi_aware_intit_description)
+        stringResource(R.string.wifi_aware_intit_description),
+        style = MaterialTheme.typography.titleLarge.copy(
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 0.8.sp,
+            fontSize = 8.sp
+        )
     )
     VSpacer.Small()
-    Icon(
-        imageVector = Icons.Filled.WifiFind,
-        contentDescription = stringResource(R.string.wifi_disconnected),
+    Box(
         modifier = Modifier
-            .size(96.dp)
+            .fillMaxWidth()
             .padding(bottom = SPACING_MEDIUM.dp),
-        tint = MaterialTheme.colorScheme.onSurfaceVariant
-    )
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.WifiFind,
+            contentDescription = stringResource(R.string.wifi_disconnected),
+            modifier = Modifier.size(96.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+    }
     VSpacer.Small()
     DoubleBtn(
         { viewModel?.setEvent(Event.StartDiscovery) },
@@ -298,7 +313,7 @@ private fun WifiWareScreenContentPreview() {
             }
         ) { paddingValues ->
             Content(
-                state = State(),
+                state = null,
                 effectFlow = Channel<Effect>().receiveAsFlow(),
                 onNavigationRequested = {},
                 paddingValues = PaddingValues(0.dp)

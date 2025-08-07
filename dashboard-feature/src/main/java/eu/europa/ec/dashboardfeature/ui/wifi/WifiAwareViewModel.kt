@@ -1,6 +1,7 @@
 package eu.europa.ec.dashboardfeature.ui.wifi
 
 import android.net.wifi.aware.PeerHandle
+import eu.europa.ec.dashboardfeature.interactor.WifiAwareInteractor
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
@@ -12,7 +13,7 @@ import org.koin.android.annotation.KoinViewModel
 data class State(
     val isLoading: Boolean = false,
     val hasPermissions: Boolean = false,
-    val isWifiAwareSupported: Boolean = true,
+    val isWifiAwareSupported: Boolean,
     val isDiscovering: Boolean = false,
     val discoveredPeers: List<PeerHandle> = emptyList()
 ) : ViewState
@@ -41,15 +42,13 @@ sealed class Effect : ViewSideEffect {
 
 @KoinViewModel
 class WifiAwareViewModel(
-
+    private val interactor: WifiAwareInteractor
 ) : MviViewModel<Event, State, Effect>(
 
 ) {
     override fun setInitialState(): State {
-
-
         return  State(
-
+            isWifiAwareSupported = interactor.isWifiAvailable()
         )
     }
 

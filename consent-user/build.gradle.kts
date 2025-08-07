@@ -21,6 +21,7 @@ dependencies {
     implementation(project(LibraryModule.CoreLogic.path))
     implementation(project(LibraryModule.UiLogic.path))
     implementation(project(LibraryModule.ResourcesLogic.path))
+    implementation(libs.androidx.material.icons.extended)
 
 }
 

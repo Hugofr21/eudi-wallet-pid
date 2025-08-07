@@ -32,12 +32,12 @@ fun TopStepBar(currentStep: Int) {
 
     val step1 = stringResource(id = R.string.user_consent_step_1_title)
     val step2 = stringResource(id = R.string.user_consent_step_2_title)
-//    val step3 = stringResource(id = R.string.user_consent_step_3_title)
+    val step3 = stringResource(id = R.string.user_consent_step_3_title)
     val step4 = stringResource(id = R.string.user_consent_step_4_title)
 
     WrapStepBar(
         currentStep = currentStep,
-        steps = listOf(step1, step2, step4),
+        steps = listOf(step1, step2, step3, step4),
         modifier = Modifier.padding(
             top = SPACING_EXTRA_LARGE.dp,
         ),

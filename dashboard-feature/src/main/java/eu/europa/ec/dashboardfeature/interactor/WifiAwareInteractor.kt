@@ -2,6 +2,7 @@ package eu.europa.ec.dashboardfeature.interactor
 
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
+import eu.europa.ec.corelogic.controller.WalletLiveDataController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.flow.Flow
 
@@ -25,12 +26,10 @@ interface WifiAwareInteractor {
 
 class WifiAwareInteractorImpl(
     private val resourceProvider: ResourceProvider,
-//    private val wifiController: WifiController,
-//    private val networkCoreConfig: NetworkCoreConfig,
+    private val walletLiveDataController: WalletLiveDataController
 ) : WifiAwareInteractor {
-    override fun isWifiAvailable(): Boolean {
-        TODO("Not yet implemented")
-    }
+    override fun isWifiAvailable(): Boolean =
+        walletLiveDataController.isWifiAwareAvailable()
 
     override fun isWifiCentralClientModeEnabled(): Boolean {
         TODO("Not yet implemented")

@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -61,6 +62,12 @@ import eu.europa.ec.uilogic.component.wrap.WrapText
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
+
+val LightSkyBlue   = Color(0xFFCAE6FD)
+val OceanBlue      = Color(0xFF2A5ED9)
+val DeepBlue       = Color(0xFF0048D2)
+val SoftYellow     = Color(0xFFFFF1BA)
+val CoralRed       = Color(0xFFFF6E70)
 
 
 @Composable
@@ -196,8 +203,8 @@ private fun VerificationCard(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = LightSkyBlue,
+            contentColor = LightSkyBlue
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp

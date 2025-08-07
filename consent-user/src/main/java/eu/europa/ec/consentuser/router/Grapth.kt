@@ -21,6 +21,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import eu.europa.ec.consentuser.ui.consent.ConsentScreen
+import eu.europa.ec.consentuser.ui.restore.RestoreScreen
 import eu.europa.ec.consentuser.ui.verification.VerificationScreen
 import eu.europa.ec.consentuser.ui.welcome.WelcomeScreen
 import eu.europa.ec.uilogic.navigation.ConsentUserScreens
@@ -42,6 +43,10 @@ fun NavGraphBuilder.featureConsentUserGraph(navController: NavController) {
         }
         composable(route = ConsentUserScreens.Verification.screenRoute) {
             VerificationScreen(navController, koinViewModel())
+        }
+
+        composable(route = ConsentUserScreens.Restore.screenRoute) {
+            RestoreScreen(navController, koinViewModel())
         }
     }
 }
