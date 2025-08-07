@@ -38,7 +38,7 @@ abstract class MviViewModel<Event : ViewEvent, UiState : ViewState, Effect : Vie
 
     private val _event: MutableSharedFlow<Event> = MutableSharedFlow()
 
-    private val _effect: Channel<Effect> = Channel()
+    val _effect: Channel<Effect> = Channel()
     val effect = _effect.receiveAsFlow()
 
     private val _viewStateHistory: Channel<UiState> = Channel()

@@ -1,11 +1,14 @@
 package eu.europa.ec.corelogic.config
 
+import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.LinkProperties
+import android.net.NetworkCapabilities
 import android.os.Build
 import java.net.Inet4Address
-import java.net.InetAddress
+import android.net.ConnectivityManager
+import androidx.annotation.RequiresPermission
 import java.net.NetworkInterface
 import java.util.Collections
 
@@ -13,7 +16,9 @@ interface WalletConfigNetworkConfig {
     fun getDeviceIpAddress(useIPv4: Boolean = true): String?
     fun getDeviceMacAddress(useIPv4: Boolean = true): String?
     fun isWifiAwareAvailable(): Boolean
+    fun isNetworkAvailable(context: Context?): Boolean
 }
+
 
 class WalletConfigNetworkConfigImpl(
     private val context: Context
@@ -65,5 +70,36 @@ class WalletConfigNetworkConfigImpl(
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                 context.packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_AWARE)
     }
+
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+    override fun isNetworkAvailable(context: Context?): Boolean {
+        if (context == null) return false
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as
+                ConnectivityManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager
+                .activeNetwork)
+            if (capabilities != null) {
+                when {
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> {
+                        return true
+                    }
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> {
+                        return true
+                    }
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> {
+                        return true
+                    }
+                }
+            }
+        } else {
+            val activeNetworkInfo = connectivityManager.activeNetworkInfo
+            if (activeNetworkInfo != null && activeNetworkInfo.isConnected) {
+                return true
+            }
+        }
+        return false
+    }
+
 
 }

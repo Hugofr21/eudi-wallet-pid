@@ -1,6 +1,15 @@
 package eu.europa.ec.dashboardfeature.ui.wifi
 
+import android.Manifest
 import android.content.Context
+import android.content.Intent
+import android.location.LocationManager
+import android.os.Build
+import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,9 +62,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WifiFind
 import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.core.content.getSystemService
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WifiAwareScreen(
@@ -66,6 +80,52 @@ fun WifiAwareScreen(
     val context = LocalContext.current
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     val effects = viewModel.effect
+    val locationManager = context.getSystemService<LocationManager>()
+    var isLocationEnabled by remember { mutableStateOf(true) }
+
+
+
+    LaunchedEffect(Unit) {
+        isLocationEnabled = locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            ?: false
+    }
+
+    val openLocationSettings = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {}
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { results ->
+            val denied = results.filterValues { !it }.keys
+            if (denied.isEmpty() && isLocationEnabled) {
+                viewModel.handleEvents(Event.StartDiscovery)
+            } else {
+                Toast.makeText(
+                    context,
+                    "You need to authorize permissions and enable Location.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    )
+
+
+    LaunchedEffect(Unit) {
+        if (!isLocationEnabled) {
+            openLocationSettings.launch(
+                Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            )
+        } else {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.NEARBY_WIFI_DEVICES
+                )
+            )
+        }
+    }
+
 
     ContentScreen(
         isLoading = state.isLoading,
@@ -92,21 +152,30 @@ fun WifiAwareScreen(
     LaunchedEffect(effects) {
         effects.collect { effect ->
             when (effect) {
-                is Effect.Navigation.Pop -> {
-                    navHostController.popBackStack()
+                is Effect.Navigation.Pop -> navHostController.popBackStack()
+                is Effect.Navigation.SwitchScreen -> navHostController.navigate(effect.screenRoute) {
+                    popUpTo(effect.popUpToScreenRoute) { inclusive = effect.inclusive }
                 }
-                is Effect.Navigation.SwitchScreen -> {
-                    navHostController.navigate(effect.screenRoute) {
-                        popUpTo(effect.popUpToScreenRoute) { inclusive = effect.inclusive }
-                    }
+                is Effect.ShowPermissionDenied -> Toast.makeText(
+                    context,
+                    "Permissions denied: ${effect.missing.joinToString()}",
+                    Toast.LENGTH_LONG
+                ).show()
+                is Effect.UpdatePeers -> {
+
                 }
 
-                is Effect.ShowPermissionDenied -> TODO()
-                is Effect.UpdatePeers -> TODO()
+                Effect.RequestPermissions -> {
+                    permissionLauncher.launch(arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.NEARBY_WIFI_DEVICES,
+                    ))
+                }
             }
         }
     }
 }
+
 
 @Composable
 private fun TopBar(
@@ -194,35 +263,40 @@ private fun Content(
                 InitWifiAware(viewModel)
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(SPACING_MEDIUM.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.WifiOff,
-                    contentDescription = stringResource(R.string.wifi_disconnected),
-                    modifier = Modifier
-                        .size(96.dp)
-                        .padding(bottom = SPACING_MEDIUM.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                VSpacer.Small()
-                Text(
-                    text = stringResource(R.string.wifi_disconnected_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center
-                )
-                VSpacer.Small()
-                Text(
-                    text = stringResource(R.string.wifi_disconnected_description),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
-                )
-            }
+            PermissionLauncherDenied()
         }
+    }
+}
+
+@Composable
+private fun PermissionLauncherDenied(){
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(SPACING_MEDIUM.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Filled.WifiOff,
+            contentDescription = stringResource(R.string.wifi_disconnected),
+            modifier = Modifier
+                .size(96.dp)
+                .padding(bottom = SPACING_MEDIUM.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        VSpacer.Small()
+        Text(
+            text = stringResource(R.string.wifi_disconnected_title),
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center
+        )
+        VSpacer.Small()
+        Text(
+            text = stringResource(R.string.wifi_disconnected_description),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

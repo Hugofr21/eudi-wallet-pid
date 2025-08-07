@@ -18,15 +18,6 @@ data class State(
     val discoveredPeers: List<PeerHandle> = emptyList()
 ) : ViewState
 
-
-sealed class Event : ViewEvent {
-    object GoBack : Event()
-    object GoNext : Event()
-    object CheckPermissions : Event()
-    object StartDiscovery : Event()
-}
-
-
 sealed class Effect : ViewSideEffect {
     sealed class Navigation : Effect() {
         object Pop : Navigation()
@@ -36,8 +27,16 @@ sealed class Effect : ViewSideEffect {
             val inclusive: Boolean = false,
         ) : Navigation()
     }
+    object RequestPermissions : Effect()
     data class ShowPermissionDenied(val missing: List<String>) : Effect()
     data class UpdatePeers(val peers: List<PeerHandle>) : Effect()
+}
+
+sealed class Event : ViewEvent {
+    object GoBack : Event()
+    object GoNext : Event()
+    object CheckPermissions : Event()
+    object StartDiscovery : Event()
 }
 
 @KoinViewModel
@@ -56,7 +55,7 @@ class WifiAwareViewModel(
         when (event) {
 
             Event.GoBack -> {
-                setEffect { Effect.Navigation.Pop }
+
             }
 
             Event.GoNext -> {
@@ -64,10 +63,11 @@ class WifiAwareViewModel(
             }
 
             Event.CheckPermissions -> TODO()
-            Event.StartDiscovery -> TODO()
+            Event.StartDiscovery -> {
+                interactor.scanPeers()
+            }
         }
     }
-
 
 }
 

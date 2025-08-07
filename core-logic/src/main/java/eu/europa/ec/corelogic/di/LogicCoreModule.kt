@@ -37,6 +37,8 @@ import eu.europa.ec.corelogic.controller.WalletLiveDataController
 import eu.europa.ec.corelogic.controller.WalletLiveDataControllerImpl
 import eu.europa.ec.corelogic.controller.WalletLotlController
 import eu.europa.ec.corelogic.controller.WalletLotlControllerImpl
+import eu.europa.ec.corelogic.controller.wifi.WifiAwareServerController
+import eu.europa.ec.corelogic.controller.wifi.WifiAwareServerControllerImpl
 import eu.europa.ec.eudi.wallet.EudiWallet
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.storagelogic.dao.BookmarkDao
@@ -131,10 +133,17 @@ fun provideWalletCoreDocumentsController(
     )
 
 
+
+@Singleton
+fun providerWifiAwareServerController(
+    context: Context
+): WifiAwareServerController = WifiAwareServerControllerImpl(context)
+
 @Factory
 fun provideWalletLiveDataControllerImpl(
-    walletConfigNetworkConfig: WalletConfigNetworkConfig
-): WalletLiveDataController = WalletLiveDataControllerImpl(walletConfigNetworkConfig)
+    walletConfigNetworkConfig: WalletConfigNetworkConfig,
+    wifiAwareServerController: WifiAwareServerController
+): WalletLiveDataController = WalletLiveDataControllerImpl(walletConfigNetworkConfig, wifiAwareServerController)
 
 
 /**
