@@ -33,6 +33,8 @@ import eu.europa.ec.uilogic.component.content.ContentHeaderConfig
 import eu.europa.ec.uilogic.config.NavigationType
 import eu.europa.ec.uilogic.navigation.ProximityScreens
 import eu.europa.ec.uilogic.navigation.Screen
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
@@ -149,6 +151,7 @@ class ProximityLoadingViewModel(
     ) {
         val authenticationData = authenticationDataList[index]
         val isFinalAuthentication = index == authenticationDataList.lastIndex
+
         interactor.handleUserAuthentication(
             context = context,
             crypto = authenticationData.crypto,
@@ -157,19 +160,28 @@ class ProximityLoadingViewModel(
                 onAuthenticationSuccess = {
                     authenticationData.onAuthenticationSuccess()
                     if (isFinalAuthentication) {
-                        sendRequestedDocumentsAction()
+                        // chamar suspend dentro de uma coroutine
+                        CoroutineScope(Dispatchers.Main).launch {
+                            sendRequestedDocumentsAction()
+                        }
                     } else {
-                        delay(500)
-                        openAuthenticationPrompt(
-                            context,
-                            popEffect,
-                            authenticationDataList,
-                            sendRequestedDocumentsAction,
-                            index + 1
-                        )
+                        // usar coroutine para delay + chamar recursivamente
+                        CoroutineScope(Dispatchers.Main).launch {
+                            delay(500)
+                            openAuthenticationPrompt(
+                                context,
+                                popEffect,
+                                authenticationDataList,
+                                sendRequestedDocumentsAction,
+                                index + 1
+                            )
+                        }
                     }
                 },
-                onAuthenticationError = { setEffect { popEffect } } as (Int, String) -> Unit
+                // corrige o mismatch: aceita os dois parâmetros esperados (ignorados aqui)
+                onAuthenticationError = { _, _ ->
+                    setEffect { popEffect }
+                }
             )
         )
     }

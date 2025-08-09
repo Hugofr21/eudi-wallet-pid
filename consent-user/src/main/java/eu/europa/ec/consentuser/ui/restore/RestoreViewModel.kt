@@ -13,7 +13,6 @@ import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import org.koin.android.annotation.KoinViewModel
 
-
 sealed class RestorePage {
     object First : RestorePage()
     object Second : RestorePage()
@@ -45,36 +44,69 @@ sealed class Effect : ViewSideEffect {
         data class SwitchScreen(val screenRoute: String) : Navigation()
         object Pop : Navigation()
     }
+
+    data class ShowError(val message: String) : Effect()
 }
 
 @KoinViewModel
-class RestoreViewModel : MviViewModel<Event, State, Effect>() {
+class RestoreViewModel(
+) : MviViewModel<Event, State, Effect>() {
     override fun setInitialState(): State = State()
 
     override fun handleEvents(event: Event) {
         when (event) {
             Event.GoNext -> {
                 val nextRoute = getQuickPinConfig()
-                setEffect { SwitchScreen(nextRoute) }
+                setEffect { Effect.Navigation.SwitchScreen(nextRoute) }
             }
             Event.GoBack -> setEffect { Effect.Navigation.Pop }
-            is Event.FileSelected -> TODO()
-            is Event.OptionToggled -> TODO()
+
+            is Event.FileSelected -> {
+                setState { copy(selectedFileUri = event.uri) }
+                setEffect { Effect.ShowError("File selected: ${event.uri.lastPathSegment}") }
+            }
+
+            is Event.OptionToggled -> {
+                val updated = viewState.value.selectedOptions.toMutableSet().apply {
+                    if (contains(event.option)) remove(event.option) else add(event.option)
+                }
+                setState { copy(selectedOptions = updated) }
+            }
+
             Event.Restore -> {
-                setEffect{
+                val current = viewState.value
+                if (current.selectedFileUri == null && current.mnemonicWords.all { it.isBlank() }) {
+                    setEffect { Effect.ShowError("Choose a file or enter your recovery phrase first.") }
+                    return
+                }
+                if (!validateForm()) {
+                    setEffect { Effect.ShowError("Please accept Terms and Data Protection before restoring.") }
+                    return
+                }
+
+                setEffect {
                     Effect.Navigation.SwitchScreen(
-                        screenRoute  = DashboardScreens.Dashboard.screenRoute
+                        screenRoute = DashboardScreens.Dashboard.screenRoute
                     )
                 }
             }
-            Event.SubmitWords -> TODO()
-            is Event.WordsChanged -> TODO()
+
+            Event.SubmitWords -> {
+                if (viewState.value.mnemonicWords.any { it.isBlank() }) {
+                    setEffect { Effect.ShowError("All mnemonic words must be filled.") }
+                } else {
+                    setState { copy(page = RestorePage.Third) }
+                }
+            }
+
+            is Event.WordsChanged -> setState { copy(mnemonicWords = event.words) }
         }
     }
 
-    private fun validateForm() {
-        val enabled = viewState.value.tosAccepted && viewState.value.dataProtectionAccepted
-        setState { copy(isButtonEnabled = enabled) }
+    private fun validateForm(): Boolean {
+        val valid = viewState.value.tosAccepted && viewState.value.dataProtectionAccepted
+        setState { copy(isButtonEnabled = valid) }
+        return valid
     }
 
     private fun getQuickPinConfig(): String =

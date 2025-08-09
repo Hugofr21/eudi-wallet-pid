@@ -102,22 +102,6 @@ class DashboardInteractorImpl(
                 )
             )
 
-
-            add(
-                SideMenuItemUi(
-                    type = SideMenuTypeUi.LOGS,
-                    data = ListItemDataUi(
-                        itemId = resourceProvider.getString(R.string.settings_screen_option_logs_id),
-                        mainContentData = ListItemMainContentDataUi.Text(
-                            text = resourceProvider.getString(R.string.settings_screen_option_logs)
-                        ),
-                        leadingContentData = ListItemLeadingContentDataUi.Icon(
-                            iconData = AppIcons.Logs
-                        )
-                    )
-                )
-            )
-
             add(
                 SideMenuItemUi(
                     type = SideMenuTypeUi.PROFILE,

@@ -22,6 +22,7 @@ enum class LibraryModule(val path: String) {
     TestFeatureLogic(":test-feature"),
     AnalyticsLogic(":analytics-logic"),
     AssemblyLogic(":assembly-logic"),
+
     BusinessLogic(":business-logic"),
     CoreLogic(":core-logic"),
     AuthenticationLogic(":authentication-logic"),

@@ -73,14 +73,14 @@ class BiometricSetupViewModel(
 
             is Event.NextButtonPressed -> {
                 clearError()
-                println("NextButtonPressed: pressed")
+//                println("NextButtonPressed: pressed")
                 if (viewState.value.isBiometricsAvailable) {
-                    println("NextButtonPressed: isBiometricsAvailable")
+//                    println("NextButtonPressed: isBiometricsAvailable")
                     if (viewState.value.hasFingerprint) {
-                        println("NextButtonPressed: hasFingerprint")
+//                        println("NextButtonPressed: hasFingerprint")
                         authenticate(event.context)
                     } else {
-                        println("NextButtonPressed: launchBiometricSystemScreen")
+//                        println("NextButtonPressed: launchBiometricSystemScreen")
                         biometricInteractor.launchBiometricSystemScreen()
                     }
                 }

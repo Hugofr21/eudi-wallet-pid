@@ -15,6 +15,7 @@
  */
 
 package eu.europa.ec.dashboardfeature.ui.profile
+import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
 import eu.europa.ec.dashboardfeature.interactor.PersonIdentificationDataInteractor
 import eu.europa.ec.dashboardfeature.model.ClaimsUI
 import eu.europa.ec.uilogic.mvi.MviViewModel
@@ -22,6 +23,7 @@ import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
+import eu.europa.ec.uilogic.navigation.IssuanceScreens
 import org.koin.android.annotation.KoinViewModel
 
 data class State(
@@ -85,7 +87,7 @@ class ProfileViewModel(
     override fun handleEvents(event: Event) {
        when (event) {
            Event.AddDocument -> {
-
+               navigateToNextScreenAddDocument()
            }
            Event.CreateQrCode -> {
 
@@ -96,7 +98,17 @@ class ProfileViewModel(
        }
     }
 
+    private fun navigateToNextScreenAddDocument() {
+        val template = IssuanceScreens.AddDocument.screenRoute
+        val route = template.replace("{flowType}", IssuanceFlowUiConfig.EXTRA_DOCUMENT.name)
 
+        setEffect {
+            Effect.Navigation.SwitchScreen(
+                screenRoute = route,
+                inclusive = true
+            )
+        }
+    }
 }
 
 

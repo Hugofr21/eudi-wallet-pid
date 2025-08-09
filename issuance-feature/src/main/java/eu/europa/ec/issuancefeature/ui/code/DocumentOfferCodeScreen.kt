@@ -18,6 +18,7 @@ package eu.europa.ec.issuancefeature.ui.code
 
 import android.content.Context
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -57,6 +59,7 @@ import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.utils.SPACING_LARGE
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
+import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.WrapPinTextField
 import eu.europa.ec.uilogic.config.ConfigNavigation
 import eu.europa.ec.uilogic.config.NavigationType
@@ -181,35 +184,61 @@ private fun CodeFieldLayout(
 ) {
     var pin by remember { mutableStateOf("") }
     val len = state.offerCodeUiConfig.txCodeLength
+    val isLocked = state.lockoutUntilMillis?.let { it > System.currentTimeMillis() } == true
+
+    LaunchedEffect(state.resetPinToken) {
+        pin = ""
+    }
 
     OutlinedTextField(
         value = pin,
         onValueChange = { input ->
+            if (isLocked) return@OutlinedTextField
             val digits = input.filter { it.isDigit() }.take(len)
             pin = digits
             onPinInput(digits)
         },
         modifier = modifier
             .height(56.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(onLongPress = {})
+            }
             .border(
                 width = 2.dp,
-                color = MaterialTheme.colorScheme.primary,
+                color = when {
+                    isLocked -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    state.isInputError -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.primary
+                },
                 shape = RoundedCornerShape(0.dp)
             ),
         singleLine = true,
-        visualTransformation = PinPlaceholderTransformation(len),
+        visualTransformation = PasswordVisualTransformation(), // mascara
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        enabled = !isLocked,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+            focusedBorderColor = if (state.isInputError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = if (state.isInputError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
         ),
-        shape = RoundedCornerShape(0.dp),
         placeholder = {
-
+            Text(text = "•".repeat(len))
         }
     )
+
+
+    VSpacer.Small()
+    if (state.isInputError || state.lockoutUntilMillis != null) {
+        val msg = state.inputErrorMessage ?: if (isLocked) {
+            val secLeft = ((state.lockoutUntilMillis!! - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+            "Too many attempts — reative em $secLeft s"
+        } else null
+        msg?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error)
+            )
+        }
+    }
 }
 
 

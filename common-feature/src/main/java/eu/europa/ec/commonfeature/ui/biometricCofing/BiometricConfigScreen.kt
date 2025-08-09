@@ -17,14 +17,21 @@
 package eu.europa.ec.commonfeature.ui.biometricCofing
 
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -161,33 +168,36 @@ private fun Content(
         WrapText(
             modifier = Modifier.fillMaxWidth(),
             textConfig = TextConfig(
-                style = MaterialTheme.typography.titleLarge
-                    .copy(fontWeight = FontWeight.Bold),
-                maxLines = 4,
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 textAlign = TextAlign.Center
             ),
             text = title
         )
 
-        VSpacer.Large()
+        VSpacer.Medium()
 
-
-        WrapImage(
+        Icon(
+            imageVector = Icons.Default.Fingerprint,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier
-                .wrapContentSize()
-                .defaultMinSize(minHeight = DEFAULT_ACTION_CARD_HEIGHT.dp)
+                .size(80.dp)
                 .align(Alignment.CenterHorizontally)
-                .size(80.dp),
-            iconData = AppIcons.Fingerprint,
-            contentScale = ContentScale.Fit
         )
 
-        VSpacer.Large()
+        VSpacer.Medium()
 
         WrapText(
-            textConfig = TextConfig(style = MaterialTheme.typography.bodyMedium, maxLines = 6),
+            textConfig = TextConfig(
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            ),
             text = description
         )
+
+        BiometricStepsList()
+
+        VSpacer.Medium()
 
         state.biometricsError?.let { error ->
             ErrorText(error)
@@ -202,6 +212,53 @@ private fun Content(
         }.collect()
     }
 }
+
+@Composable
+private fun BiometricStepsList() {
+    val steps = listOf(
+        "We will check if biometric authentication is available on your device.",
+        "If configured, you will be prompted to authenticate.",
+        "If not configured, you'll be asked to enroll your fingerprint in system settings.",
+        "Your biometric data is never stored or shared by the app."
+    )
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+    ) {
+        Text(
+            text = "What will happen next:",
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+        )
+
+        steps.forEachIndexed { index, step ->
+            Row(
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .padding(top = 2.dp)
+                )
+
+                VSpacer.Small()
+
+                Text(
+                    text = "${index + 1}. $step",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun ErrorText(error: String) {

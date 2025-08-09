@@ -68,9 +68,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun WifiAwareScreen(
     navHostController: NavController,
@@ -80,30 +81,21 @@ fun WifiAwareScreen(
     val context = LocalContext.current
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     val effects = viewModel.effect
-    val locationManager = context.getSystemService<LocationManager>()
-    var isLocationEnabled by remember { mutableStateOf(true) }
-
-
-
-    LaunchedEffect(Unit) {
-        isLocationEnabled = locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER)
-            ?: false
-    }
-
-    val openLocationSettings = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) {}
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    val isLocationEnabled: Boolean =
+        locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { results ->
             val denied = results.filterValues { !it }.keys
-            if (denied.isEmpty() && isLocationEnabled) {
+            if (denied.isEmpty()) {
                 viewModel.handleEvents(Event.StartDiscovery)
             } else {
                 Toast.makeText(
                     context,
-                    "You need to authorize permissions and enable Location.",
+                    "Você precisa autorizar as permissões para prosseguir.",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -112,18 +104,12 @@ fun WifiAwareScreen(
 
 
     LaunchedEffect(Unit) {
-        if (!isLocationEnabled) {
-            openLocationSettings.launch(
-                Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+        permissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.NEARBY_WIFI_DEVICES
             )
-        } else {
-            permissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.NEARBY_WIFI_DEVICES
-                )
-            )
-        }
+        )
     }
 
 

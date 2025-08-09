@@ -66,14 +66,14 @@ fun RestoreScreen(navController: NavController, viewModel: RestoreViewModel) {
 
     val config = ButtonConfig(
         type = ButtonType.PRIMARY,
-        onClick = { viewModel.setEvent(Event.GoNext) },
+        onClick = { viewModel.setEvent(GoNext) },
         enabled = state.value.isButtonEnabled
     )
 
     ContentScreen(
         isLoading = false,
         navigatableAction = ScreenNavigateAction.NONE,
-        onBack = { viewModel.setEvent(Event.GoBack) },
+        onBack = { viewModel.setEvent(GoBack) },
         stickyBottom = { paddingValues ->
             ContinueButton(paddingValues, config)
         }) { paddingValues ->
@@ -98,6 +98,8 @@ private fun NavigationSlider(
     state: State,
     viewModel: RestoreViewModel
 ) {
+
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -115,6 +117,9 @@ private fun NavigationSlider(
         effectFlow.onEach { effect ->
             when (effect) {
                 is Effect.Navigation -> onNavigationRequested(effect)
+                is Effect.ShowError -> {
+                    effect.message
+                }
             }
         }.collect()
     }
@@ -148,13 +153,11 @@ private fun MainContent(
             .padding(paddingValues)
     ) {
 
-        WrapImage(
-            modifier = Modifier
-                .wrapContentSize()
-                .defaultMinSize(minHeight = DEFAULT_ACTION_CARD_HEIGHT.dp)
-                .align(Alignment.CenterHorizontally),
-            iconData = AppIcons.Backup,
-            contentScale = ContentScale.Fit
+        Icon(
+            imageVector = Icons.Default.Backup,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(ICON_SIZE_40.dp)
         )
 
         VSpacer.Small()
@@ -257,7 +260,7 @@ private fun StepFormContent(
         RestorePage.Second -> SecondEnterPhraseContentPage(
             words = state.mnemonicWords,
             onWordsChanged = { viewModel?.setEvent(WordsChanged(it)) },
-            onSubmit = { viewModel?.setEvent(Event.SubmitWords) }
+            onSubmit = { viewModel?.setEvent(SubmitWords) }
         )
         RestorePage.Third -> ThirdRestoreWalletContent(
             options = listOf("option A", "option B", "…"),

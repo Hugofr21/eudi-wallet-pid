@@ -21,8 +21,6 @@ import eu.europa.ec.backuplogic.controller.BackupController
 import eu.europa.ec.backuplogic.controller.ListWordsController
 import eu.europa.ec.backuplogic.controller.model.RestoreStatus
 import eu.europa.ec.storagelogic.model.BackupLog
-import java.io.File
-import java.io.InputStream
 
 interface BackupInteractor {
     suspend fun exportBackup(): ArrayList<Uri>
