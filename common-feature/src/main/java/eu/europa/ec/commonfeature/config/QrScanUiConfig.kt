@@ -24,7 +24,7 @@ import eu.europa.ec.uilogic.serializer.adapter.SerializableTypeAdapter
 
 sealed interface QrScanFlow {
     data object Presentation : QrScanFlow
-    data class Issuance(val issuanceFlow: IssuanceFlowUiConfig) : QrScanFlow
+    data class Issuance(val issuanceFlowType: IssuanceFlowType?) : QrScanFlow
     data object Signature : QrScanFlow
 }
 
@@ -37,10 +37,16 @@ data class QrScanUiConfig(
     companion object Parser : UiSerializableParser {
         override val serializedKeyName = "qrScanConfig"
         override fun provideParser(): Gson {
-            return GsonBuilder().registerTypeAdapter(
-                QrScanFlow::class.java,
-                SerializableTypeAdapter<QrScanFlow>()
-            ).create()
+            return GsonBuilder()
+                .registerTypeAdapter(
+                    QrScanFlow::class.java,
+                    SerializableTypeAdapter<QrScanFlow>()
+                )
+                .registerTypeAdapter(
+                    IssuanceFlowType::class.java,
+                    SerializableTypeAdapter<IssuanceFlowType>()
+                )
+                .create()
         }
     }
 }

@@ -121,13 +121,11 @@ fun provideDocumentDetailsInteractor(
     walletCoreDocumentsController: WalletCoreDocumentsController,
     resourceProvider: ResourceProvider,
     uuidProvider: UuidProvider,
-    prefKeys: PrefKeys,
 ): DocumentDetailsInteractor =
     DocumentDetailsInteractorImpl(
         walletCoreDocumentsController,
         resourceProvider,
         uuidProvider,
-        prefKeys,
     )
 
 @Factory

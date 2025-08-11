@@ -542,6 +542,8 @@
     <string name="wifi_disconnected_title">Wi-Fi Aware Not Available</string>
     <string name="wifi_disconnected_description">Your device doesn’t support Wi-Fi Aware. Please try on a compatible device.</string>
     <string name="consent_screen_restore_button">Continue without restore</string>
+    <string name="document_details_document_credentials_info_expanded_button_update_now_text">For security reasons, this document can be shared a limited number of times before it needs to be re-issued by the issuing authority</string>
+    <string name="issuance_add_document_no_options">No available documents</string>
 
     <!-- Logs Screen -->
 </resources>

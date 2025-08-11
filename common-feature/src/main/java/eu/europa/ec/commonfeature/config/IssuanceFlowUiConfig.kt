@@ -16,24 +16,29 @@
 
 package eu.europa.ec.commonfeature.config
 
-enum class IssuanceFlowUiConfig {
-    NO_DOCUMENT, EXTRA_DOCUMENT;
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import eu.europa.ec.corelogic.model.FormatType
+import eu.europa.ec.uilogic.serializer.UiSerializable
+import eu.europa.ec.uilogic.serializer.UiSerializableParser
+import eu.europa.ec.uilogic.serializer.adapter.SerializableTypeAdapter
 
-    companion object {
-        fun fromIssuanceFlowUiConfig(value: IssuanceFlowUiConfig): String {
-            return try {
-                value.name
-            } catch (e: Exception) {
-                throw RuntimeException("Wrong IssuanceFlowUiConfig")
-            }
-        }
+sealed interface IssuanceFlowType {
+    data object NoDocument : IssuanceFlowType
+    data class ExtraDocument(val formatType: FormatType?) : IssuanceFlowType
+}
 
-        fun fromString(value: String): IssuanceFlowUiConfig {
-            return try {
-                IssuanceFlowUiConfig.valueOf(value)
-            } catch (e: Exception) {
-                throw RuntimeException("Wrong IssuanceFlowUiConfig")
-            }
+data class IssuanceUiConfig(
+    val flowType: IssuanceFlowType,
+) : UiSerializable {
+
+    companion object Parser : UiSerializableParser {
+        override val serializedKeyName = "issuanceConfig"
+        override fun provideParser(): Gson {
+            return GsonBuilder().registerTypeAdapter(
+                IssuanceFlowType::class.java,
+                SerializableTypeAdapter<IssuanceFlowType>()
+            ).create()
         }
     }
 }

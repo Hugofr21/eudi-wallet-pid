@@ -18,6 +18,7 @@ package eu.europa.ec.commonfeature.config
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import eu.europa.ec.corelogic.model.FormatType
 import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.uilogic.config.ConfigNavigation
 import eu.europa.ec.uilogic.config.NavigationType

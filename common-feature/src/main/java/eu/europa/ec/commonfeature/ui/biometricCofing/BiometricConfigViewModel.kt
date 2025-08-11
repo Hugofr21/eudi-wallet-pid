@@ -18,17 +18,18 @@ package eu.europa.ec.commonfeature.ui.biometricCofing
 import android.content.Context
 import eu.europa.ec.authenticationlogic.controller.authentication.BiometricsAuthenticate
 import eu.europa.ec.authenticationlogic.controller.authentication.BiometricsAvailability
-import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
+import eu.europa.ec.commonfeature.config.IssuanceFlowType
+import eu.europa.ec.commonfeature.config.IssuanceUiConfig
 import eu.europa.ec.commonfeature.interactor.BiometricInteractor
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
-import eu.europa.ec.uilogic.navigation.CommonScreens
-import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.IssuanceScreens
+import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
+import eu.europa.ec.uilogic.serializer.UiSerializer
 import org.koin.android.annotation.KoinViewModel
 
 
@@ -60,6 +61,7 @@ sealed class Effect : ViewSideEffect {
 
 @KoinViewModel
 class BiometricSetupViewModel(
+    private val uiSerializer: UiSerializer,
     private val biometricInteractor: BiometricInteractor
 ) : MviViewModel<Event, State, Effect>() {
 
@@ -88,7 +90,7 @@ class BiometricSetupViewModel(
 
             is Event.SkipButtonPressed -> {
                 biometricInteractor.storeBiometricsUsageDecision(false)
-                navigateToNextScreen()
+                navigateToNextScreenAddDocument()
             }
         }
     }
@@ -169,20 +171,30 @@ class BiometricSetupViewModel(
 
     private fun authenticationSuccess() {
         biometricInteractor.storeBiometricsUsageDecision(true)
-        navigateToNextScreen()
+        navigateToNextScreenAddDocument()
     }
 
 
-    private fun navigateToNextScreen() {
-        val template = IssuanceScreens.AddDocument.screenRoute
-        val route = template.replace("{flowType}", IssuanceFlowUiConfig.NO_DOCUMENT.name)
-
+    private fun navigateToNextScreenAddDocument() {
+        val addDocumentScreenRoute = generateComposableNavigationLink(
+            screen = IssuanceScreens.AddDocument,
+            arguments = generateComposableArguments(
+                mapOf(
+                    IssuanceUiConfig.serializedKeyName to uiSerializer.toBase64(
+                        model = IssuanceUiConfig(
+                            flowType = IssuanceFlowType.NoDocument
+                        ),
+                        parser = IssuanceUiConfig.Parser
+                    )
+                )
+            )
+        )
         setEffect {
             Effect.Navigation.SwitchScreen(
-                screenRoute = route,
-                argument = null,
-                inclusive = true
+                screenRoute = addDocumentScreenRoute
             )
         }
     }
+
+
 }

@@ -19,7 +19,6 @@ package eu.europa.ec.corelogic.controller
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationResult
 import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
 import eu.europa.ec.businesslogic.extension.safeAsync
-import eu.europa.ec.corelogic.config.Issuer
 import eu.europa.ec.corelogic.config.OpenId4VciManagerRegistry
 import eu.europa.ec.corelogic.config.OpenId4VciModule
 import eu.europa.ec.corelogic.config.WalletCoreConfig
@@ -28,7 +27,6 @@ import eu.europa.ec.corelogic.extension.getLocalizedDisplayName
 import eu.europa.ec.corelogic.extension.parseTransactionLog
 import eu.europa.ec.corelogic.extension.toCoreTransactionLog
 import eu.europa.ec.corelogic.extension.toTransactionLogData
-import eu.europa.ec.corelogic.model.CredentialIssuerMetadataDefault
 import eu.europa.ec.corelogic.model.DeferredDocumentDataDomain
 import eu.europa.ec.corelogic.model.DocumentCategories
 import eu.europa.ec.corelogic.model.DocumentIdentifier
@@ -36,7 +34,6 @@ import eu.europa.ec.corelogic.model.FormatType
 import eu.europa.ec.corelogic.model.ScopedDocumentDomain
 import eu.europa.ec.corelogic.model.TransactionLogDataDomain
 import eu.europa.ec.corelogic.model.toDocumentIdentifier
-import eu.europa.ec.eudi.openid4vci.CredentialConfiguration
 import eu.europa.ec.eudi.openid4vci.MsoMdocCredential
 import eu.europa.ec.eudi.openid4vci.SdJwtVcCredential
 import eu.europa.ec.eudi.statium.Status
@@ -54,7 +51,6 @@ import eu.europa.ec.eudi.wallet.issue.openid4vci.IssueEvent
 import eu.europa.ec.eudi.wallet.issue.openid4vci.Offer
 import eu.europa.ec.eudi.wallet.issue.openid4vci.OfferResult
 import eu.europa.ec.eudi.wallet.issue.openid4vci.OpenId4VciManager
-import eu.europa.ec.resourceslogic.BuildConfig
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.storagelogic.dao.BookmarkDao
@@ -76,7 +72,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.component.getScopeName
 import java.util.Locale
-import eu.europa.ec.eudi.openid4vci.*
+import eu.europa.ec.eudi.wallet.document.CreateDocumentSettings
+
 enum class IssuanceMethod {
     OPENID4VCI
 }
@@ -210,6 +207,8 @@ interface WalletCoreDocumentsController {
     suspend fun storeBookmark(bookmarkId: DocumentId)
 
     suspend fun deleteBookmark(bookmarkId: DocumentId)
+
+    suspend fun isDocumentLowOnCredentials(document: IssuedDocument): Boolean
 }
 
 
@@ -264,6 +263,7 @@ class WalletCoreDocumentsControllerImpl(
                                     is SdJwtVcCredential -> config.type.toDocumentIdentifier() == DocumentIdentifier.SdJwtPid
                                     else -> false
                                 }
+
                                 val isAgeVerification = when (config) {
                                     is MsoMdocCredential -> config.docType.toDocumentIdentifier() in listOf(
                                         DocumentIdentifier.MdocEUDIAgeOver18,
@@ -272,11 +272,19 @@ class WalletCoreDocumentsControllerImpl(
                                     is SdJwtVcCredential -> config.type.toDocumentIdentifier() == DocumentIdentifier.AgeOver18Pid
                                     else -> false
                                 }
+
+                                val formatType = when (config) {
+                                    is MsoMdocCredential -> config.docType
+                                    is SdJwtVcCredential -> config.type
+                                    else -> null
+                                }
+
                                 ScopedDocumentDomain(
-                                    name            = name,
+                                    name = name,
                                     configurationId = id.toString(),
-                                    isPid           = isPid,
-                                    ageProof        = isAgeVerification
+                                    isPid = isPid,
+                                    ageProof = isAgeVerification,
+                                    formatType = formatType,
                                 )
 
                             }
@@ -663,6 +671,13 @@ class WalletCoreDocumentsControllerImpl(
 
     override suspend fun deleteBookmark(bookmarkId: DocumentId) =
         bookmarkDao.delete(bookmarkId)
+
+    override suspend fun isDocumentLowOnCredentials(document: IssuedDocument): Boolean {
+        val documentRemainingCredentials = document.credentialsCount()
+
+        return document.credentialPolicy == CreateDocumentSettings.CredentialPolicy.OneTimeUse
+                && documentRemainingCredentials <= 1
+    }
 
     override suspend fun getRevokedDocumentIds(): List<String> =
         revokedDocumentDao.retrieveAll().map { it.identifier }

@@ -16,12 +16,15 @@
 
 package eu.europa.ec.dashboardfeature.ui.documents.model
 
+
+
 data class DocumentCredentialsInfoUi(
     val availableCredentials: Int,
     val totalCredentials: Int,
     val title: String,
     val collapsedInfo: CollapsedInfo? = null,
     val expandedInfo: ExpandedInfo? = null,
+    val isExpanded: Boolean,
 ) {
     data class CollapsedInfo(
         val moreInfoText: String,

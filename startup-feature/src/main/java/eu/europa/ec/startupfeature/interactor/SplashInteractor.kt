@@ -18,7 +18,8 @@ package eu.europa.ec.startupfeature.interactor
 
 import eu.europa.ec.commonfeature.config.BiometricMode
 import eu.europa.ec.commonfeature.config.BiometricUiConfig
-import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
+import eu.europa.ec.commonfeature.config.IssuanceFlowType
+import eu.europa.ec.commonfeature.config.IssuanceUiConfig
 import eu.europa.ec.commonfeature.config.OnBackNavigationConfig
 import eu.europa.ec.commonfeature.interactor.QuickPinInteractor
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
@@ -88,7 +89,14 @@ class SplashInteractorImpl(
                                         IssuanceScreens.AddDocument
                                     },
                                     arguments = if (!hasDocuments) {
-                                        mapOf("flowType" to IssuanceFlowUiConfig.NO_DOCUMENT.name)
+                                        mapOf(
+                                            IssuanceUiConfig.serializedKeyName to uiSerializer.toBase64(
+                                                model = IssuanceUiConfig(
+                                                    flowType = IssuanceFlowType.NoDocument
+                                                ),
+                                                parser = IssuanceUiConfig.Parser
+                                            )
+                                        )
                                     } else {
                                         emptyMap()
                                     }

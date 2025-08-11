@@ -80,6 +80,7 @@ import eu.europa.ec.uilogic.navigation.helper.handleDeepLinkAction
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 
@@ -309,7 +310,6 @@ private fun Footer(
         }
     }
 }
-
 @ThemeModePreviews
 @Composable
 private fun IssuanceAddDocumentScreenPreview() {
@@ -318,8 +318,8 @@ private fun IssuanceAddDocumentScreenPreview() {
             state = State(
                 showFooterScanner = true,
                 navigatableAction = ScreenNavigateAction.NONE,
-                title = stringResource(R.string.issuance_add_document_title),
-                subtitle = stringResource(R.string.issuance_add_document_subtitle),
+                title = "Add Document",
+                subtitle = "Select a document to add",
                 options = listOf(
                     AddDocumentUi(
                         itemData = ListItemDataUi(
@@ -335,9 +335,16 @@ private fun IssuanceAddDocumentScreenPreview() {
                             trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
                         )
                     )
-                )
+                ),
+                onBackAction = {},
+                issuanceConfig = null,
+                isLoading = false,
+                error = null,
+                isInitialised = true,
+                notifyOnAuthenticationFailure = false,
+                noOptions = false
             ),
-            effectFlow = Channel<Effect>().receiveAsFlow(),
+            effectFlow = emptyFlow(),
             onEventSend = {},
             onNavigationRequested = {},
             paddingValues = PaddingValues(all = SPACING_LARGE.dp),
@@ -354,8 +361,8 @@ private fun DashboardAddDocumentScreenPreview() {
             state = State(
                 showFooterScanner = false,
                 navigatableAction = ScreenNavigateAction.BACKABLE,
-                title = stringResource(R.string.issuance_add_document_title),
-                subtitle = stringResource(R.string.issuance_add_document_subtitle),
+                title = "Add Document",
+                subtitle = "Select a document to add",
                 options = listOf(
                     AddDocumentUi(
                         itemData = ListItemDataUi(
@@ -371,9 +378,16 @@ private fun DashboardAddDocumentScreenPreview() {
                             trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
                         )
                     )
-                )
+                ),
+                onBackAction = {},
+                issuanceConfig = null,
+                isLoading = false,
+                error = null,
+                isInitialised = true,
+                notifyOnAuthenticationFailure = false,
+                noOptions = false
             ),
-            effectFlow = Channel<Effect>().receiveAsFlow(),
+            effectFlow = emptyFlow(),
             onEventSend = {},
             onNavigationRequested = {},
             paddingValues = PaddingValues(all = SPACING_LARGE.dp),

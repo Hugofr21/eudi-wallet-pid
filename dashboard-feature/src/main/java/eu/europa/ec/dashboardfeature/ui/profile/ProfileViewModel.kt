@@ -15,7 +15,8 @@
  */
 
 package eu.europa.ec.dashboardfeature.ui.profile
-import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
+import eu.europa.ec.commonfeature.config.IssuanceFlowType
+import eu.europa.ec.commonfeature.config.IssuanceUiConfig
 import eu.europa.ec.dashboardfeature.interactor.PersonIdentificationDataInteractor
 import eu.europa.ec.dashboardfeature.model.ClaimsUI
 import eu.europa.ec.uilogic.mvi.MviViewModel
@@ -24,6 +25,9 @@ import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.IssuanceScreens
+import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
+import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
+import eu.europa.ec.uilogic.serializer.UiSerializer
 import org.koin.android.annotation.KoinViewModel
 
 data class State(
@@ -61,6 +65,7 @@ sealed class Effect : ViewSideEffect {
 
 @KoinViewModel
 class ProfileViewModel(
+    private val uiSerializer: UiSerializer,
     private val personIdentificationDataInteractor: PersonIdentificationDataInteractor,
 ) : MviViewModel<Event, State, Effect>(
 
@@ -98,17 +103,30 @@ class ProfileViewModel(
        }
     }
 
-    private fun navigateToNextScreenAddDocument() {
-        val template = IssuanceScreens.AddDocument.screenRoute
-        val route = template.replace("{flowType}", IssuanceFlowUiConfig.EXTRA_DOCUMENT.name)
 
+    private fun navigateToNextScreenAddDocument() {
+        val addDocumentScreenRoute = generateComposableNavigationLink(
+            screen = IssuanceScreens.AddDocument,
+            arguments = generateComposableArguments(
+                mapOf(
+                    IssuanceUiConfig.serializedKeyName to uiSerializer.toBase64(
+                        model = IssuanceUiConfig(
+                            flowType = IssuanceFlowType.ExtraDocument(
+                                formatType = null
+                            )
+                        ),
+                        parser = IssuanceUiConfig.Parser
+                    )
+                )
+            )
+        )
         setEffect {
             Effect.Navigation.SwitchScreen(
-                screenRoute = route,
-                inclusive = true
+                screenRoute = addDocumentScreenRoute
             )
         }
     }
+
 }
 
 

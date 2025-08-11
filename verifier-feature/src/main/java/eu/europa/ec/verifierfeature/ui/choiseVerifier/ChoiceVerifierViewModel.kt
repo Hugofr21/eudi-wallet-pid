@@ -1,6 +1,5 @@
 package eu.europa.ec.verifierfeature.ui.choiseVerifier
 
-import eu.europa.ec.commonfeature.config.IssuanceFlowUiConfig
 import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
@@ -79,7 +78,7 @@ class ChoiceVerifierViewModel(
                                 screen = VerifierScreens.FieldsLabels.screenRoute,
                                 arguments = generateComposableArguments(
                                     mapOf(
-                                        "detailsType" to IssuanceFlowUiConfig.EXTRA_DOCUMENT,
+//                                        "detailsType" to IssuanceFlowUiConfig.EXTRA_DOCUMENT,
                                         "documentId" to documentId
                                     )
                                 ),
