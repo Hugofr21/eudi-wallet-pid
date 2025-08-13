@@ -221,6 +221,10 @@ class AddDocumentViewModel(
                             copy(
                                 error = null,
                                 options = response.options,
+                                noOptions = false,
+                                showFooterScanner = shouldShowFooterScanner(
+                                    flowType = viewState.value.issuanceConfig?.flowType
+                                ),
                                 isInitialised = true,
                                 isLoading = false
                             )
@@ -421,10 +425,11 @@ class AddDocumentViewModel(
         }
     }
 
-    private fun shouldShowFooterScanner(flowType: IssuanceFlowType): Boolean {
+    private fun shouldShowFooterScanner(flowType: IssuanceFlowType?): Boolean {
         return when (flowType) {
             is IssuanceFlowType.NoDocument -> true
             is IssuanceFlowType.ExtraDocument -> false
+            null -> false
         }
     }
 

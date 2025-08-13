@@ -6,11 +6,14 @@ import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.controller.WalletCorePresentationController
 import eu.europa.ec.corelogic.di.PRESENTATION_SCOPE_ID
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractor
+import eu.europa.ec.eudi.wallet.EudiWallet
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.verifierfeature.controller.VerifierAgeProofController
 import eu.europa.ec.verifierfeature.controller.VerifierAgeProofControllerImpl
 import eu.europa.ec.verifierfeature.controller.VerifierApiSwaggerController
 import eu.europa.ec.verifierfeature.controller.VerifierApiSwaggerControllerImpl
+import eu.europa.ec.verifierfeature.controller.VerifierEUDIController
+import eu.europa.ec.verifierfeature.controller.VerifierEUDIControllerImpl
 import eu.europa.ec.verifierfeature.interactor.AgeProofInteractor
 import eu.europa.ec.verifierfeature.interactor.AgeProofInteractorImpl
 import okhttp3.OkHttpClient
@@ -40,19 +43,25 @@ fun provideVerifierAgeProofController(
     api = api,
 )
 
+@Single
+fun provideVerifierEUDIController(
+): VerifierEUDIController = VerifierEUDIControllerImpl()
+
 @Factory
 fun providerAgeProofInteractor(
     verifierAgeProofController: VerifierAgeProofController,
     walletCoreDocumentsController: WalletCoreDocumentsController,
     resourceProvider: ResourceProvider,
     documentDetailsInteractor: DocumentDetailsInteractor,
-    deviceAuthenticationInteractor: DeviceAuthenticationInteractor
-
+    deviceAuthenticationInteractor: DeviceAuthenticationInteractor,
+    eudiWallet: EudiWallet,
 ): AgeProofInteractor = AgeProofInteractorImpl(
     verifierAgeProofController = verifierAgeProofController,
     walletCoreDocumentsController =  walletCoreDocumentsController,
     resourceProvider = resourceProvider,
     documentDetailsInteractor = documentDetailsInteractor,
-    deviceAuthenticationInteractor = deviceAuthenticationInteractor
+    deviceAuthenticationInteractor = deviceAuthenticationInteractor,
+    eudiWallet = eudiWallet
+
 )
 

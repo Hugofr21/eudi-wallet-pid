@@ -5,23 +5,42 @@ package eu.europa.ec.verifierfeature.model
  * Trusted List (TL)  ETSI TS 119 612,
  */
 data class Verifier(
+    val id: String,
     val name: String,
     val url: String,
-    val schema:String? = null,
+    val schema: String? = null,
+    val description: String? = null,
+    val recommended: Boolean = false,
+    var isSelected: Boolean = false
 )
 
-object VerifierModule{
-    fun trustListVerifier(): List<Verifier>{
-       return listOf(   Verifier("Eu Digital Wallet Identity", "https://verifier.eudiw.dev/home", "eudi-openid4vp"),
-            Verifier("Age Verification Testing Verifier", "https://verifier.ageverification.dev/", "av"),
-            Verifier("Funke Testbed", "https://testbed.lissi.io/funke", "haip"),
-            Verifier("EUDI Verifier Endpoint OpenId4VP draft 23", "http://localhost:8080/swagger-ui#","")
-           )
+object VerifierModule {
+    fun trustListVerifier(): List<Verifier> {
+        return listOf(
+            Verifier(
+                id = "eudiw",
+                name = "Eu Digital Wallet Identity",
+                url = "https://verifier.eudiw.dev/home",
+                schema = "eudi-openid4vp://",
+                description = "OpenID4VP demo verifier",
+                recommended = true
+            ),
+            Verifier(
+                id = "age",
+                name = "Age Verification Testing Verifier",
+                url = "https://verifier.ageverification.dev/",
+                schema = "av://",
+                description = "Teste de verificação de idade"
+            ),
+            Verifier(
+                id = "test_rp",
+                name = "Test Relying Party",
+                url = "https://tester.relyingparty.eudiw.dev/",
+                schema = "eudi-openid4vp://",
+                description = "Relying party de teste para fluxo EUDIW"
+            )
+        )
     }
 
-    fun optionsVerifierName(): List<String>{
-        return trustListVerifier().map {
-            it.name
-        }
-    }
+    fun optionsVerifierName(): List<String> = trustListVerifier().map { it.name }
 }

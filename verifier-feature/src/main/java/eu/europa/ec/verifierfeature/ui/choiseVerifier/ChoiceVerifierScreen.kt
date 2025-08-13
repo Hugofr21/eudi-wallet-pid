@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -85,7 +87,7 @@ private fun NavigationSlider(
     effectFlow: Flow<Effect>,
     onNavigationRequested: (Effect.Navigation) -> Unit,
     state: State,
-    onToggle: (String, Boolean) -> Unit
+    onToggle: (String, Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -220,8 +222,8 @@ private fun ContentPreview() {
                 state = State(
                     isLoading = false,
                     verifiers = listOf(
-                        VerifierItem("1", "Option 1", false),
-                        VerifierItem("2", "Option 2", true)
+                        VerifierItem("1", "Option 1", "", true),
+                        VerifierItem("2", "Option 2", "", false)
                     )
                 ),
                 onToggle = { _, _ -> }

@@ -7,7 +7,7 @@ import eu.europa.ec.verifierfeature.model.FieldLabel
 
 @Serializable
 data class RequestArgs(
-    val detailsType: IssuanceFlowType,
+    val detailsType: String? = null,
     val documentId: String,
     val fieldLabels: List<FieldLabel>
 )

@@ -1,5 +1,7 @@
 package eu.europa.ec.verifierfeature.ui.choiseVerifier
 
+import android.content.Context
+import androidx.lifecycle.viewModelScope
 import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
@@ -9,13 +11,16 @@ import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.VerifierScreens
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
+import eu.europa.ec.verifierfeature.controller.VerifierEUDIController
 import eu.europa.ec.verifierfeature.model.VerifierModule
+import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.annotation.InjectedParam
 
 data class VerifierItem(
     val id: String,
     val displayName: String,
+    val url: String,
     val isSelected: Boolean
 )
 
@@ -40,53 +45,82 @@ sealed class Effect : ViewSideEffect {
             val inclusive: Boolean = false,
         ) : Navigation()
     }
+
+    data class ShowMessage(val message: String): Effect()
 }
 
 @KoinViewModel
 class ChoiceVerifierViewModel(
+    private val verifierEUDIController: VerifierEUDIController,
+    private val context: Context,
     @InjectedParam private val documentId: DocumentId,
 ) : MviViewModel<Event, State, Effect>() {
     override fun setInitialState(): State = with(VerifierModule) {
-        val options = optionsVerifierName()
-        val items = options.map { id -> VerifierItem(id = id, displayName = id, isSelected = false) }
+        val trustList = trustListVerifier()
+        val options = trustList.map { it.name }
+
+        val items = trustList.map { v ->
+            VerifierItem(
+                id = v.id,
+                displayName = v.name,
+                url = v.url,
+                isSelected = false
+            )
+        }
+
         return State(
             trustListVerifier = options,
             verifiers = items
         )
     }
 
-    override fun handleEvents(event: Event) {
+    override  fun handleEvents(event: Event) {
         when (event) {
             is Event.ToggleVerifier -> {
-                val currentSelection = viewState.value.verifiers.firstOrNull { it.isSelected }
-                val isSame = currentSelection?.id == event.verifierId
-
-                val updated = viewState.value.verifiers.map {
-                    when {
-                        it.id == event.verifierId -> it.copy(isSelected = event.isChecked)
-                        else -> it.copy(isSelected = false)
+                val updated = viewState.value.verifiers.map { item ->
+                    when (item.id) {
+                        event.verifierId -> item.copy(isSelected = event.isChecked)
+                        else -> item.copy(isSelected = false)
                     }
                 }
                 setState { copy(verifiers = updated) }
             }
             Event.SubmitSelection -> {
-                val selected = viewState.value.verifiers.filter { it.isSelected }.map { it.id }
-                if ("Age Verification Testing Verifier" in selected) {
-                    setEffect {
-                        Effect.Navigation.SwitchScreen(
-                            screenRoute = generateComposableNavigationLink(
-                                screen = VerifierScreens.FieldsLabels.screenRoute,
-                                arguments = generateComposableArguments(
-                                    mapOf(
-//                                        "detailsType" to IssuanceFlowUiConfig.EXTRA_DOCUMENT,
-                                        "documentId" to documentId
+                val selectedVerifier = viewState.value.verifiers.firstOrNull { it.isSelected }
+                    ?: run {
+                        setEffect { Effect.ShowMessage("Selecione um verificador") }
+                        return
+                    }
+
+                when(selectedVerifier.id){
+                    "age" -> {
+                        println("")
+                        setEffect {
+                            Effect.Navigation.SwitchScreen(
+                                screenRoute = generateComposableNavigationLink(
+                                    screen = VerifierScreens.FieldsLabels.screenRoute,
+                                    arguments = generateComposableArguments(
+                                        mapOf("documentId" to documentId)
                                     )
                                 ),
-                            ),
-                            inclusive = false,
-                        )
+                                inclusive = false
+                            )
+                        }
+                    }
+                    "test_rp" -> {
+                        setState { copy(isLoading = true) }
+                        viewModelScope.launch {
+                            verifierEUDIController.launchTestVerifierAndGetResult(context)
+                        }
+                    }
+                    "eudiw" ->{
+                        setState { copy(isLoading = true) }
+                        viewModelScope.launch {
+                            verifierEUDIController.launchTestVerifierEudiAndGetResult(context)
+                        }
                     }
                 }
+
             }
 
             Event.GoBack -> setEffect { Effect.Navigation.Pop }

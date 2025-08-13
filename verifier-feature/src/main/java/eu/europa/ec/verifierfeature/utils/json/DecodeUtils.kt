@@ -1,17 +1,11 @@
 package eu.europa.ec.verifierfeature.utils.json
 
-import com.nimbusds.jose.JWSObject
-import com.nimbusds.jose.util.Base64URL
-import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.Base64
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 data class AuthRequestData(
     val nonce: String,
@@ -19,6 +13,7 @@ data class AuthRequestData(
     val requestUri: String?,
     val dcqlQuery: JsonObject,
     val responseMode: String,
+    val responseType: String?,
 )
 
 object DecodeUtils {
@@ -51,6 +46,9 @@ object DecodeUtils {
         val requestUri = payload["response_uri"]?.takeIf { it !is JsonNull }
             ?.jsonPrimitive?.content
 
+        val requestType = payload["response_type"]?.takeIf { it !is JsonNull }
+            ?.jsonPrimitive?.content
+
         val dcql = payload["dcql_query"]?.jsonObject
             ?: throw IllegalArgumentException("Missing 'dcql_query' in JWT")
 
@@ -63,6 +61,7 @@ object DecodeUtils {
             requestUri = requestUri,
             dcqlQuery = dcql,
             responseMode = responseMode,
+            requestType
         )
     }
 

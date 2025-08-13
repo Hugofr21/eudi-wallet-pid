@@ -2,7 +2,6 @@ package eu.europa.ec.verifierfeature.ui.fieldLabelsPrrofAge
 
 import android.net.Uri
 import androidx.lifecycle.viewModelScope
-import eu.europa.ec.commonfeature.config.IssuanceFlowType
 import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
@@ -63,10 +62,6 @@ class FieldLabelsProofAgeViewModel(
     override fun handleEvents(event: Event) {
         when (event) {
             is Event.ToggleFieldLabel -> {
-//                val current = viewState.value.selectedKeys.toMutableSet()
-//                if (event.isChecked) current += event.key
-//                else                current -= event.key
-//                setState { copy(selectedKeys = current) }
                 val newSelection = if (event.isChecked) {
                     setOf(event.key)
                 } else {
@@ -82,8 +77,8 @@ class FieldLabelsProofAgeViewModel(
                     setEffect {
 
                         val requestArgs = RequestArgs(
-                            detailsType = IssuanceFlowType.ExtraDocument(formatType = null),
-                            documentId = documentId,
+                            detailsType = null,
+                            documentId = documentId.replace(Regex("""(\{documentId\}\?documentId=)+"""), ""),
                             fieldLabels = selected
                         )
 
@@ -92,7 +87,7 @@ class FieldLabelsProofAgeViewModel(
 
 
                         Effect.Navigation.SwitchScreen(
-                            screenRoute = "${VerifierScreens.RequestVerifier.screenRoute}?args=$encodedJson"
+                            screenRoute = nextPage(encodedJson)
                         )
                     }
                 }
@@ -102,5 +97,13 @@ class FieldLabelsProofAgeViewModel(
         }
     }
 
+
+    private fun nextPage(encodedJson: String): String =
+        generateComposableNavigationLink(
+            screen = VerifierScreens.RequestVerifier.screenRoute,
+            arguments = generateComposableArguments(
+                mapOf("args" to encodedJson)
+            )
+        )
 
 }

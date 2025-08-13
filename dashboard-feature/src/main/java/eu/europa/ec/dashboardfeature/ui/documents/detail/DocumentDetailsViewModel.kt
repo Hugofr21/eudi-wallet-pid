@@ -250,14 +250,7 @@ class DocumentDetailsViewModel(
             screen = VerifierScreens.ChoiceListTrust.screenRoute,
             arguments = generateComposableArguments(
                 mapOf(
-                    IssuanceUiConfig.serializedKeyName to uiSerializer.toBase64(
-                        model = IssuanceUiConfig(
-                            flowType = IssuanceFlowType.ExtraDocument(
-                                formatType = null
-                            )
-                        ),
-                        parser = IssuanceUiConfig.Parser
-                    )
+                    "documentId" to documentId
                 )
             )
         )
