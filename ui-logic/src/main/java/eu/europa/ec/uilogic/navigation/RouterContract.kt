@@ -85,7 +85,12 @@ sealed class BackupScreens {
     data object BackupPhraseList : Screen(name = "PHRASE_LIST")
     data object BackupPhraseListCreated : Screen(name = "PHRASE_LIST_CREATED")
     data object Restore : Screen(name = "RESTORE")
-    data object ViewRestore : Screen(name = "VIEW_RESTORE")
+
+    data object ViewRestore : Screen(
+        name = "VIEW_RESTORE",
+        parameters = "?listwords={listwords}"
+    )
+
 }
 
 sealed class VerifierScreens{

@@ -98,12 +98,10 @@ fun QuizPhraseWordsScreen(navController: NavController, viewModel: QuizPhraseWor
 
     val configButton = ButtonConfig(
         type = ButtonType.PRIMARY,
-        onClick = {
-            viewModel.setEvent(Event.Skip)
-        },
-        enabled = when (state) {
-            is State.DisplayAll -> state.quizWords.isEmpty()
-            is State.VerifyOrder -> true
+        onClick = { viewModel.setEvent(Event.Skip) },
+        enabled = when (val sVal = state.value) {
+            is State.DisplayAll -> sVal.quizCompleted
+            is State.VerifyOrder -> sVal.quizCompleted
             else -> false
         }
     )
@@ -179,7 +177,7 @@ private fun NavigationSlider(
                     Toast.makeText(context, "Incorrect word order. Please try again.", Toast.LENGTH_SHORT).show()
                 }
                 Effect.Success -> {
-                    onNavigationRequested(Effect.Navigation.SwitchScreen(BackupScreens.ViewRestore.screenRoute))
+                    Toast.makeText(context, "List successfully organized!", Toast.LENGTH_SHORT).show()
                 }
             }
         }.collect()
@@ -306,7 +304,9 @@ fun MainContent(
                             ) {
                                 Text(
                                     text = slot.ifEmpty { stringResource(R.string.backup_slot_placeholder) },
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = Color(0xFF0D0D0D)
+                                    ),
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -318,9 +318,11 @@ fun MainContent(
                                     .height(50.dp)
                                     .background(LightSkyBlue, RoundedCornerShape(0.dp))
                                     .padding(8.dp),
-                                style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
-                                fontWeight = FontWeight.Normal
+                                fontWeight = FontWeight.Normal,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color =Color(0xFF0D0D0D)
+                                ),
                             )
                         }
                     }
@@ -409,7 +411,9 @@ fun MainContent(
                             ) {
                                 Text(
                                     text = word,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = Color(0xFF0D0D0D)
+                                    ),
                                     fontWeight = FontWeight.Bold
                                 )
                             }

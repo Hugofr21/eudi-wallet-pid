@@ -20,11 +20,13 @@ package eu.europa.ec.backuplogic.ui.viewBackup
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
 import eu.europa.ec.backuplogic.model.BackupKey
+import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.storagelogic.model.BackupLog
@@ -35,6 +37,7 @@ import eu.europa.ec.uilogic.mvi.ViewState
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import org.koin.android.annotation.KoinViewModel
+import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.Named
 
 sealed class State : ViewState {
@@ -65,9 +68,18 @@ sealed class Effect : ViewSideEffect {
 class ViewBackupViewModel(
     private val backupInteractor: BackupInteractor,
     private val resourceProvider: ResourceProvider,
+    @InjectedParam private val encodedString: String,
 ) : MviViewModel<Event, State, Effect>() {
 
+    private lateinit var originalWordList: List<String>
+
     override fun setInitialState(): State {
+        val listwordsValue = Uri.parse(encodedString).getQueryParameter("listwords") ?: ""
+        val decoded = Uri.decode(listwordsValue)
+        originalWordList = decoded.split("|")
+
+        println("List response the words: $originalWordList")
+
         val initialState = State.Default(
             existBackup = false,
             backupLog = null
@@ -95,7 +107,7 @@ class ViewBackupViewModel(
             Event.NewBackupBtn -> {
                 setState { State.Default(isLoading = true) }
                 viewModelScope.launch {
-                    val zipEnc = backupInteractor.exportBackup()
+                    val zipEnc = backupInteractor.exportBackup(originalWordList)
                     val zipToShare = zipEnc.filter { uri ->
                         uri.path?.endsWith(".zip.enc", ignoreCase = true) == true
                     }

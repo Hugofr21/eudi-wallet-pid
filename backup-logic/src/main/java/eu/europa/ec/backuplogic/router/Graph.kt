@@ -18,8 +18,10 @@ package eu.europa.ec.backuplogic.router
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
+import androidx.navigation.navArgument
 import eu.europa.ec.backuplogic.ui.backup.BackupScreen
 import eu.europa.ec.backuplogic.ui.listWordsBackup.ListWordsBackupScreen
 import eu.europa.ec.backuplogic.ui.quizPhraseWords.QuizPhraseWordsScreen
@@ -28,6 +30,7 @@ import eu.europa.ec.backuplogic.ui.viewBackup.ViewBackupScreen
 import eu.europa.ec.uilogic.navigation.BackupScreens
 import eu.europa.ec.uilogic.navigation.ModuleRoute
 import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 fun NavGraphBuilder.featureBackupGraph(navController: NavController) {
     navigation(
@@ -47,8 +50,21 @@ fun NavGraphBuilder.featureBackupGraph(navController: NavController) {
             QuizPhraseWordsScreen(navController, koinViewModel())
         }
 
-        composable(route = BackupScreens.ViewRestore.screenRoute) {
-            ViewBackupScreen(navController, koinViewModel())
+        composable(
+            route = BackupScreens.ViewRestore.screenRoute,
+            arguments = listOf(
+                navArgument("listwords") {
+                    type = NavType.StringType
+                },
+            ))
+        {
+            ViewBackupScreen(navController, koinViewModel(
+                parameters =  {
+                    parametersOf(
+                    it.arguments?.getString("listwords").orEmpty(),
+                    )
+                }
+            ))
         }
 
         composable(route = BackupScreens.Restore.screenRoute) {

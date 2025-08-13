@@ -23,7 +23,7 @@ import eu.europa.ec.backuplogic.controller.model.RestoreStatus
 import eu.europa.ec.storagelogic.model.BackupLog
 
 interface BackupInteractor {
-    suspend fun exportBackup(): ArrayList<Uri>
+    suspend fun exportBackup(listQuiz: List<String>): ArrayList<Uri>
 
     suspend fun getLastBackup(): BackupLog?
 
@@ -63,11 +63,11 @@ class BackupInteractorIml (
         return _cachedWords!!
     }
 
-    override suspend fun exportBackup(): ArrayList<Uri> {
-        println("Phrase to exportBackup: $_cachedWords")
+    override suspend fun exportBackup(listQuiz: List<String>): ArrayList<Uri> {
+        println("Phrase to exportBackup: $listQuiz")
         val words = _cachedWords
         return if (words != null && words.size == COUNT_TAKE) {
-            val backupUris = backupController.exportBackup(words, WALLET_NAME)
+            val backupUris = backupController.exportBackup(listQuiz, WALLET_NAME)
             words.clear()
             ArrayList(backupUris)
         } else {

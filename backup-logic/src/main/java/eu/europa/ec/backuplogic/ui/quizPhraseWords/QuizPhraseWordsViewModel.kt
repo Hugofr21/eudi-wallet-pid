@@ -17,12 +17,15 @@
 package eu.europa.ec.backuplogic.ui.quizPhraseWords
 
 
+import android.net.Uri
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.BackupScreens
+import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
+import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import org.koin.android.annotation.KoinViewModel
 
 
@@ -32,13 +35,15 @@ sealed class State : ViewState {
         val originalList: List<String>,
         val fullList: List<String>,
         val quizWords: List<String>,
-        val indexRemove: List<Int>
+        val indexRemove: List<Int>,
+        val quizCompleted: Boolean = false
     ) : State()
     data class VerifyOrder(
         val originalList: List<String>,
         val fullList: List<String>,
         val quizWords: List<String>,
-        val indexRemove: List<Int>
+        val indexRemove: List<Int>,
+        val quizCompleted: Boolean = false
     ) : State()
 }
 
@@ -47,6 +52,7 @@ sealed class Event : ViewEvent {
     data class PlaceWord(val word: String, val index: Int) : Event()
     object GoBack : Event()
     object ResetWords : Event()
+
 }
 
 sealed class Effect : ViewSideEffect {
@@ -55,6 +61,7 @@ sealed class Effect : ViewSideEffect {
         object Pop : Navigation()
     }
     object Success : Effect()
+
     object Error : Effect()
 }
 
@@ -89,7 +96,7 @@ class QuizPhraseWordsViewModel(
         val s = viewState.value
         when (s) {
             is State.DisplayAll -> when (event) {
-                Event.Skip -> {} // // Should not occur, as the button is only enabled when quizWords is empty
+                Event.Skip -> {}  // Should not occur, as the button is only enabled when quizWords is empty
                 is Event.PlaceWord -> {
                     val newSlots = s.fullList.toMutableList()
                     newSlots[event.index] = event.word
@@ -113,11 +120,18 @@ class QuizPhraseWordsViewModel(
                     }
 
                     if (newQuizWords.isEmpty()) {
-                        if (newSlots == s.originalList) {
-                            setEffect { Effect.Success }
-                            Effect.Navigation.SwitchScreen(
-                                screenRoute = BackupScreens.ViewRestore.screenRoute
+                        val isCorrect = newSlots == s.originalList
+                        setState {
+                            State.VerifyOrder(
+                                originalList = s.originalList,
+                                fullList = newSlots,
+                                quizWords = newQuizWords,
+                                indexRemove = s.indexRemove,
+                                quizCompleted = isCorrect
                             )
+                        }
+                        if (isCorrect) {
+                            setEffect { Effect.Success }
                         } else {
                             setEffect { Effect.Error }
                         }
@@ -138,10 +152,18 @@ class QuizPhraseWordsViewModel(
             is State.VerifyOrder -> when (event) {
                 Event.Skip -> {
                     if (s.fullList == s.originalList) {
-                        setEffect { Effect.Success }
-                        setEffect {  Effect.Navigation.SwitchScreen(
-                            screenRoute = BackupScreens.ViewRestore.screenRoute
-                        ) }
+                        setState {
+                            when (this) {
+                                is State.DisplayAll -> copy(quizCompleted = true)
+                                is State.VerifyOrder -> copy(quizCompleted = true)
+                                else -> this
+                            }
+                        }
+                        setEffect {
+                            Effect.Navigation.SwitchScreen(
+                                nextPage(s.fullList)
+                            )
+                        }
                     } else {
                         setEffect { Effect.Error }
                     }
@@ -180,4 +202,22 @@ class QuizPhraseWordsViewModel(
             is State.Loading -> {}
         }
     }
+
+
+}
+
+
+private fun nextPage(listWord: List<String>): String {
+    val joinedWords = listWord.joinToString(separator = "|")
+    println("joinedWords: $joinedWords")
+    val encoded = Uri.encode(joinedWords)
+    println("encoded list words: $encoded")
+    return generateComposableNavigationLink(
+        screen = BackupScreens.ViewRestore.screenRoute,
+        arguments = generateComposableArguments(
+            mapOf(
+                "listwords" to encoded
+            )
+        )
+    )
 }

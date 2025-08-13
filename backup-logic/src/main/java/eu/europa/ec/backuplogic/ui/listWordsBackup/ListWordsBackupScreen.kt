@@ -234,7 +234,7 @@ fun WordItem(index: Int, word: String) {
             text = "$index.",
             style = MaterialTheme.typography.bodyMedium.merge(
                 TextStyle(
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = Color(0xFF0D0D0D),
                     fontWeight = FontWeight.Bold
                 )
             ),
@@ -244,7 +244,7 @@ fun WordItem(index: Int, word: String) {
             text = word,
             style = MaterialTheme.typography.bodyMedium.merge(
                 TextStyle(
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color(0xFF0D0D0D)
                 )
             )
         )
