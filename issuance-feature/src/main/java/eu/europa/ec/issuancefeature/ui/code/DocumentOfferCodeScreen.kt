@@ -175,7 +175,6 @@ private fun Content(
         }.collect()
     }
 }
-
 @Composable
 private fun CodeFieldLayout(
     modifier: Modifier,
@@ -183,11 +182,13 @@ private fun CodeFieldLayout(
     onPinInput: (String) -> Unit,
 ) {
     var pin by remember { mutableStateOf("") }
+    var lastSubmittedPin by remember { mutableStateOf<String?>(null) }
     val len = state.offerCodeUiConfig.txCodeLength
     val isLocked = state.lockoutUntilMillis?.let { it > System.currentTimeMillis() } == true
 
     LaunchedEffect(state.resetPinToken) {
         pin = ""
+        lastSubmittedPin = null
     }
 
     OutlinedTextField(
@@ -196,7 +197,10 @@ private fun CodeFieldLayout(
             if (isLocked) return@OutlinedTextField
             val digits = input.filter { it.isDigit() }.take(len)
             pin = digits
-            onPinInput(digits)
+            if (digits.length == len && digits != lastSubmittedPin) {
+                lastSubmittedPin = digits
+                onPinInput(digits)
+            }
         },
         modifier = modifier
             .height(56.dp)
@@ -213,7 +217,7 @@ private fun CodeFieldLayout(
                 shape = RoundedCornerShape(0.dp)
             ),
         singleLine = true,
-        visualTransformation = PasswordVisualTransformation(), // mascara
+        visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
         enabled = !isLocked,
         colors = OutlinedTextFieldDefaults.colors(
@@ -225,23 +229,7 @@ private fun CodeFieldLayout(
         }
     )
 
-
-    VSpacer.Small()
-    if (state.isInputError || state.lockoutUntilMillis != null) {
-        val msg = state.inputErrorMessage ?: if (isLocked) {
-            val secLeft = ((state.lockoutUntilMillis!! - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
-            "Too many attempts — reative em $secLeft s"
-        } else null
-        msg?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error)
-            )
-        }
-    }
 }
-
-
 
 
 

@@ -75,7 +75,8 @@ class ProximityLoadingInteractorImpl(
                     )
                 }
 
-                is WalletCorePartialState.RequestIsReadyToBeSent -> ProximityLoadingObserveResponsePartialState.RequestReadyToBeSent
+                is WalletCorePartialState.RequestIsReadyToBeSent ->
+                    ProximityLoadingObserveResponsePartialState.RequestReadyToBeSent
             }
         }
 

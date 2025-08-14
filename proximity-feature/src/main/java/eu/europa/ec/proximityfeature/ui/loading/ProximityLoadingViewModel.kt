@@ -66,13 +66,15 @@ class ProximityLoadingViewModel(
         return ProximityScreens.Success.screenRoute
     }
 
-    override fun getCancellableTimeout(): Duration = 5.toDuration(DurationUnit.SECONDS)
+    override fun getCancellableTimeout(): Duration = Long.MAX_VALUE.toDuration(DurationUnit.SECONDS)
 
     override fun doWork(context: Context) {
         viewModelScope.launch {
             interactor.observeResponse().collect {
+                println("[ProximityLoadingViewModel] observeResponse -> ${it.toString()}")
                 when (it) {
                     is ProximityLoadingObserveResponsePartialState.Failure -> {
+                        println("[ProximityLoadingViewModel] observeResponse -> Failure: ${it.error}")
                         setState {
                             copy(
                                 error = ContentErrorConfig(
@@ -88,14 +90,22 @@ class ProximityLoadingViewModel(
                     }
 
                     is ProximityLoadingObserveResponsePartialState.Success -> {
-                        onSuccess()
+                        println("[ProximityLoadingViewModel] (doWork) success! calling onSuccess()")
+                        try {
+                            onSuccess()
+                            println("[ProximityLoadingViewModel] onSuccess() returned")
+                        } catch (e: Exception) {
+                            println("[ProximityLoadingViewModel] onSuccess threw: $e")
+                        }
                     }
 
                     is ProximityLoadingObserveResponsePartialState.RequestReadyToBeSent -> {
+                        println("[ProximityLoadingViewModel] RequestReadyToBeSent -> calling sendRequestedDocuments")
                         sendRequestedDocuments(event = Event.DoWork(context))
                     }
 
                     is ProximityLoadingObserveResponsePartialState.UserAuthenticationRequired -> {
+                        println("[ProximityLoadingViewModel] UserAuthenticationRequired")
                         val popEffect = Effect.Navigation.PopBackStackUpTo(
                             screenRoute = ProximityScreens.Request.screenRoute,
                             inclusive = false
@@ -116,12 +126,20 @@ class ProximityLoadingViewModel(
     }
 
     private fun sendRequestedDocuments(event: Event) {
-
+        println("[ProximityLoadingViewModel] sendRequestedDocuments - calling interactor")
         when (val result = interactor.sendRequestedDocuments()) {
-            is ProximityLoadingSendRequestedDocumentPartialState.Success -> { /*no op*/
+            is ProximityLoadingSendRequestedDocumentPartialState.Success -> {
+                println("[ProximityLoadingViewModel] sendRequestedDocuments -> Success")
+                setState {
+                    copy(
+                        error = null,
+                    )
+                }
+                onSuccess()
             }
 
             is ProximityLoadingSendRequestedDocumentPartialState.Failure -> {
+                println("[ProximityLoadingViewModel] sendRequestedDocuments -> Failure: ${result.error}")
                 setState {
                     copy(
                         error = ContentErrorConfig(
@@ -151,7 +169,6 @@ class ProximityLoadingViewModel(
     ) {
         val authenticationData = authenticationDataList[index]
         val isFinalAuthentication = index == authenticationDataList.lastIndex
-
         interactor.handleUserAuthentication(
             context = context,
             crypto = authenticationData.crypto,
@@ -160,28 +177,19 @@ class ProximityLoadingViewModel(
                 onAuthenticationSuccess = {
                     authenticationData.onAuthenticationSuccess()
                     if (isFinalAuthentication) {
-                        // chamar suspend dentro de uma coroutine
-                        CoroutineScope(Dispatchers.Main).launch {
-                            sendRequestedDocumentsAction()
-                        }
+                        sendRequestedDocumentsAction()
                     } else {
-                        // usar coroutine para delay + chamar recursivamente
-                        CoroutineScope(Dispatchers.Main).launch {
-                            delay(500)
-                            openAuthenticationPrompt(
-                                context,
-                                popEffect,
-                                authenticationDataList,
-                                sendRequestedDocumentsAction,
-                                index + 1
-                            )
-                        }
+                        delay(500)
+                        openAuthenticationPrompt(
+                            context,
+                            popEffect,
+                            authenticationDataList,
+                            sendRequestedDocumentsAction,
+                            index + 1
+                        )
                     }
                 },
-                // corrige o mismatch: aceita os dois parâmetros esperados (ignorados aqui)
-                onAuthenticationError = { _, _ ->
-                    setEffect { popEffect }
-                }
+                onAuthenticationError = { setEffect { popEffect } } as (Int, String) -> Unit
             )
         )
     }

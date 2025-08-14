@@ -39,6 +39,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.annotation.InjectedParam
+import java.util.concurrent.atomic.AtomicBoolean
 
 private typealias PinCode = String
 
@@ -114,102 +115,137 @@ class DocumentOfferCodeViewModel(
         }
     }
 
+    private val isSubmitting = AtomicBoolean(false)
+
     private fun issueDocuments(context: Context, pinCode: PinCode) {
+        if (!isSubmitting.compareAndSet(false, true)) return
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
-            viewState.value.lockoutUntilMillis?.let {
-                if (it > now) {
-                    setState { copy(
-                        isLoading = false,
-                        isInputError = true,
-                        inputErrorMessage = "Too many attempts. Try later."
-                    ) }
-                    return@launch
-                }
-            }
-
-            setState { copy(isLoading = true, isInputError = false, inputErrorMessage = null) }
-
-            val pinCopy = pinCode.toCharArray()
             try {
-                documentOfferInteractor.issueDocuments(
-                    offerUri = viewState.value.offerCodeUiConfig.offerURI,
-                    issuerName = viewState.value.offerCodeUiConfig.issuerName,
-                    navigation = viewState.value.offerCodeUiConfig.onSuccessNavigation,
-                    txCode = String(pinCopy)
-                ).collect { response ->
-                    when (response) {
-                        is IssueDocumentsInteractorPartialState.Failure -> {
-                            val newAttempts = viewState.value.failedAttempts + 1
-                            val lockDurationMs = when (newAttempts) {
-                                1 -> 0L
-                                2 -> 30_000L
-                                3 -> 2 * 60_000L
-                                else -> 15 * 60_000L
-                            }
-                            val lockUntil = if (lockDurationMs > 0) System.currentTimeMillis() + lockDurationMs else null
-
-                            setState {
-                                copy(
-                                    isLoading = false,
-                                    failedAttempts = newAttempts,
-                                    lockoutUntilMillis = lockUntil,
-                                    isInputError = true,
-                                    inputErrorMessage = response.errorMessage,
-                                    resetPinToken = System.currentTimeMillis()
-                                )
-                            }
-
-                            if (lockDurationMs > 0) {
-                                val currentLockToken = viewState.value.resetPinToken
-                                viewModelScope.launch {
-                                    delay(lockDurationMs)
-                                    if (viewState.value.lockoutUntilMillis?.let { it <= System.currentTimeMillis() } == true) {
-                                        setState {
-                                            copy(
-                                                lockoutUntilMillis = null,
-                                                isInputError = false,
-                                                inputErrorMessage = null
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        is IssueDocumentsInteractorPartialState.Success -> {
-                            setState {
-                                copy(isLoading = false, error = null, failedAttempts = 0, lockoutUntilMillis = null, isInputError = false)
-                            }
-
-                            setState { copy(resetPinToken = System.currentTimeMillis()) }
-
-                            goToDocumentIssuanceSuccessScreen(
-                                documentIds = response.documentIds,
-                                onSuccessNavigation = viewState.value.offerCodeUiConfig.onSuccessNavigation
+                val now = System.currentTimeMillis()
+                viewState.value.lockoutUntilMillis?.let {
+                    if (it > now) {
+                        val secLeft = ((it - now) / 1000).coerceAtLeast(0)
+                        setState {
+                            copy(
+                                isLoading = false,
+                                isInputError = true,
+                                inputErrorMessage = "Not valid at this time. Try again in$secLeft s"
                             )
                         }
-
-                        is IssueDocumentsInteractorPartialState.DeferredSuccess -> {
-                            setState { copy(isLoading = false, error = null) }
-                            goToSuccessScreen(route = response.successRoute)
-                        }
-
-                        is IssueDocumentsInteractorPartialState.UserAuthRequired -> {
-                            documentOfferInteractor.handleUserAuthentication(
-                                context = context,
-                                crypto = response.crypto,
-                                notifyOnAuthenticationFailure = viewState.value.notifyOnAuthenticationFailure,
-                                resultHandler = response.resultHandler
-                            )
-                        }
+                        return@launch
                     }
                 }
+
+                setState { copy(isLoading = true, error = null, isInputError = false, inputErrorMessage = null) }
+
+                documentOfferInteractor
+                    .issueDocuments(
+                        offerUri = viewState.value.offerCodeUiConfig.offerURI,
+                        issuerName = viewState.value.offerCodeUiConfig.issuerName,
+                        navigation = viewState.value.offerCodeUiConfig.onSuccessNavigation,
+                        txCode = pinCode
+                    )
+                    .collect { response ->
+                        when (response) {
+                            is IssueDocumentsInteractorPartialState.Failure -> {
+                                val prevAttempts = viewState.value.failedAttempts
+                                val newAttempts = prevAttempts
+
+                                val shouldLockNow = (newAttempts % 3 == 0)
+                                if (shouldLockNow) {
+                                    val lockDurationMs = 30_000L
+                                    val lockUntil = System.currentTimeMillis() + lockDurationMs
+                                    val token = System.currentTimeMillis()
+
+                                    setState {
+                                        copy(
+                                            isLoading = false,
+                                            failedAttempts = 0,
+                                            lockoutUntilMillis = lockUntil,
+                                            isInputError = true,
+                                            inputErrorMessage = response.errorMessage,
+                                            resetPinToken = token,
+                                            error = ContentErrorConfig(
+                                                errorSubTitle = response.errorMessage,
+                                                onCancel = { setEvent(Event.DismissError) }
+                                            )
+                                        )
+                                    }
+
+                                    viewModelScope.launch {
+                                        delay(lockDurationMs)
+                                        if (viewState.value.resetPinToken == token &&
+                                            (viewState.value.lockoutUntilMillis?.let { it <= System.currentTimeMillis() } == true)
+                                        ) {
+                                            setState {
+                                                copy(
+                                                    lockoutUntilMillis = null,
+                                                    isInputError = false,
+                                                    inputErrorMessage = null,
+                                                    failedAttempts = 0,
+                                                    error = null
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    setState {
+                                        copy(
+                                            isLoading = false,
+                                            failedAttempts = newAttempts,
+                                            error = ContentErrorConfig(
+                                                errorSubTitle = response.errorMessage,
+                                                onCancel = { setEvent(Event.DismissError) }
+                                            )
+                                        )
+                                    }
+                                }
+                                return@collect
+                            }
+
+                            is IssueDocumentsInteractorPartialState.Success -> {
+                                setState {
+                                    copy(
+                                        isLoading = false,
+                                        error = null,
+                                        failedAttempts = 0,
+                                        lockoutUntilMillis = null,
+                                        isInputError = false,
+                                        inputErrorMessage = null,
+                                        resetPinToken = System.currentTimeMillis()
+                                    )
+                                }
+
+                                goToDocumentIssuanceSuccessScreen(
+                                    documentIds = response.documentIds,
+                                    onSuccessNavigation = viewState.value.offerCodeUiConfig.onSuccessNavigation
+                                )
+
+                                return@collect
+                            }
+
+                            is IssueDocumentsInteractorPartialState.DeferredSuccess -> {
+                                setState { copy(isLoading = false, error = null) }
+                                goToSuccessScreen(route = response.successRoute)
+                                return@collect
+                            }
+
+                            is IssueDocumentsInteractorPartialState.UserAuthRequired -> {
+                                documentOfferInteractor.handleUserAuthentication(
+                                    context = context,
+                                    crypto = response.crypto,
+                                    notifyOnAuthenticationFailure = viewState.value.notifyOnAuthenticationFailure,
+                                    resultHandler = response.resultHandler
+                                )
+                            }
+                        }
+                    }
             } finally {
-                for (i in pinCopy.indices) pinCopy[i] = '\u0000'
+                isSubmitting.set(false)
             }
         }
     }
+
 
 
     private fun goToDocumentIssuanceSuccessScreen(

@@ -202,7 +202,6 @@ class WalletCorePresentationControllerImpl(
     private val eudiWallet: EudiWallet,
     private val resourceProvider: ResourceProvider,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val documentsController: WalletCoreDocumentsController
 ) : WalletCorePresentationController {
 
     private val genericErrorMessage = resourceProvider.genericErrorMessage()
@@ -228,87 +227,88 @@ class WalletCorePresentationControllerImpl(
     override var redirectUri: URI? = null
 
     override fun setConfig(config: PresentationControllerConfig) {
-        println("WalletcorePresentationController config: $config")
         _config = config
     }
 
-    override val events: SharedFlow<TransferEventPartialState> =
-        callbackFlow<TransferEventPartialState> {
-            val eventListenerWrapper = EudiWalletListenerWrapper(
-
-                onQrEngagementReady = { qrCode ->
-                    println("[WalletCorePresentationControllerImpl events] onQrEngagementReady: $qrCode")
-                    trySendBlocking(TransferEventPartialState.QrEngagementReady(qrCode))
-                },
-                onConnected = {
-                    println("[WalletCorePresentationControllerImpl events] onConnected")
-                    trySendBlocking(TransferEventPartialState.Connected)
-                },
-                onConnecting = {
-                    println("[WalletCorePresentationControllerImpl events] onConnecting")
-                    trySendBlocking(TransferEventPartialState.Connecting)
-                },
-                onDisconnected = {
-                    println("[WalletCorePresentationControllerImpl events] onDisconnected")
-                    trySendBlocking(TransferEventPartialState.Disconnected)
-                },
-                onError = { errorMessage ->
-                    println("[WalletCorePresentationControllerImpl events] onError: $errorMessage")
-                    trySendBlocking(
-                        TransferEventPartialState.Error(error = errorMessage.ifEmpty { genericErrorMessage })
+    override val events: SharedFlow<TransferEventPartialState> = callbackFlow {
+        val eventListenerWrapper = EudiWalletListenerWrapper(
+            onQrEngagementReady = { qrCode ->
+                trySendBlocking(
+                    TransferEventPartialState.QrEngagementReady(qrCode = qrCode)
+                )
+            },
+            onConnected = {
+                trySendBlocking(
+                    TransferEventPartialState.Connected
+                )
+            },
+            onConnecting = {
+                trySendBlocking(
+                    TransferEventPartialState.Connecting
+                )
+            },
+            onDisconnected = {
+                trySendBlocking(
+                    TransferEventPartialState.Disconnected
+                )
+            },
+            onError = { errorMessage ->
+                trySendBlocking(
+                    TransferEventPartialState.Error(
+                        error = errorMessage.ifEmpty { genericErrorMessage }
                     )
-                },
-                onRequestReceived = { requestedDocumentData ->
-                    println("[WalletCorePresentationControllerImpl events] onRequestReceived: $requestedDocumentData")
-                    trySendBlocking(
-                        requestedDocumentData.getOrNull()?.let { requestedDocuments ->
-                            println("[WalletCorePresentationControllerImpl events] verifierName: $verifierName, isTrusted: $verifierIsTrusted")
-                            TransferEventPartialState.RequestReceived(
-                                requestData = requestedDocuments.requestedDocuments,
-                                verifierName = verifierName,
-                                verifierIsTrusted = true
-                            )
-                        } ?: TransferEventPartialState.Error(error = genericErrorMessage)
+                )
+            },
+            onRequestReceived = { requestedDocumentData ->
+                trySendBlocking(
+                    requestedDocumentData.getOrNull()?.let { requestedDocuments ->
+
+                        processedRequest = requestedDocuments
+
+                        verifierName = requestedDocuments.requestedDocuments
+                            .firstOrNull()?.readerAuth?.readerCommonName
+
+                        val isTrusted = requestedDocuments.requestedDocuments
+                            .firstOrNull()?.readerAuth?.isVerified == true
+                        verifierIsTrusted = isTrusted
+
+                        TransferEventPartialState.RequestReceived(
+                            requestData = requestedDocuments.requestedDocuments,
+                            verifierName = verifierName,
+                            verifierIsTrusted = isTrusted
+                        )
+                    } ?: TransferEventPartialState.Error(error = genericErrorMessage)
+                )
+            },
+            onResponseSent = {
+                trySendBlocking(
+                    TransferEventPartialState.ResponseSent
+                )
+            },
+            onRedirect = { uri ->
+                redirectUri = uri
+
+                trySendBlocking(
+                    TransferEventPartialState.Redirect(
+                        uri = uri
                     )
-                },
-                onResponseSent = {
-                    println("[WalletCorePresentationControllerImpl events] onResponseSent")
-                    trySendBlocking(TransferEventPartialState.ResponseSent)
-                },
-                onRedirect = { uri ->
-                    println("[WalletCorePresentationControllerImpl events] onRedirect full URI: $uri")
-                    println("[WalletCorePresentationControllerImpl events] onRedirect scheme: ${uri.scheme}")
-                    redirectUri = uri
-                    trySendBlocking(TransferEventPartialState.Redirect(uri = uri))
-                }
-            )
-
-            println("eventListenerWrapper ${eventListenerWrapper}")
-            addListener(eventListenerWrapper)
-            println("[WalletCorePresentationControllerImpl events] Listener added")
-
-            awaitClose {
-                println("[WalletCorePresentationControllerImpl events] Listener removed, stopping presentation")
-                removeListener(eventListenerWrapper)
-                eudiWallet.stopProximityPresentation()
-            }
-        }
-
-            .safeAsync<TransferEventPartialState> { throwable ->
-                println("[WalletCorePresentationControllerImpl events] Exception in flow: ${throwable.localizedMessage}")
-                throwable.printStackTrace()
-                TransferEventPartialState.Error(
-                    error = throwable.localizedMessage
-                        ?: resourceProvider.genericErrorMessage()
                 )
             }
-            .shareIn(coroutineScope, SharingStarted.Lazily, replay = 2)
+        )
 
-
+        addListener(eventListenerWrapper)
+        awaitClose {
+            removeListener(eventListenerWrapper)
+            eudiWallet.stopProximityPresentation()
+        }
+    }.safeAsync {
+        TransferEventPartialState.Error(
+            error = it.localizedMessage ?: resourceProvider.genericErrorMessage()
+        )
+    }.shareIn(coroutineScope, SharingStarted.Lazily, 2)
 
     override fun startQrEngagement() {
         eudiWallet.startProximityPresentation()
-        println("[WalletCorePresentationControllerImpl] startQrEngagement!")
     }
 
     override fun toggleNfcEngagement(componentActivity: ComponentActivity, toggle: Boolean) {
@@ -395,58 +395,38 @@ class WalletCorePresentationControllerImpl(
     }
 
     override fun mappedCallbackStateFlow(): Flow<ResponseReceivedPartialState> {
-        return events
-            .onEach { response ->
-                println("[mappedCallbackStateFlow] raw response: $response")
-            }
-            .mapNotNull { response ->
-                println("[mappedCallbackStateFlow] mapeando response: $response")
-                when (response) {
-                    is TransferEventPartialState.Error -> {
-                        if (response.error == "Peer disconnected without proper session termination") {
-                            println("[mappedCallbackStateFlow] -> Success (peer disconnect)")
-                            ResponseReceivedPartialState.Success
-                        } else {
-                            println("[mappedCallbackStateFlow] -> Failure(error=${response.error})")
-                            ResponseReceivedPartialState.Failure(error = response.error)
-                        }
-                    }
+        return events.mapNotNull { response ->
+            when (response) {
 
-                    is TransferEventPartialState.Redirect -> {
-                        println("[mappedCallbackStateFlow] -> Redirect(uri=${response.uri})")
-                        ResponseReceivedPartialState.Redirect(uri = response.uri)
-                    }
-
-                    is TransferEventPartialState.Disconnected -> {
-                        val firstWasRedirect = events.replayCache.firstOrNull() is TransferEventPartialState.Redirect
-                        println("[mappedCallbackStateFlow] -> Disconnected; firstWasRedirect=$firstWasRedirect")
-                        when {
-                            firstWasRedirect -> null
-                            else -> {
-                                println("[mappedCallbackStateFlow] -> Success (normal disconnect)")
-                                ResponseReceivedPartialState.Success
-                            }
-                        }
-                    }
-
-                    is TransferEventPartialState.ResponseSent -> {
-                        println("[mappedCallbackStateFlow] -> Success (response sent)")
+                // Fix: Wallet core should return Success state here
+                is TransferEventPartialState.Error -> {
+                    if (response.error == "Peer disconnected without proper session termination") {
                         ResponseReceivedPartialState.Success
-                    }
-
-                    else -> {
-                        println("[mappedCallbackStateFlow] -> Ignoring event")
-                        null
+                    } else {
+                        ResponseReceivedPartialState.Failure(error = response.error)
                     }
                 }
+
+                is TransferEventPartialState.Redirect -> {
+                    ResponseReceivedPartialState.Redirect(uri = response.uri)
+                }
+
+                is TransferEventPartialState.Disconnected -> {
+                    when {
+                        events.replayCache.firstOrNull() is TransferEventPartialState.Redirect -> null
+                        else -> ResponseReceivedPartialState.Success
+                    }
+                }
+
+                is TransferEventPartialState.ResponseSent -> ResponseReceivedPartialState.Success
+
+                else -> null
             }
-            .safeAsync { throwable ->
-                println("[mappedCallbackStateFlow] Exception in mapping: ${throwable.localizedMessage}")
-                throwable.printStackTrace()
-                ResponseReceivedPartialState.Failure(
-                    error = throwable.localizedMessage ?: genericErrorMessage
-                )
-            }
+        }.safeAsync {
+            ResponseReceivedPartialState.Failure(
+                error = it.localizedMessage ?: genericErrorMessage
+            )
+        }
     }
 
     override fun observeSentDocumentsRequest(): Flow<WalletCorePartialState> =
@@ -491,7 +471,6 @@ class WalletCorePresentationControllerImpl(
     override fun stopPresentation() {
         coroutineScope.cancel()
         CoroutineScope(dispatcher).launch {
-            println("[WalletCorePresentationControllerImpl] stopPresentation")
             eudiWallet.stopProximityPresentation()
         }
     }
@@ -499,16 +478,10 @@ class WalletCorePresentationControllerImpl(
     private fun addListener(listener: EudiWalletListenerWrapper) {
         val config = requireInit { _config }
         eudiWallet.addTransferEventListener(listener)
-
         if (config is PresentationControllerConfig.OpenId4VP) {
-            val originalUri = config.uri.toUri()
-            eudiWallet.startRemotePresentation(originalUri)
+            eudiWallet.startRemotePresentation(config.uri.toUri())
         }
-        println("Added EudiWalletListenerWrapper: $listener with config: $config")
     }
-
-
-
 
     private fun removeListener(listener: EudiWalletListenerWrapper) {
         requireInit { _config }

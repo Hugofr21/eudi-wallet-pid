@@ -45,16 +45,11 @@ data class RequestUriConfig(
 }
 
 fun RequestUriConfig.toDomainConfig(): PresentationControllerConfig {
-    val cfg = when (mode) {
-        is PresentationMode.Ble -> {
-            PresentationControllerConfig.Ble(mode.initiatorRoute)
-        }
-        is PresentationMode.OpenId4Vp -> {
-            PresentationControllerConfig.OpenId4VP(
-                mode.uri,
-                mode.initiatorRoute
-            )
-        }
+    return when (mode) {
+        is PresentationMode.Ble -> PresentationControllerConfig.Ble(mode.initiatorRoute)
+        is PresentationMode.OpenId4Vp -> PresentationControllerConfig.OpenId4VP(
+            mode.uri,
+            mode.initiatorRoute
+        )
     }
-    return cfg
 }
