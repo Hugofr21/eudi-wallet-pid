@@ -101,6 +101,8 @@ class ProximityRequestViewModel(
             )
         }
 
+        print("[ProximityRequestViewModel] doWork -> $requestUriConfigRaw")
+
         val requestUriConfig = uiSerializer.fromBase64(
             requestUriConfigRaw,
             RequestUriConfig::class.java,

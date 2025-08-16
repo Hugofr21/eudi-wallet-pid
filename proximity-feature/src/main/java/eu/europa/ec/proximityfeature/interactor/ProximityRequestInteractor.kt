@@ -68,6 +68,7 @@ class ProximityRequestInteractorImpl(
 
     override fun getRequestDocuments(): Flow<ProximityRequestInteractorPartialState> =
         walletCorePresentationController.events.mapNotNull { response ->
+            println("[ProximityRequestInteractorImpl] getRequestDocuments response: $response ")
             when (response) {
                 is TransferEventPartialState.RequestReceived -> {
                     if (response.requestData.all { it.requestedItems.isEmpty() }) {

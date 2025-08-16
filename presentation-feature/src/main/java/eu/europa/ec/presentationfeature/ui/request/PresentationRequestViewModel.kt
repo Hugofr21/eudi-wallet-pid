@@ -101,11 +101,15 @@ class PresentationRequestViewModel(
             )
         }
 
+        print("[PresentationRequestViewModel] requestUriConfigRaw parms: $requestUriConfigRaw")
+
         val requestUriConfig = uiSerializer.fromBase64(
             requestUriConfigRaw,
             RequestUriConfig::class.java,
             RequestUriConfig.Parser
         ) ?: throw RuntimeException("RequestUriConfig:: is Missing or invalid")
+
+
 
         interactor.setConfig(requestUriConfig)
 

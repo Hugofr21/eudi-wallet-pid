@@ -109,6 +109,15 @@ sealed class VerifierScreens{
         parameters = "?args={args}"
     )
 
+    data object PresentationRequestVerifier : Screen(
+        name = "PRESENTATION_REQUEST_VERIFIER",
+        parameters = "?requestUriConfig={requestUriConfig}"
+    )
+
+    data object PresentationLoadingVerifier : Screen(name = "PRESENTATION_LOADING_VERIFIER")
+
+    data object PresentationSuccessVerifier : Screen(name = "PRESENTATION_SUCCESS_VERIFIER")
+
 }
 
 

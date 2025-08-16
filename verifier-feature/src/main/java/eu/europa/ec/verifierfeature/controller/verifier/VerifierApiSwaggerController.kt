@@ -1,14 +1,11 @@
-package eu.europa.ec.verifierfeature.controller
+package eu.europa.ec.verifierfeature.controller.verifier
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
-import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.verifierfeature.model.ClientMetadata
 import eu.europa.ec.verifierfeature.model.MsoDeviceResponseValidation
-import eu.europa.ec.verifierfeature.model.PresentationEvent
 import eu.europa.ec.verifierfeature.model.PresentationRequest
 import eu.europa.ec.verifierfeature.model.PresentationResponse
 import eu.europa.ec.verifierfeature.model.PresentationState
-import eu.europa.ec.verifierfeature.model.SdJwtVcRequest
 import eu.europa.ec.verifierfeature.model.TransactionEvents
 import eu.europa.ec.verifierfeature.model.WalletResponse
 import kotlinx.serialization.json.Json
@@ -99,10 +96,11 @@ interface VerifierApiSwaggerController {
 class VerifierApiSwaggerControllerImpl(
     private val okHttpClient: OkHttpClient,
 
-):VerifierApiSwaggerController{
+    ):VerifierApiSwaggerController{
 
     companion object{
-        val BASE_URL  = "https://verifier-backend.ageverification.dev/"
+        val BASE_URL_AGE  = "https://verifier-backend.ageverification.dev/"
+        val BASE_URL  = "https://verifier-backend.eudiw.dev/"
     }
 
     private val json = Json { ignoreUnknownKeys = true }

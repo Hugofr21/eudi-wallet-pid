@@ -27,7 +27,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi
 import eu.europa.ec.storagelogic.model.TransactionLog as TransactionStorage
-
 interface WalletCoreTransactionLogController : TransactionLogger
 
 class WalletCoreTransactionLogControllerImpl(

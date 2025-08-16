@@ -1,4 +1,4 @@
-package eu.europa.ec.verifierfeature.controller
+package eu.europa.ec.verifierfeature.controller.verifier
 
 import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.verifierfeature.model.ClientMetadata
@@ -15,9 +15,12 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import retrofit2.Response
 import com.nimbusds.openid.connect.sdk.Nonce
+import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.eudi.openid4vp.JwkSetSource
 import eu.europa.ec.eudi.openid4vp.PreregisteredClient
 import eu.europa.ec.verifierfeature.model.WalletResponse
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.json.Json
 
 interface  VerifierAgeProofController{
     suspend fun metadataVerifier(): Response<ClientMetadata>
@@ -35,6 +38,7 @@ interface  VerifierAgeProofController{
 
 class VerifierAgeProofControllerImpl(
     private val api: VerifierApiSwaggerController,
+    private val uuidProvider: UuidProvider
 ):VerifierAgeProofController {
 
     private var lastNonce: String? = null
@@ -79,9 +83,11 @@ class VerifierAgeProofControllerImpl(
         fields: List<FieldLabel>,
     ): PresentationResponse {
         val nonce = randomNonce()
+        val credentialId = "proof_of_age"
+
         val credentialsArray = buildJsonArray {
             add(buildJsonObject {
-                put("id", JsonPrimitive("proof_of_age"))
+                put("id", JsonPrimitive(credentialId))
                 put("format", JsonPrimitive("mso_mdoc"))
                 putJsonObject("meta") {
                     put("doctype_value", JsonPrimitive("eu.europa.ec.av.1"))
@@ -100,47 +106,31 @@ class VerifierAgeProofControllerImpl(
             })
         }
 
+
         val dcqlQuery = buildJsonObject {
             putJsonArray("credentials") {
                 credentialsArray.forEach { add(it) }
             }
-            put("jar_mode", JsonPrimitive("by_reference"))
-            put("request_uri_method", JsonPrimitive("post"))
-//            put(
-//                "issuer_chain",
-//                JsonPrimitive(
-//                    """
-//                -----BEGIN CERTIFICATE-----
-//                MIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw
-//                XDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ
-//                IFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X
-//                DTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz
-//                c3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug
-//                SW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID
-//                YgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh
-//                sF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa
-//                O8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR
-//                FxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E
-//                PDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk
-//                X0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD
-//                VR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k
-//                aWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j
-//                ZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf
-//                M1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe
-//                hxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs
-//                -----END CERTIFICATE-----
-//                """.trimIndent()
-//                )
-
         }
 
         val request = PresentationRequest(
             type = "vp_token",
             dcqlQuery = dcqlQuery,
             nonce = nonce,
+            requestUriMethod = "get",
         )
 
+        println("[createPresentationRequest] request JSON: ${Json.encodeToString(JsonObject.serializer(), buildJsonObject {
+            put("type", JsonPrimitive(request.type))
+            put("dcql_query", request.dcqlQuery)
+            put("nonce", JsonPrimitive(request.nonce))
+            request.jarMode?.let { put("jar_mode", JsonPrimitive(it)) }
+            request.requestUriMethod?.let { put("request_uri_method", JsonPrimitive(it)) }
+            request.issuerChain?.let { put("issuer_chain", JsonPrimitive(it)) }
+        })}")
+
         val response = api.createPresentation(request)
+
         if (!response.isSuccessful) {
             throw RuntimeException("Error ${response.code()}: ${response.errorBody()?.string()}")
         }
@@ -188,6 +178,40 @@ class VerifierAgeProofControllerImpl(
     }
 
 
+//     suspend fun createPresentationRequest(nameSpace: NameSpace, format: Format, claims: List<String>): PresentationResponse {
+//        val id = uuidProvider.provideUuid()
+//        val nonce = randomNonce()
+//        val chain = """
+//        -----BEGIN CERTIFICATE-----
+//        MIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw
+//        XDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ
+//        IFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X
+//        DTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz
+//        c3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug
+//        SW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID
+//        YgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh
+//        sF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa
+//        O8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR
+//        FxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E
+//        PDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk
+//        X0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD
+//        VR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k
+//        aWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j
+//        ZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf
+//        M1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe
+//        hxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs
+//        -----END CERTIFICATE-----
+//    """.trimIndent()
+//
+//        val response = api.createPresentation()
+//
+//        if (!response.isSuccessful) {
+//            throw RuntimeException("Error ${response.code()}: ${response.errorBody()?.string()}")
+//        }
+//        println("Response presentation state: ${response.body()}")
+//        return response.body()!!
+//
+//    }
 
     override fun getLastNonce(): String =
         lastNonce

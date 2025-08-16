@@ -1,7 +1,6 @@
 package eu.europa.ec.verifierfeature.utils.authorizationRequest
 
 import eu.europa.ec.verifierfeature.model.FieldLabel
-import eu.europa.ec.verifierfeature.utils.authorizationRequest.AuthorizationRequest.encode
 import java.net.URI
 import java.net.URLEncoder
 import android.net.Uri
@@ -11,10 +10,32 @@ object AuthorizationRequest {
     private fun String.encode(): String =
         URLEncoder.encode(this, "UTF-8")
 
+    fun formatAuthorizationRequestApi(
+        clientId: String,
+        requestUri: String?,
+        responseMode: String?
+    ): URI {
+        require(clientId.isNotBlank()) { "clientId is required" }
+        require(!requestUri.isNullOrBlank()) { "requestUri is required" }
+        require(!responseMode.isNullOrBlank()) { "responseMode is required" }
+
+        val encodedClientId = Uri.encode(clientId)
+        val encodedRequestUri = Uri.encode(requestUri)
+        val encodedResponseMode = Uri.encode(responseMode)
+
+        val uriString = "eudi-openid4vp://verifier-backend.eudiw.dev/?" +
+                "client_id=$encodedClientId" +
+                "&request_uri=$encodedRequestUri" +
+                "&response_mode=$encodedResponseMode"
+
+        return URI(uriString)
+    }
+
+
     fun formatAuthorizationRequest(
         clientId: String? = null,
         requestUri: String? = null,
-        responseMode: String,
+        responseMode: String? = null,
         state: String? = null,
         nonce: String? = null,
         fields: List<FieldLabel>,

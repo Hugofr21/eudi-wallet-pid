@@ -26,6 +26,7 @@ import eu.europa.ec.uilogic.serializer.adapter.SerializableTypeAdapter
 sealed interface PresentationMode {
     data class OpenId4Vp(val uri: String, val initiatorRoute: String) : PresentationMode
     data class Ble(val initiatorRoute: String) : PresentationMode
+    
 }
 
 data class RequestUriConfig(

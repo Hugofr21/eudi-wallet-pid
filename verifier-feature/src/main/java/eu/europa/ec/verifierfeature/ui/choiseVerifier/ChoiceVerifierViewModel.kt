@@ -11,7 +11,7 @@ import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.VerifierScreens
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
-import eu.europa.ec.verifierfeature.controller.VerifierEUDIController
+import eu.europa.ec.verifierfeature.controller.verifier.VerifierEUDIController
 import eu.europa.ec.verifierfeature.model.VerifierModule
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel

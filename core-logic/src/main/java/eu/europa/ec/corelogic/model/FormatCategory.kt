@@ -1,6 +1,5 @@
 package eu.europa.ec.corelogic.model
 
-import eu.europa.ec.eudi.wallet.transfer.openId4vp.Format
 import org.multipaz.crypto.Algorithm
 
 // OpenID for Verifiable Presentations 1.0

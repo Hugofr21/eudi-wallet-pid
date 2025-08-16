@@ -1,21 +1,6 @@
-/*
- * Copyright (c) 2023 European Commission
- *
- * Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the European
- * Commission - subsequent versions of the EUPL (the "Licence"); You may not use this work
- * except in compliance with the Licence.
- *
- * You may obtain a copy of the Licence at:
- * https://joinup.ec.europa.eu/software/page/eupl
- *
- * Unless required by applicable law or agreed to in writing, software distributed under
- * the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF
- * ANY KIND, either express or implied. See the Licence for the specific language
- * governing permissions and limitations under the Licence.
- */
+package eu.europa.ec.verifierfeature.interactor
 
-package eu.europa.ec.presentationfeature.interactor
-
+import androidx.lifecycle.viewModelScope
 import eu.europa.ec.businesslogic.extension.safeAsync
 import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.commonfeature.config.RequestUriConfig
@@ -24,61 +9,73 @@ import eu.europa.ec.commonfeature.ui.request.model.RequestDocumentItemUi
 import eu.europa.ec.commonfeature.ui.request.transformer.RequestTransformer
 import eu.europa.ec.corelogic.controller.TransferEventPartialState
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
-import eu.europa.ec.corelogic.controller.WalletCorePresentationController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
+import eu.europa.ec.verifierfeature.controller.document.EventPresentationDocumentController
+import eu.europa.ec.verifierfeature.controller.document.TransferEventVerifiedPartialState
+import eu.europa.ec.verifierfeature.model.FieldLabel
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.launch
 
 
-sealed class PresentationRequestInteractorPartialState {
+sealed class PresentationRequestVerifierInteractorPartialState {
     data class Success(
         val verifierName: String?,
         val verifierIsTrusted: Boolean,
         val requestDocuments: List<RequestDocumentItemUi>
-    ) : PresentationRequestInteractorPartialState()
+    ) : PresentationRequestVerifierInteractorPartialState()
 
     data class NoData(
         val verifierName: String?,
         val verifierIsTrusted: Boolean,
-    ) : PresentationRequestInteractorPartialState()
+    ) : PresentationRequestVerifierInteractorPartialState()
 
-    data class Failure(val error: String) : PresentationRequestInteractorPartialState()
-    data object Disconnect : PresentationRequestInteractorPartialState()
+    data class Failure(val error: String) : PresentationRequestVerifierInteractorPartialState()
+    data object Disconnect : PresentationRequestVerifierInteractorPartialState()
 }
 
-interface PresentationRequestInteractor {
-    fun getRequestDocuments(): Flow<PresentationRequestInteractorPartialState>
+interface PresentationRequestVerifierInteractor {
+    suspend fun  getRequestDocuments(): Flow<PresentationRequestVerifierInteractorPartialState>
     fun stopPresentation()
     fun updateRequestedDocuments(items: List<RequestDocumentItemUi>)
     fun setConfig(config: RequestUriConfig)
 }
 
-class PresentationRequestInteractorImpl(
+class PresentationRequestVerifierInteractorImpl(
     private val resourceProvider: ResourceProvider,
     private val uuidProvider: UuidProvider,
-    private val walletCorePresentationController: WalletCorePresentationController,
-    private val walletCoreDocumentsController: WalletCoreDocumentsController
-) : PresentationRequestInteractor {
+    private val eventPresentationDocumentController: EventPresentationDocumentController,
+    private val walletCoreDocumentsController: WalletCoreDocumentsController,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+) : PresentationRequestVerifierInteractor {
 
     private val genericErrorMsg
         get() = resourceProvider.genericErrorMessage()
 
+    private val scope = CoroutineScope(dispatcher + SupervisorJob())
+
     override fun setConfig(config: RequestUriConfig) {
-        walletCorePresentationController.setConfig(config.toDomainConfig())
+        eventPresentationDocumentController.setConfig(config.toDomainConfig())
     }
 
-    override fun getRequestDocuments(): Flow<PresentationRequestInteractorPartialState> =
-        walletCorePresentationController.events.mapNotNull { response ->
-            println("[PresentationRequestInteractorImpl] getRequestDocuments -> Received response: $response")
+    override suspend fun getRequestDocuments(): Flow<PresentationRequestVerifierInteractorPartialState> {
+
+        return eventPresentationDocumentController.events.mapNotNull { response ->
+            println("Received response: $response")
 
             when (response) {
-                is TransferEventPartialState.RequestReceived -> {
+                is TransferEventVerifiedPartialState.RequestReceived -> {
                     println("RequestReceived from: ${response.verifierName}, Trusted: ${response.verifierIsTrusted}")
                     println("Request data: ${response.requestData}")
 
                     if (response.requestData.all { it.requestedItems.isEmpty() }) {
                         println("All requested items are empty")
-                        PresentationRequestInteractorPartialState.NoData(
+                        PresentationRequestVerifierInteractorPartialState.NoData(
                             verifierName = response.verifierName,
                             verifierIsTrusted = response.verifierIsTrusted,
                         )
@@ -92,9 +89,26 @@ class PresentationRequestInteractorImpl(
                             resourceProvider = resourceProvider,
                             uuidProvider = uuidProvider
                         ).getOrThrow()
-                            .filterNot {
-                                val isRevoked = walletCoreDocumentsController.isDocumentRevoked(it.docId)
-                                println("DocId: ${it.docId}, isRevoked: $isRevoked")
+                            .filterNot { document ->
+                                val isRevoked =
+                                    walletCoreDocumentsController.isDocumentRevoked(document.docId)
+                                println(
+                                    buildString {
+                                        appendLine("────────── Document ──────────")
+                                        appendLine("ID.............: ${document.docId}")
+                                        appendLine("Name...........: ${document.docName}")
+                                        appendLine("Format........: ${document.domainDocFormat}")
+                                        appendLine("Revoked.......: $isRevoked")
+                                        appendLine("Claims:")
+                                        document.docClaimsDomain.forEach { claim ->
+                                            appendLine("  - Title: ${claim.displayTitle}")
+                                            appendLine("    Key : ${claim.key}")
+                                            appendLine("    Path  : ${claim.path}")
+                                        }
+                                        appendLine("──────────────────────────────")
+                                    }
+                                )
+
                                 isRevoked
                             }
 
@@ -107,14 +121,14 @@ class PresentationRequestInteractorImpl(
                             )
                             println("UI Items: $uiItems")
 
-                            PresentationRequestInteractorPartialState.Success(
+                            PresentationRequestVerifierInteractorPartialState.Success(
                                 verifierName = response.verifierName,
                                 verifierIsTrusted = response.verifierIsTrusted,
                                 requestDocuments = uiItems
                             )
                         } else {
                             println("No valid documents matched the request")
-                            PresentationRequestInteractorPartialState.NoData(
+                            PresentationRequestVerifierInteractorPartialState.NoData(
                                 verifierName = response.verifierName,
                                 verifierIsTrusted = response.verifierIsTrusted,
                             )
@@ -122,14 +136,14 @@ class PresentationRequestInteractorImpl(
                     }
                 }
 
-                is TransferEventPartialState.Error -> {
+                is TransferEventVerifiedPartialState.Error -> {
                     println("Error received: ${response.error}")
-                    PresentationRequestInteractorPartialState.Failure(error = response.error)
+                    PresentationRequestVerifierInteractorPartialState.Failure(error = response.error)
                 }
 
-                is TransferEventPartialState.Disconnected -> {
+                is TransferEventVerifiedPartialState.Disconnected -> {
                     println("Disconnected from verifier")
-                    PresentationRequestInteractorPartialState.Disconnect
+                    PresentationRequestVerifierInteractorPartialState.Disconnect
                 }
 
                 else -> {
@@ -139,18 +153,19 @@ class PresentationRequestInteractorImpl(
             }
         }.safeAsync {
             println("Exception caught in flow: ${it.localizedMessage}")
-            PresentationRequestInteractorPartialState.Failure(
+            PresentationRequestVerifierInteractorPartialState.Failure(
                 error = it.localizedMessage ?: genericErrorMsg
             )
         }
+    }
 
 
     override fun stopPresentation() {
-        walletCorePresentationController.stopPresentation()
+        eventPresentationDocumentController.stopPresentation()
     }
 
     override fun updateRequestedDocuments(items: List<RequestDocumentItemUi>) {
         val disclosedDocuments = RequestTransformer.createDisclosedDocuments(items)
-        walletCorePresentationController.updateRequestedDocuments(disclosedDocuments.toMutableList())
+        eventPresentationDocumentController.updateRequestedDocuments(disclosedDocuments.toMutableList())
     }
 }

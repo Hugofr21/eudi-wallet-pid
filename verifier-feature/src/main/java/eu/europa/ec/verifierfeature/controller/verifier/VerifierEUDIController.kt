@@ -1,4 +1,4 @@
-package eu.europa.ec.verifierfeature.controller
+package eu.europa.ec.verifierfeature.controller.verifier
 
 import android.content.Context
 import android.content.Intent
