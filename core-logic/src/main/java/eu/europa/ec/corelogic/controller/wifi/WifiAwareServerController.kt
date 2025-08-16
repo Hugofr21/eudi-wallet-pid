@@ -98,28 +98,31 @@ class WifiAwareServerControllerImpl(
             @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
             override fun onAttached(session: WifiAwareSession) {
                 println("[WifiAware] onAttached: criando sessão")
-                val fineLocationGranted = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
+                // https://developer.android.com/develop/connectivity/wifi/wifi-permissions
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val nearbyWifiGranted = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.NEARBY_WIFI_DEVICES
+                    ) == PackageManager.PERMISSION_GRANTED
 
+                    if (!nearbyWifiGranted) {
+                        println("[WifiAware] Permission denied: NEARBY_WIFI_DEVICES")
+                        callback.onPublishFailed(PERMISSION_DENIED)
+                        return
+                    }
+                } else {
+                    val fineLocationGranted = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
 
-                if (!fineLocationGranted) {
-                    println("[WifiAware] Permissão negada: ACCESS_FINE_LOCATION")
-                    callback.onPublishFailed(PERMISSION_DENIED)
-                    return
+                    if (!fineLocationGranted) {
+                        println("[WifiAware] Permission denied: ACCESS_FINE_LOCATION")
+                        callback.onPublishFailed(PERMISSION_DENIED)
+                        return
+                    }
                 }
 
-                val nearbyWifiGranted = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.NEARBY_WIFI_DEVICES
-                ) == PackageManager.PERMISSION_GRANTED
-
-                if (!nearbyWifiGranted) {
-                    println("[WifiAware] Permissão negada: NEARBY_WIFI_DEVICES")
-                    callback.onPublishFailed(PERMISSION_DENIED)
-                    return
-                }
 
                 session.publish(publishConfig, object : DiscoverySessionCallback() {
                     override fun onPublishStarted(pubSession: PublishDiscoverySession) {

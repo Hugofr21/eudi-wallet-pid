@@ -91,6 +91,13 @@ interface VerifierApiSwaggerController {
         @Path("requestId") requestId: String
     ): Response<String>
 
+    @FormUrlEncoded
+    @POST("/wallet/direct_post/{state}")
+    @Headers("Accept: application/json")
+    suspend fun directPost(
+        @Path(value = "state") state: String,
+        @Field("vp_token") vpToken: String
+    ): Response<JsonObject>
 }
 
 class VerifierApiSwaggerControllerImpl(
@@ -99,7 +106,7 @@ class VerifierApiSwaggerControllerImpl(
     ):VerifierApiSwaggerController{
 
     companion object{
-        val BASE_URL_AGE  = "https://verifier-backend.ageverification.dev/"
+//        val BASE_URL  = "https://verifier-backend.ageverification.dev/"
         val BASE_URL  = "https://verifier-backend.eudiw.dev/"
     }
 
@@ -147,5 +154,9 @@ class VerifierApiSwaggerControllerImpl(
     override suspend fun getAuthorizationRequest(requestId: String): Response<String> =
         api.getAuthorizationRequest(requestId)
 
+    override suspend fun directPost(
+        state: String,
+        vpToken: String
+    ): Response<JsonObject> = api.directPost(state, vpToken)
 
 }

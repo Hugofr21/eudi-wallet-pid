@@ -26,7 +26,9 @@ import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.verifierfeature.controller.verifier.VerifierAgeProofController
 import eu.europa.ec.verifierfeature.model.FieldLabel
+import eu.europa.ec.verifierfeature.model.PresentationResponse
 import eu.europa.ec.verifierfeature.utils.authorizationRequest.AuthorizationRequest
+import eu.europa.ec.verifierfeature.utils.json.AuthRequestData
 import eu.europa.ec.verifierfeature.utils.json.DecodeUtils.decodeAuthRequest
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -43,14 +45,19 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import java.net.URI
 
 
 sealed class PresentationControllerVerifierConfig(val initiatorRoute: String) {
     data class OpenId4VP(val uri: String, val initiator: String) :
         PresentationControllerVerifierConfig(initiator)
-
 }
+
 
 sealed class VerifierLoadingObserveResponsePartialState {
     data class UserAuthenticationRequired(
@@ -102,12 +109,13 @@ sealed class WalletCoreVerifiedPartialState {
     data object RequestIsReadyToBeSent : WalletCoreVerifiedPartialState()
 }
 
-
 interface EventPresentationDocumentController {
     /**
      * Who started the presentation
      * */
     val initiatorRoute: String
+
+
 
 
     /**
@@ -218,7 +226,8 @@ class EventPresentationDocumentControllerImpl(
     override suspend fun intFlowVerifier(documentId: DocumentId, fields: List<FieldLabel>): String {
         val metadata = verifierAgeProofController.metadataVerifier()
 
-        val pres = verifierAgeProofController.createPresentationRequest(fields)
+//        val pres = verifierAgeProofController.createPresentationRequest(fields)
+        val pres = verifierAgeProofController.createPresentationRequestOther()
         println("transaction_id = ${pres.transaction_id}")
         println("client_id      = ${pres.client_id}")
         println("request        = ${pres.request}")
@@ -559,6 +568,37 @@ class EventPresentationDocumentControllerImpl(
             throw IllegalStateException("setConfig() must be called before using the WalletCorePresentationController")
         }
         return block()
+    }
+
+    private suspend fun postDirectWallet(authData:AuthRequestData, pres: PresentationResponse ){
+                    val vpTokenString: String? = if (authData.responseType?.contains("vp_token") == true) {
+                val key = pres.client_id ?: pres.transaction_id ?: "vp_token"
+
+                val vpJson = buildJsonObject {
+                    put(key, buildJsonArray {
+                        add(buildJsonObject {
+                            put("id", JsonPrimitive("proof_of_age"))
+                        })
+                    })
+                }
+                Json.encodeToString(JsonObject.serializer(), vpJson)
+            } else {
+                null
+            }
+
+            val response = if (vpTokenString != null) {
+                verifierAgeProofController.directPost(authData.state, vpTokenString)
+            } else {
+                verifierAgeProofController.directPost(authData.state, "{}")
+            }
+
+            if (!response.isSuccessful) {
+                val err = response.errorBody()?.string()
+                throw RuntimeException("directPost failed ${response.code()}: $err")
+            }
+
+            val body = response.body()
+            println("directPost response: $body")
     }
 
 

@@ -71,6 +71,8 @@ class PresentationLoadingVerifierViewModel(
             interactor.observeResponse().collect {
                 when (it) {
                     is PresentationLoadingVerifierObserveResponsePartialState.Failure -> {
+                        println("❌ Failure: ${it.error}")
+
                         setState {
                             copy(
                                 error = ContentErrorConfig(
@@ -86,18 +88,23 @@ class PresentationLoadingVerifierViewModel(
                     }
 
                     is PresentationLoadingVerifierObserveResponsePartialState.Success -> {
+                        println("✅ Success: ${it}")
                         onSuccess()
                     }
 
                     is PresentationLoadingVerifierObserveResponsePartialState.Redirect -> {
+                        println("➡️ Redirect: ${it}")
                         onSuccess()
                     }
 
                     is PresentationLoadingVerifierObserveResponsePartialState.RequestReadyToBeSent -> {
+                        println("📤 RequestReadyToBeSent: ${it}")
                         sendRequestedDocuments(Event.DoWork(context))
                     }
 
                     is PresentationLoadingVerifierObserveResponsePartialState.UserAuthenticationRequired -> {
+                        println("🔐 UserAuthenticationRequired: ${it.authenticationData}")
+
                         val popEffect = Effect.Navigation.PopBackStackUpTo(
                             screenRoute = VerifierScreens.PresentationRequestVerifier.screenRoute,
                             inclusive = false
@@ -108,6 +115,7 @@ class PresentationLoadingVerifierViewModel(
                             popEffect,
                             it.authenticationData,
                             {
+                                println("✅ Authentication done, sending documents again")
                                 sendRequestedDocuments(Event.DoWork(context))
                             }
                         )
@@ -116,6 +124,7 @@ class PresentationLoadingVerifierViewModel(
             }
         }
     }
+
 
     private fun sendRequestedDocuments(event: Event) {
 
