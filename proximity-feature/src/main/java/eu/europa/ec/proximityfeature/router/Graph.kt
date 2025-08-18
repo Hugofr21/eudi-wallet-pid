@@ -26,6 +26,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import eu.europa.ec.commonfeature.config.RequestUriConfig
 import eu.europa.ec.proximityfeature.BuildConfig
+import eu.europa.ec.proximityfeature.ui.generateQrcode.ProximityGenerateScreen
 import eu.europa.ec.proximityfeature.ui.loading.ProximityLoadingScreen
 import eu.europa.ec.proximityfeature.ui.qr.ProximityQRScreen
 import eu.europa.ec.proximityfeature.ui.success.ProximitySuccessScreen
@@ -64,6 +65,27 @@ fun NavGraphBuilder.featureProximityGraph(navController: NavController) {
             )
         ) {
             ProximityQRScreen(
+                navController,
+                koinViewModel(
+                    parameters = {
+                        parametersOf(
+                            it.arguments?.getString(RequestUriConfig.serializedKeyName).orEmpty()
+                        )
+                    }
+                )
+            )
+        }
+
+        // generate qr code
+        composable(
+            route = ProximityScreens.GenerateQR.screenRoute,
+            arguments = listOf(
+                navArgument(RequestUriConfig.serializedKeyName) {
+                    type = NavType.StringType
+                },
+            )
+        ) {
+            ProximityGenerateScreen(
                 navController,
                 koinViewModel(
                     parameters = {

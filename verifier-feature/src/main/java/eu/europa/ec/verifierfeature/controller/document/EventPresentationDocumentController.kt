@@ -10,7 +10,6 @@ import eu.europa.ec.corelogic.controller.PresentationControllerConfig
 import eu.europa.ec.corelogic.controller.ResponseReceivedPartialState
 import eu.europa.ec.corelogic.controller.TransferEventPartialState
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
-import eu.europa.ec.corelogic.controller.WalletCorePartialState
 import eu.europa.ec.corelogic.model.AuthenticationData
 import eu.europa.ec.corelogic.util.EudiWalletListenerWrapper
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractor
@@ -35,7 +34,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -109,6 +107,22 @@ sealed class WalletCoreVerifiedPartialState {
     data object RequestIsReadyToBeSent : WalletCoreVerifiedPartialState()
 }
 
+
+private data class VerifierSessionData(
+    val transactionId: String?,
+    val clientId: String?,
+    val nonce: String?,
+    val state: String?,
+    val requestUri: String?,
+    val request: String?,
+    val requestUriMethod: String?,
+    val responseType: String?,
+    val responseMode: String?,
+    val fields: List<FieldLabel>?,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+
 interface EventPresentationDocumentController {
     /**
      * Who started the presentation
@@ -141,7 +155,10 @@ interface EventPresentationDocumentController {
     val disclosedDocuments: MutableList<DisclosedDocument>?
 
     suspend fun getDocumentDetails(documentId: DocumentId): DocumentDetailsInteractorPartialState.Success
-    suspend fun intFlowVerifier(documentId: DocumentId, fields: List<FieldLabel>):String
+    suspend fun intFlowVerifierOther(documentId: DocumentId, fields: List<String>, format: String):String
+
+
+    suspend fun intFlowVerifierAge(documentId: DocumentId, fields: List<FieldLabel>): String
 
     fun updateRequestedDocuments(disclosedDocuments: MutableList<DisclosedDocument>?)
 
@@ -207,6 +224,31 @@ class EventPresentationDocumentControllerImpl(
 
     override var disclosedDocuments: MutableList<DisclosedDocument>? = null
 
+    @Volatile
+    private var verifierSession: VerifierSessionData? = null
+
+    private fun saveVerifierSession(session: VerifierSessionData) {
+        verifierSession = session
+    }
+
+    private fun clearVerifierSession() {
+        verifierSession = null
+    }
+
+    private fun getVerifierSessionOrNull(): VerifierSessionData? = verifierSession
+
+    private fun getVerifierSessionOrThrow(): VerifierSessionData {
+        return verifierSession ?: throw IllegalStateException("Verifier session not initialized")
+    }
+
+    fun getSavedNonce(): String? = verifierSession?.nonce
+
+    fun getSavedTransactionId(): String? = verifierSession?.transactionId
+
+    fun getSavedState(): String? = verifierSession?.state
+
+    fun getSavedRequestUri(): String? = verifierSession?.requestUri
+
 
     override suspend fun getDocumentDetails(documentId: DocumentId): DocumentDetailsInteractorPartialState.Success {
         val partialState = documentDetailsInteractor
@@ -223,11 +265,11 @@ class EventPresentationDocumentControllerImpl(
     }
 
 
-    override suspend fun intFlowVerifier(documentId: DocumentId, fields: List<FieldLabel>): String {
+    override suspend fun intFlowVerifierAge(documentId: DocumentId, fields: List<FieldLabel>): String {
         val metadata = verifierAgeProofController.metadataVerifier()
 
-//        val pres = verifierAgeProofController.createPresentationRequest(fields)
-        val pres = verifierAgeProofController.createPresentationRequestOther()
+        val pres = verifierAgeProofController.createPresentationRequest(fields)
+//        val pres = verifierAgeProofController.createPresentationRequestOther()
         println("transaction_id = ${pres.transaction_id}")
         println("client_id      = ${pres.client_id}")
         println("request        = ${pres.request}")
@@ -280,6 +322,33 @@ class EventPresentationDocumentControllerImpl(
             return deepLink.toString()
         }
         return ""
+    }
+
+
+    override suspend fun intFlowVerifierOther(documentId: DocumentId, fields: List<String>, format: String): String {
+        val metadata = verifierAgeProofController.metadataVerifier()
+        val pres = verifierAgeProofController.createPresentationRequestOther()
+        println("transaction_id = ${pres.transaction_id}")
+        println("client_id      = ${pres.client_id}")
+        println("request        = ${pres.request}")
+        println("request_uri_method        = ${pres.request_uri_method}")
+        println("request_uri        = ${pres.request_uri}")
+        fields.forEach { println("Fields {$it.key}") }
+
+        val nonce = verifierAgeProofController.getLastNonce()
+
+        val deepLink = AuthorizationRequest.formatAuthorizationRequestApi(
+            pres.client_id,
+            pres.request_uri,
+            pres.request_uri_method
+        )
+
+        val deepLinkUri = deepLink.toString().toUri()
+        println("[intFlowVerifier] deepLink = $deepLinkUri")
+        listenerScope.launch {
+            startRemotePresentationAndListen(deepLinkUri)
+        }
+        return deepLink.toString()
     }
 
 

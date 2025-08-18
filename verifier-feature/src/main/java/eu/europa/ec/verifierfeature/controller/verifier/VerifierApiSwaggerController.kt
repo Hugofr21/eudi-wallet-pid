@@ -106,8 +106,10 @@ class VerifierApiSwaggerControllerImpl(
     ):VerifierApiSwaggerController{
 
     companion object{
-//        val BASE_URL  = "https://verifier-backend.ageverification.dev/"
         val BASE_URL  = "https://verifier-backend.eudiw.dev/"
+//        val BASE_URL = "https://dev.verifier-backend.eudiw.dev"
+//        val BASE_URL = "http://localhost:8080/"
+    //        val BASE_URL  = "https://verifier-backend.ageverification.dev/"
     }
 
     private val json = Json { ignoreUnknownKeys = true }

@@ -544,6 +544,14 @@
     <string name="consent_screen_restore_button">Continue without restore</string>
     <string name="document_details_document_credentials_info_expanded_button_update_now_text">For security reasons, this document can be shared a limited number of times before it needs to be re-issued by the issuing authority</string>
     <string name="issuance_add_document_no_options">No available documents</string>
+    <string name="generic_wifi_publisher">Publisher</string>
+    <string name="generic_wifi_subscriber">Subscriber</string>
+    <string name="close">Close</string>
+    <string name="retry">Retry</string>S
+    <string name="qr_error">This functionality is unavailable</string>
+    <string name="qr_code_title">Share the document with another entity.</string>
+    <string name="qr_generating_text">Generating QR...</string>
+    <string name="qr_no_data">There is not enough data.</string>
 
     <!-- Logs Screen -->
 </resources>

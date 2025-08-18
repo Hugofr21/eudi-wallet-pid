@@ -286,56 +286,74 @@ private fun PermissionLauncherDenied(){
 
 @Composable
 fun InitWifiAware(viewModel: WifiAwareViewModel?) {
-    Text(
-        text = stringResource(R.string.wifi_aware_intit_title),
-        style = MaterialTheme.typography.titleLarge.copy(
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.2.sp,
-            fontSize = 14.sp
-        )
-    )
-    Text(
-        stringResource(R.string.wifi_aware_intit_description),
-        style = MaterialTheme.typography.titleLarge.copy(
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 0.8.sp,
-            fontSize = 8.sp
-        )
-    )
-    VSpacer.Small()
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = SPACING_MEDIUM.dp),
+            .fillMaxSize()
+            .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = Icons.Filled.WifiFind,
-            contentDescription = stringResource(R.string.wifi_disconnected),
-            modifier = Modifier.size(96.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-    }
-    VSpacer.Small()
-    DoubleBtn(
-        { viewModel?.setEvent(Event.StartDiscovery) },
-        { viewModel?.setEvent(Event.GoBack) }
-    )
-}
 
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = stringResource(R.string.wifi_aware_intit_title),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp,
+                    fontSize = 14.sp
+                ),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                stringResource(R.string.wifi_aware_intit_description),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.8.sp,
+                    fontSize = 12.sp
+                ),
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            )
+
+            VSpacer.Medium()
+
+            Icon(
+                imageVector = Icons.Filled.WifiFind,
+                contentDescription = stringResource(R.string.wifi_disconnected),
+                modifier = Modifier.size(96.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+
+            VSpacer.Medium()
+
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                DoubleBtn(
+                    onPublisher = { viewModel?.setEvent(Event.StartDiscovery) },
+                    onSubscriber = { viewModel?.setEvent(Event.GoBack) },
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun DoubleBtn(
-    onScan: () -> Unit,
-    onCancel: () -> Unit,
+    onPublisher: () -> Unit,
+    onSubscriber: () -> Unit,
 ) {
     val buttons = StickyBottomType.TwoButtons(
         primaryButtonConfig = ButtonConfig(
             type = ButtonType.SECONDARY,
-            onClick = { onCancel() } ),
+            onClick = { onSubscriber() } ),
         secondaryButtonConfig = ButtonConfig(
             type = ButtonType.PRIMARY,
-            onClick = { onScan() })
+            onClick = { onPublisher() })
     )
     WrapStickyBottomContent(
         stickyBottomModifier = Modifier
@@ -344,8 +362,8 @@ private fun DoubleBtn(
         stickyBottomConfig = StickyBottomConfig(type = buttons, showDivider = false)
     ) {
         when (it?.type) {
-            ButtonType.PRIMARY -> Text(text = stringResource(id = R.string.generic_confirm_capitalized))
-            ButtonType.SECONDARY -> Text(text = stringResource(id = R.string.generic_cancel_capitalized))
+            ButtonType.PRIMARY -> Text(text = stringResource(id = R.string.generic_wifi_publisher))
+            ButtonType.SECONDARY -> Text(text = stringResource(id = R.string.generic_wifi_subscriber))
             else -> {}
         }
     }

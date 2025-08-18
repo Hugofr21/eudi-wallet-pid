@@ -17,6 +17,8 @@
 package eu.europa.ec.dashboardfeature.ui.dashboard
 
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
@@ -72,6 +74,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DashboardScreen(
@@ -94,7 +97,6 @@ internal fun DashboardScreen(
 
     Scaffold(
         bottomBar = {
-
             BottomNavigationBar(bottomNavigationController, viewModel)
         }
     ) { padding ->

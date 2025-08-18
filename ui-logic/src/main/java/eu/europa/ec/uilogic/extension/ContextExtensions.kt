@@ -93,6 +93,13 @@ fun Context.openBleSettings() {
     startActivity(intent)
 }
 
+fun Context.openWifiSettings() {
+    val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    startActivity(intent)
+}
+
+
 fun Context.openIntentChooser(intent: Intent, title: String? = null) {
     try {
         startActivity(Intent.createChooser(intent, title))

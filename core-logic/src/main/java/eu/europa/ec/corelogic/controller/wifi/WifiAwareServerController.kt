@@ -128,6 +128,7 @@ class WifiAwareServerControllerImpl(
                     override fun onPublishStarted(pubSession: PublishDiscoverySession) {
                         println("[WifiAwareServerControllerImpl] onPublishStarted() OK")
                         publishSession = pubSession
+                        print("onPublishStarted --> PublishSession $publishSession")
                         callback.onPublished(pubSession)
                     }
 

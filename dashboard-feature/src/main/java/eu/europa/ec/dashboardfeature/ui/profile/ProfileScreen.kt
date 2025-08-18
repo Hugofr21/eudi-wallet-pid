@@ -17,6 +17,7 @@
 package eu.europa.ec.dashboardfeature.ui.profile
 
 
+import android.app.Dialog
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
@@ -79,6 +80,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.window.Dialog
 import eu.europa.ec.dashboardfeature.model.ClaimValue
 import eu.europa.ec.uilogic.component.IconDataUi
 import eu.europa.ec.dashboardfeature.ui.profile.compoment.ActionButtons
@@ -97,7 +100,6 @@ fun ProfileScreen(
     val context = LocalContext.current
     val state: State by viewModel.viewState.collectAsStateWithLifecycle()
     val effects = viewModel.effect
-    var showQrCode by remember { mutableStateOf(false) }
 
     ContentScreen(
         isLoading = state.isLoading,
@@ -109,7 +111,6 @@ fun ProfileScreen(
                     viewModel = viewModel,
                     paddingValues = paddingValues,
                     isLoading = state.isLoading,
-                    onShowQrCode = { showQrCode = true }
                 )
             }
         }
@@ -128,8 +129,6 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-        } else if (showQrCode) {
-            // Show QR code screen
         } else {
             Content(
                 state = state,
@@ -153,12 +152,6 @@ fun ProfileScreen(
                         popUpTo(effect.popUpToScreenRoute) { inclusive = effect.inclusive }
                     }
                 }
-                is Effect.Navigation.CreateQrCode -> {
-                    showQrCode = true
-                }
-                is Effect.Navigation.AddDocument -> {
-                    navHostController.navigate("add_document_screen")
-                }
             }
         }
     }
@@ -178,9 +171,6 @@ private fun handleNavigationEffect(
                 }
             }
         }
-
-        Effect.Navigation.AddDocument -> TODO()
-        Effect.Navigation.CreateQrCode -> TODO()
     }
 }
 
@@ -445,8 +435,6 @@ private fun ClaimValueView(value: ClaimValue) {
         }
     }
 }
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @ThemeModePreviews

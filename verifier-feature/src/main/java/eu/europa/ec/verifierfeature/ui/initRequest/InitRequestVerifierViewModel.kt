@@ -126,7 +126,7 @@ class InitRequestVerifierViewModel(
                 val selected = viewState.value.selectedFieldLabels.toList()
               viewModelScope.launch {
                   val uri =  eventPresentationDocumentController
-                        .intFlowVerifier(requestArgs.documentId, requestArgs.fieldLabels)
+                        .intFlowVerifierAge(requestArgs.documentId, requestArgs.fieldLabels)
 
                     setEffect {
                         Effect.Navigation.SwitchScreen(

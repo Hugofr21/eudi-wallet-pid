@@ -1,20 +1,4 @@
-/*
- * Copyright (c) 2023 European Commission
- *
- * Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the European
- * Commission - subsequent versions of the EUPL (the "Licence"); You may not use this work
- * except in compliance with the Licence.
- *
- * You may obtain a copy of the Licence at:
- * https://joinup.ec.europa.eu/software/page/eupl
- *
- * Unless required by applicable law or agreed to in writing, software distributed under
- * the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF
- * ANY KIND, either express or implied. See the Licence for the specific language
- * governing permissions and limitations under the Licence.
- */
-
-package eu.europa.ec.dashboardfeature.ui.profile.compoment
+package eu.europa.ec.proximityfeature.ui.generateQrcode.qrcode
 
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -32,19 +16,18 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import eu.europa.ec.resourceslogic.R
-import eu.europa.ec.uilogic.component.wrap.WrapImage
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlin.collections.set
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.WriterException
 import com.google.zxing.qrcode.QRCodeWriter
+import eu.europa.ec.uilogic.component.wrap.WrapImage
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import eu.europa.ec.resourceslogic.R
 
 @Composable
-private fun QRCode(
+fun QRCode(
     modifier: Modifier = Modifier,
     qrCode: String,
     qrSize: Dp

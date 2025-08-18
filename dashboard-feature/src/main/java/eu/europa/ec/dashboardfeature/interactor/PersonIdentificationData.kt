@@ -16,18 +16,15 @@
 
 package eu.europa.ec.dashboardfeature.interactor
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.util.Base64
 import eu.europa.ec.commonfeature.util.docNamespace
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.model.DocumentIdentifier
 import eu.europa.ec.dashboardfeature.model.ClaimValue
 import eu.europa.ec.dashboardfeature.model.ClaimsUI
 import eu.europa.ec.eudi.wallet.document.IssuedDocument
+import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-
 
 interface PersonIdentificationDataInteractor {
     fun getPidDocuments(): List<String>
@@ -38,17 +35,21 @@ interface PersonIdentificationDataInteractor {
     fun getUserFirstAndLastName (): Pair<String, String>
     fun getUserWithPortrait(): String
     fun getListClaims(): List<ClaimsUI>
+
 }
 
 
 class PersonIdentificationDataImpl(
-    private val walletCoreDocumentsController: WalletCoreDocumentsController
+    private val resourceProvider: ResourceProvider,
+    private val walletCoreDocumentsController: WalletCoreDocumentsController,
 ) : PersonIdentificationDataInteractor {
 
     private val pidTypes = listOf(
         DocumentIdentifier.MdocPid,
         DocumentIdentifier.SdJwtPid
     )
+
+
 
     override fun getPidDocuments(): List<String> =
         walletCoreDocumentsController
@@ -131,7 +132,7 @@ class PersonIdentificationDataImpl(
         val claims = uniqueClaims.map { claim ->
             val normalizedKey = claim.identifier.replace("_"," ").lowercase()
 
-            val v: Any? = claim.value   // o claim.value original
+            val v: Any? = claim.value
             val cv = when (v) {
                 is Map<*,*>        -> ClaimValue.Obj(v.mapKeys { it.key.toString().replace("_"," ").lowercase() })
                 is Collection<*>   -> ClaimValue.Arr(v.toList())
@@ -174,4 +175,6 @@ class PersonIdentificationDataImpl(
             println("-------------------------------")
         }
     }
+
+
 }

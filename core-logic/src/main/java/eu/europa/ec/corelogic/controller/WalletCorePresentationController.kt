@@ -59,6 +59,8 @@ sealed class PresentationControllerConfig(val initiatorRoute: String) {
         PresentationControllerConfig(initiator)
 
     data class Ble(val initiator: String) : PresentationControllerConfig(initiator)
+
+    data class QrCodeMdoc(val initiator: String) : PresentationControllerConfig(initiator)
 }
 
 sealed class TransferEventPartialState {

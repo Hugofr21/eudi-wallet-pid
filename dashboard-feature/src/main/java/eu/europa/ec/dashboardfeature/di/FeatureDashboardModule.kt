@@ -23,7 +23,9 @@ import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.businesslogic.validator.FilterValidator
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
+import eu.europa.ec.corelogic.controller.WalletCorePresentationController
 import eu.europa.ec.corelogic.controller.WalletLiveDataController
+import eu.europa.ec.corelogic.di.WalletPresentationScope
 import eu.europa.ec.dashboardfeature.interactor.DashboardInteractor
 import eu.europa.ec.dashboardfeature.interactor.DashboardInteractorImpl
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractor
@@ -48,6 +50,7 @@ import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
+import org.koin.core.annotation.Scoped
 
 @Module
 @ComponentScan("eu.europa.ec.dashboardfeature")
@@ -140,20 +143,29 @@ fun provideTransactionDetailsInteractor(
         uuidProvider
     )
 
-@Factory
-fun PersonIdentificationDataInreractor(
-    walletCoreDocumentsController: WalletCoreDocumentsController,
-): PersonIdentificationDataInteractor = PersonIdentificationDataImpl(
-    walletCoreDocumentsController
-)
+
 
 @Factory
-fun PersonWifiAwareInteractor(
+fun providerPersonWifiAwareInteractor(
      resourceProvider: ResourceProvider,
     walletLiveDataController: WalletLiveDataController
 ): WifiAwareInteractor = WifiAwareInteractorImpl(
     resourceProvider,
     walletLiveDataController
 )
+
+
+
+@Factory
+fun providerPersonIdentificationDataInteractor(
+    resourceProvider: ResourceProvider,
+    walletCoreDocumentsController: WalletCoreDocumentsController,
+): PersonIdentificationDataInteractor {
+    return PersonIdentificationDataImpl(
+        resourceProvider = resourceProvider,
+        walletCoreDocumentsController = walletCoreDocumentsController,
+    )
+}
+
 
 

@@ -54,10 +54,11 @@ class WalletLiveDataControllerImpl(
     override fun scanPeers() {
 
         val config = WifiAwareConfig(
-            serviceName = "EUDI_SERVICE",
+            serviceName = "EUDI_WIFI",
             serviceType = "_eudi._udp",
             port        = 42424
         )
+
         _peers.postValue(emptyList())
 
         wifiAwareController.publishService(config, object: PublishCallback {

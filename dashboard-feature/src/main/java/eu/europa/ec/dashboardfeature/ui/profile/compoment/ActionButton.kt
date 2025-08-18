@@ -39,6 +39,7 @@ import eu.europa.ec.dashboardfeature.ui.wifi.WifiAwareViewModel
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
+import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.ButtonConfig
 import eu.europa.ec.uilogic.component.wrap.ButtonType
 import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
@@ -53,19 +54,17 @@ fun ActionButtons(
     viewModel: ProfileViewModel?,
     paddingValues: PaddingValues,
     isLoading: Boolean,
-    onShowQrCode: () -> Unit
 ) {
     val buttons = StickyBottomType.TwoButtons(
         primaryButtonConfig = ButtonConfig(
-            type = ButtonType.SECONDARY,
+            type = ButtonType.PRIMARY,
             onClick = { viewModel?.setEvent(Event.AddDocument) }
         ),
         secondaryButtonConfig = ButtonConfig(
-            type = ButtonType.PRIMARY,
+            type = ButtonType.SECONDARY,
             enabled = !isLoading,
             onClick = {
                 viewModel?.setEvent(Event.CreateQrCode)
-                onShowQrCode()
             }
         )
     )
@@ -88,7 +87,7 @@ fun ActionButtons(
                         enabled = !isLoading,
                         onClick = { viewModel?.setEvent(Event.AddDocument) }
                     )
-                    Spacer(Modifier.width(SPACING_SMALL.dp))
+                    VSpacer.ExtraSmall()
                     Text(
                         text = stringResource(R.string.string_document),
                         style = MaterialTheme.typography.labelSmall,
@@ -109,10 +108,9 @@ fun ActionButtons(
                         enabled = !isLoading,
                         onClick = {
                             viewModel?.setEvent(Event.CreateQrCode)
-                            onShowQrCode()
                         }
                     )
-                    Spacer(Modifier.width(SPACING_SMALL.dp))
+                    VSpacer.ExtraSmall()
                     Text(
                         text = stringResource(R.string.create_qr_code),
                         style = MaterialTheme.typography.labelSmall,

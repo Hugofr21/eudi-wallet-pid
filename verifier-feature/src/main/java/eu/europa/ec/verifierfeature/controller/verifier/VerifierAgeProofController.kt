@@ -115,7 +115,6 @@ class VerifierAgeProofControllerImpl(
                                 add(JsonPrimitive("eu.europa.ec.av.1"))
                                 add(JsonPrimitive(fld.key))
                             }
-                            put("value", JsonPrimitive(true))
                         })
                     }
                 }

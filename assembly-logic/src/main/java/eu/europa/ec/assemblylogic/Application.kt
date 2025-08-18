@@ -44,7 +44,6 @@ class Application : Application() {
         initializeKoin().initializeRqes()
         initializeReporting()
         initializeRevocationWorkManager()
-//        initializeSQLCipher()
     }
 
     private fun KoinApplication.initializeRqes() {

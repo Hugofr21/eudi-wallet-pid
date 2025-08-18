@@ -138,6 +138,11 @@ sealed class ProximityScreens {
         parameters = "?requestUriConfig={requestUriConfig}"
     )
 
+    data object GenerateQR : Screen(
+        name = "PROXIMITY_GENERATE_QR",
+        parameters = "?requestUriConfig={requestUriConfig}"
+    )
+
     data object Request : Screen(
         name = "PROXIMITY_REQUEST",
         parameters = "?requestUriConfig={requestUriConfig}"
