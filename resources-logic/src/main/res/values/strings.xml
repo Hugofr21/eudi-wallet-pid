@@ -453,7 +453,8 @@
     <string name="user_consent_step_3_title">Verification</string>
     <string name="user_consent_step_4_title">Restore</string>
     <string name="user_consent_step_1_description">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</string>
-    <string name="user_consent_step_2_description">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</string>
+    <string name="user_consent_step_2_description">By continuing, you consent to your data being shared securely with public and private entities, in compliance with the EUDI ARF and the eIDAS 2.0 regulation.
+    You always retain full control over the shared data.</string>
     <string name="user_consent_step_3_description">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</string>
     <string name="user_consent_step_4_description">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</string>
 
@@ -552,6 +553,13 @@
     <string name="qr_code_title">Share the document with another entity.</string>
     <string name="qr_generating_text">Generating QR...</string>
     <string name="qr_no_data">There is not enough data.</string>
+    <string name="consent_icon_cd">Protection icon</string>
+    <string name="user_consent_step_sigle_page_first_title">Take your documents with you.</string>
+    <string name="user_consent_step_sigle_page_secound_title">Use in multiple contexts</string>
+    <string name="user_consent_step_sigle_page_thrid_title">Total security and control</string>
+    <string name="user_consent_step_sigle_page_first_description">EUDI Wallet allows you to securely store your digital identity,\nofficial documents, and personal credentials directly on your device.</string>
+    <string name="user_consent_step_sigle_page_secound_description">With Wallet, you can prove your identity online or in person,\naccess public and private services, digitally sign, and share only\nnecessary data.</string>
+    <string name="user_consent_step_sigle_page_thrid_description">Os seus dados permanecem sempre sob o seu controlo. \nA partilha é feita apenas com o seu consentimento, em conformidade com o regulamento eIDAS 2.0 \ne as normas EUDI ARF.</string>
 
     <!-- Logs Screen -->
 </resources>

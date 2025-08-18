@@ -1,16 +1,17 @@
 package eu.europa.ec.consentuser.ui.restore
 
 import android.net.Uri
+import androidx.lifecycle.viewModelScope
 import eu.europa.ec.commonfeature.model.PinFlow
-import eu.europa.ec.consentuser.ui.restore.Effect.Navigation.*
+import eu.europa.ec.consentuser.interactor.BackupRestoreInteractor
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.CommonScreens
-import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
+import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 
 sealed class RestorePage {
@@ -26,7 +27,8 @@ data class State(
     val selectedOptions: Set<String> = emptySet(),
     val tosAccepted: Boolean = false,
     val dataProtectionAccepted: Boolean = false,
-    val isButtonEnabled: Boolean = true
+    val isButtonEnabled: Boolean = true,
+    val options: List<String> = emptyList()
 ) : ViewState
 
 sealed class Event : ViewEvent {
@@ -50,6 +52,7 @@ sealed class Effect : ViewSideEffect {
 
 @KoinViewModel
 class RestoreViewModel(
+   private  val interactor: BackupRestoreInteractor
 ) : MviViewModel<Event, State, Effect>() {
     override fun setInitialState(): State = State()
 
@@ -75,19 +78,34 @@ class RestoreViewModel(
 
             Event.Restore -> {
                 val current = viewState.value
-                if (current.selectedFileUri == null && current.mnemonicWords.all { it.isBlank() }) {
-                    setEffect { Effect.ShowError("Choose a file or enter your recovery phrase first.") }
-                    return
-                }
-                if (!validateForm()) {
-                    setEffect { Effect.ShowError("Please accept Terms and Data Protection before restoring.") }
-                    return
-                }
 
-                setEffect {
-                    Effect.Navigation.SwitchScreen(
-                        screenRoute = DashboardScreens.Dashboard.screenRoute
-                    )
+                viewModelScope.launch {
+                    setState { copy(isButtonEnabled = false) }
+
+                    try {
+                        val passPhrase = current.mnemonicWords.filter { it.isNotBlank() }
+
+                        val listOptions: List<String> =
+                            interactor.restoreWallet(current.selectedFileUri, passPhrase)
+
+                        if (listOptions.isNotEmpty()) {
+                            setState {
+                                copy(
+                                    page = RestorePage.Third,
+                                    options = listOptions,
+                                    selectedOptions = emptySet()
+                                )
+                            }
+                        } else {
+                            setState { copy(page = RestorePage.Third) }
+                        }
+                    } catch (iae: IllegalArgumentException) {
+                        setEffect { Effect.ShowError(iae.message ?: "Invalid input") }
+                    } catch (e: Exception) {
+                        setEffect { Effect.ShowError(e.message ?: "Error while restoring backup") }
+                    } finally {
+                        setState { copy(isButtonEnabled = true) }
+                    }
                 }
             }
 

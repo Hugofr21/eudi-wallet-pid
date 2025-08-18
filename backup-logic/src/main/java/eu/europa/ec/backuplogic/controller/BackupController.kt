@@ -85,9 +85,7 @@ class BackupControllerImpl(
         private const val LOG_FILE_NAME_JSON = "eudi-android-wallet-backup%g.enc.json"
         private const val ITERATIONS = 100000
         private const val KEY_LENGTH = 256
-        private const val BUFFER_ARRAY = 1024
         private const val ALGORITHM = "PBKDF2WithHmacSHA256"
-        private const val ALGORITHM_CREDENTIAL = "AES"
 
     }
 
@@ -120,6 +118,7 @@ class BackupControllerImpl(
             value =LOG_FILE_NAME_JSON ,
             createdAt = System.currentTimeMillis()
         )
+
         walletBackupLogController.storeBackupLog(backupLog)
 
 

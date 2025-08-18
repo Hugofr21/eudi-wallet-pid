@@ -1,5 +1,6 @@
 package eu.europa.ec.consentuser.ui.restore
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -98,7 +100,7 @@ private fun NavigationSlider(
     state: State,
     viewModel: RestoreViewModel
 ) {
-
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -118,7 +120,7 @@ private fun NavigationSlider(
             when (effect) {
                 is Effect.Navigation -> onNavigationRequested(effect)
                 is Effect.ShowError -> {
-                    effect.message
+                    Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
                 }
             }
         }.collect()
@@ -263,7 +265,7 @@ private fun StepFormContent(
             onSubmit = { viewModel?.setEvent(SubmitWords) }
         )
         RestorePage.Third -> ThirdRestoreWalletContent(
-            options = listOf("option A", "option B", "…"),
+            options = state.options,
             selected = state.selectedOptions,
             onOptionToggled = { viewModel?.setEvent(OptionToggled(it)) },
             onRestore = { viewModel?.setEvent(Event.Restore) }

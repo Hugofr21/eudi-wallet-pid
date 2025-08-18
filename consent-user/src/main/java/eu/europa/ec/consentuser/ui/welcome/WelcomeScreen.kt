@@ -18,17 +18,23 @@ package eu.europa.ec.consentuser.ui.welcome
 
 
 import android.content.Context
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerScope
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -51,6 +58,7 @@ import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
 import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
+import eu.europa.ec.uilogic.component.utils.ICON_SIZE_40
 import eu.europa.ec.uilogic.component.utils.SIZE_XXX_LARGE
 import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.ButtonConfig
@@ -68,7 +76,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
-
 @Composable
 fun WelcomeScreen(navController: NavController, viewModel: WelcomeViewModel) {
     val context = LocalContext.current
@@ -120,33 +127,35 @@ private fun Content(
 ) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(paddingValues),
+        verticalArrangement = Arrangement.SpaceBetween,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TopStepBar(0)
-        VSpacer.ExtraLarge()
+        Column {
+            TopStepBar(0)
+            VSpacer.ExtraLarge()
+        }
+
         WelcomePager(pagerState = pagerState, pages = pages)
+
         WrapPageIndicator(pagerState)
     }
 
     LaunchedEffect(Unit) {
         effectFlow.onEach { effect ->
-            when (effect) {
-                is Effect.Navigation -> {
-                    onNavigationRequested(effect)
-                }
+            if (effect is Effect.Navigation) {
+                onNavigationRequested(effect)
             }
         }.collect()
     }
 }
-
 @Composable
 private fun WelcomePager(pagerState: PagerState, pages: List<SinglePageConfig>) {
     HorizontalPager(
         state = pagerState,
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight()
             .defaultMinSize(minHeight = 250.dp),
         pageContent = SinglePage(pages)
     )
@@ -164,45 +173,66 @@ private fun handleNavigationEffect(
     }
 }
 
-data class SinglePageConfig(val title: Int, val description: Int, val icon: IconDataUi)
+data class SinglePageConfig(
+    val title: Int,
+    val description: Int,
+    val icon: IconDataUi,
+    val iconIfo: ImageVector
+)
 
 @Composable
 private fun SinglePage(
     pages: List<SinglePageConfig>,
 ): @Composable (PagerScope.(page: Int) -> Unit) = { page ->
+
+    val config = pages[page]
+
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .defaultMinSize(minHeight = 180.dp)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center 
     ) {
         WrapImage(
-            iconData = pages[page].icon,
+            iconData = config.icon,
             contentScale = ContentScale.FillHeight,
             modifier = Modifier.height(SIZE_XXX_LARGE.dp)
-
         )
-        VSpacer.Large()
+
+        VSpacer.Medium()
+
         WrapText(
-            modifier = Modifier.fillMaxWidth(),
-            text = stringResource(id = pages[page].title),
+            text = stringResource(id = config.title),
             textConfig = TextConfig(
-                style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Start
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Justify
             )
         )
-        VSpacer.Large()
+
+        VSpacer.Small()
+
         WrapText(
-            modifier = Modifier.fillMaxWidth(),
-            text = stringResource(id = pages[page].description),
+            text = stringResource(id = config.description),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Start,
+                textAlign = TextAlign.Justify,
                 maxLines = Int.MAX_VALUE
             )
         )
+
+        VSpacer.Large()
+
+        Icon(
+            imageVector = config.iconIfo,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(ICON_SIZE_40.dp)
+        )
     }
 }
+
 
 @ThemeModePreviews
 @Composable
@@ -212,15 +242,18 @@ private fun WelcomeScreenPreview() {
             SinglePageConfig(
                 title = R.string.user_consent_step_1_title,
                 description = R.string.user_consent_step_1_description,
-                icon = AppIcons.PresentDocumentInPerson
+                icon = AppIcons.PresentDocumentInPerson,
+                iconIfo = Icons.Default.Info
             ), SinglePageConfig(
                 title = R.string.user_consent_step_2_title,
                 description = R.string.user_consent_step_2_description,
-                icon = AppIcons.WalletActivated
+                icon = AppIcons.WalletActivated,
+                iconIfo = Icons.Default.Info
             ), SinglePageConfig(
                 title = R.string.user_consent_step_3_title,
                 description = R.string.user_consent_step_3_description,
-                icon = AppIcons.WalletSecured
+                icon = AppIcons.WalletSecured,
+                iconIfo = Icons.Default.Info
             )
         )
         val pagerState = rememberPagerState { pages.size }

@@ -46,9 +46,9 @@ object SiopIdTokenBuilder {
     }
 
     fun randomKey(): RSAKey = RSAKeyGenerator(2048)
-        .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
-        .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-        .issueTime(Date(System.currentTimeMillis())) // issued-at timestamp (optional)
+        .keyUse(KeyUse.SIGNATURE)
+        .keyID(UUID.randomUUID().toString())
+        .issueTime(Date(System.currentTimeMillis()))
         .generate()
 
     fun build(

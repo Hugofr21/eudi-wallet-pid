@@ -16,151 +16,350 @@
 
 package eu.europa.ec.backuplogic.ui.restoring
 
-import android.content.ContentResolver
-import android.content.Context
-import android.net.Uri
-import android.provider.OpenableColumns
-import androidx.lifecycle.viewModelScope
-import eu.europa.ec.backuplogic.controller.model.RestoreStatus
-import eu.europa.ec.backuplogic.interactor.BackupInteractor
-import eu.europa.ec.backuplogic.model.BackupKey
-import eu.europa.ec.backuplogic.ui.restoring.Effect.*
-import eu.europa.ec.uilogic.mvi.MviViewModel
-import eu.europa.ec.uilogic.mvi.ViewEvent
-import eu.europa.ec.uilogic.mvi.ViewSideEffect
-import eu.europa.ec.uilogic.mvi.ViewState
-import kotlinx.coroutines.launch
-import org.koin.android.annotation.KoinViewModel
-import java.io.File
-import java.io.FileOutputStream
-import java.io.FileInputStream
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import eu.europa.ec.resourceslogic.R
+import eu.europa.ec.uilogic.component.content.ContentScreen
+import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
+import eu.europa.ec.uilogic.component.wrap.ButtonConfig
+import eu.europa.ec.uilogic.component.wrap.ButtonType
+import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
+import eu.europa.ec.uilogic.component.wrap.StickyBottomType
+import eu.europa.ec.uilogic.component.wrap.TextConfig
+import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
+import eu.europa.ec.uilogic.component.wrap.WrapText
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import eu.europa.ec.backuplogic.ui.restoring.setupSlider.EnterPhraseContentPage
+import eu.europa.ec.backuplogic.ui.restoring.setupSlider.FirstPage
+import eu.europa.ec.backuplogic.ui.restoring.setupSlider.RestoreWalletContent
+import eu.europa.ec.uilogic.component.utils.ICON_SIZE_40
+import eu.europa.ec.uilogic.component.utils.SIZE_XX_LARGE
+import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
+import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
+import eu.europa.ec.uilogic.component.utils.VSpacer
+import eu.europa.ec.uilogic.component.wrap.WrapPageIndicator
 
+val LightSkyBlue   = Color(0xFFCAE6FD)
+val OceanBlue      = Color(0xFF2A5ED9)
+val DeepBlue       = Color(0xFF0048D2)
+val SoftYellow     = Color(0xFFFFF1BA)
+val CoralRed       = Color(0xFFFF6E70)
 
-sealed class State : ViewState {
-    data class Default(
-        val isLoading: Boolean = false,
-        val words: List<String> = emptyList(),
-        val backupKey: BackupKey? = null,
-        val selectedFileUri: Uri? = null,
-        val options: List<String> = emptyList(),
-        val selectedOptions: Set<String> = emptySet()
-    ) : State()
-}
+@Composable
+fun RestoreBackupScreen(navController: NavController, viewModel: RestoreBackupViewModel) {
+    val state = viewModel.viewState.collectAsStateWithLifecycle()
+    val effectFlow = viewModel.effect
+    val pageSingleState = rememberPagerState { 3 }
+    val selected = (state as? State.Default)?.selectedOptions ?: emptySet()
 
+    val configButton = ButtonConfig(
+        type = ButtonType.PRIMARY,
+        onClick = {
+            if (pageSingleState.currentPage < 2) {
+                viewModel.setEvent(Event.NextPage(pageSingleState.currentPage + 1))
+            } else {
+                viewModel.setEvent(Event.Restore(selected))
+            }
+        }
+    )
 
-sealed class Event : ViewEvent {
-    object GoBack : Event()
-    data class FileSelected(val uri: Uri) : Event()
-    data class WordsChanged(val words: List<String>) : Event()
-    data class SubmitWords(val words: List<String>) : Event()
-    data class NextPage(val page: Int) : Event()
+    ContentScreen(
+        isLoading = false,
+        navigatableAction = ScreenNavigateAction.BACKABLE,
+        onBack = { viewModel.setEvent(Event.GoBack) },
 
-    data class Restore(val chosenOptions: Set<String>) : Event()
-}
-
-
-sealed class Effect : ViewSideEffect {
-    sealed class Navigation : Effect() {
-        data class SwitchScreen(val screenRoute: String) : Navigation()
-        object Pop : Navigation()
-    }
-    object Success : Effect()
-    object Error : Effect()
-    data class NavigateToPage(val page: Int) : Effect()
-
-    data class Restore(val chosenOptions: Set<String>) : Event()
-}
-
-
-@KoinViewModel
-class RestoreBackupViewModel(
-    private val backupInteractor: BackupInteractor,
-) : MviViewModel<Event, State, Effect>() {
-
-    override fun setInitialState(): State {
-        return State.Default(
-            words = List(12) { "" },
-            backupKey = null
+        stickyBottom = { paddingValues ->
+            SkipButton(
+                paddingValues = paddingValues,
+                config = configButton
+            )
+        })
+    { paddingValues ->
+        NavigationSlider(
+            paddingValues = paddingValues,
+            effectFlow = effectFlow,
+            onNavigationRequested = { handleNavigationEffect(it, navController) },
+            state = state.value,
+            viewModel = viewModel,
+            pageSingleState = pageSingleState
         )
     }
 
-    override fun handleEvents(event: Event) {
-        when (event) {
-            is Event.GoBack -> {
-                setEffect { Navigation.Pop }
-            }
-            is Event.FileSelected -> {
-                setState { (this as? State.Default)?.copy(selectedFileUri = event.uri) ?: this }
-                setEffect { NavigateToPage(1) }
-            }
-            is Event.WordsChanged -> {
-                setState { (this as? State.Default)?.copy(words = event.words) ?: this }
-            }
-            is Event.SubmitWords -> {
-                val currentState = viewState.value as? State.Default
-                val uri = currentState?.selectedFileUri
-                if (uri == null) {
-                    setEffect { Effect.Error }
-                    return
-                }
-                viewModelScope.launch {
-                    try {
-                        val listOptions: List<String> = backupInteractor.restoreWallet(uri, event.words)
-                        if (listOptions.isNotEmpty()) {
-                            setState {
-                                (this as? State.Default)?.copy(options = listOptions, selectedOptions = emptySet()) ?: this
-                            }
-                            setEffect { NavigateToPage(2) }
-                        }
-                    } catch (e: Exception) {
-                        setEffect { Effect.Error }
-                        e.printStackTrace()
-                    } finally {
+}
 
-                    }
+
+
+@Composable
+private fun NavigationSlider(
+    paddingValues: PaddingValues,
+    effectFlow: Flow<Effect>,
+    onNavigationRequested: (Effect.Navigation) -> Unit,
+    state: State,
+    viewModel: RestoreBackupViewModel,
+    pageSingleState: PagerState
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(paddingValues)
+    ) {
+        MainContent(
+            paddingValues = paddingValues,
+            state =  state,
+            viewModel = viewModel,
+            pageSingleState = pageSingleState
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        effectFlow.onEach { effect ->
+            when (effect) {
+                is Effect.Navigation -> onNavigationRequested(effect)
+                is Effect.Error -> {
+                    Toast.makeText(context, "Restore failed. Please check the file or recovery phrase.", Toast.LENGTH_SHORT).show()
+                }
+                is Effect.Success -> {
+                    onNavigationRequested(Effect.Navigation.Pop)
+                }
+                is Effect.NavigateToPage -> {
+                    pageSingleState.scrollToPage(effect.page)
                 }
             }
-            is Event.Restore -> {
-                val current = viewState.value as? State.Default ?: run {
-                    setEffect { Effect.Error }
-                    return
-                }
-                viewModelScope.launch {
-                    val result = backupInteractor.finalizeRestore(
-                        options = event.chosenOptions.toList()
+        }.collect()
+    }
+}
+
+
+private fun handleNavigationEffect(
+    navigationEffect: Effect.Navigation,
+    navController: NavController,
+) {
+    when (navigationEffect) {
+        is Effect.Navigation.SwitchScreen -> {
+            navController.navigate(navigationEffect.screenRoute)
+        }
+
+        is Effect.Navigation.Pop -> {
+            navController.popBackStack()
+        }
+    }
+}
+
+@Composable
+private fun SkipButton(
+    paddingValues: PaddingValues,
+    config: ButtonConfig,
+) {
+    WrapStickyBottomContent(
+        stickyBottomModifier = Modifier
+            .fillMaxWidth()
+            .padding(paddingValues),
+        stickyBottomConfig = StickyBottomConfig(
+            type = StickyBottomType.OneButton(config = config), showDivider = false
+        )
+    ) {
+        Text(text = stringResource(R.string.backup_screen_created_button))
+    }
+}
+
+
+@Composable
+private fun MainContent(
+    paddingValues: PaddingValues,
+    state: State,
+    viewModel: RestoreBackupViewModel,
+    pageSingleState: PagerState
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(paddingValues)
+//            .padding(horizontal = SPACING_MEDIUM.dp, vertical = SPACING_MEDIUM.dp)
+    ) {
+        WrapText(
+            text = stringResource(R.string.settings_screen_option_restore_backup),
+            textConfig = TextConfig(
+                style = MaterialTheme.typography.titleLarge.merge(
+                    TextStyle(
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 32.sp,
+                        lineHeight = 48.sp,
+                        letterSpacing = (-0.02).sp,
+                        fontWeight = FontWeight.Bold
                     )
-                    if (result == RestoreStatus.SUCCESS) {
-                        setEffect { Effect.Success }
-                    } else {
-                        setEffect { Effect.Error }
+                )
+            )
+        )
+        VSpacer.Custom(SPACING_SMALL) // 24.dp
+
+        RestoreGrid()
+
+        VSpacer.Custom(SPACING_SMALL) // 32.dp
+
+        HorizontalListOfPager(
+            pagerState = pageSingleState,
+            state = state,
+            viewModel = viewModel
+        )
+        WrapPageIndicator(pageSingleState)
+    }
+}
+
+@Composable
+private fun HorizontalListOfPager(
+    pagerState: PagerState,
+    state: State,
+    viewModel: RestoreBackupViewModel
+) {
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .defaultMinSize(minHeight = SIZE_XX_LARGE.dp),
+        userScrollEnabled = false
+    ) { page ->
+        when (page) {
+            0 -> FirstPage(
+                onFileSelected = { uri ->
+                    viewModel.setEvent(Event.FileSelected(uri))
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            1 ->  EnterPhraseContentPage(
+                words = (state as? State.Default)?.words ?: emptyList(),
+                onWordsChanged = { words ->
+                    viewModel.setEvent(Event.WordsChanged(words))
+                },
+                onSubmit = { words ->
+                    viewModel.setEvent(Event.SubmitWords(words))
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            2 -> RestoreWalletContent(
+                options = (state as? State.Default)?.options ?: emptyList(),
+                selected = (state as? State.Default)?.selectedOptions ?: emptySet(),
+                onOptionToggled = { opt ->
+                    val current = (viewModel.viewState.value  as? State.Default) ?: return@RestoreWalletContent
+                    val newSelected = if (current.selectedOptions.contains(opt))
+                        current.selectedOptions - opt
+                    else
+                        current.selectedOptions + opt
+
+                    viewModel.setState {
+                        current.copy(selectedOptions = newSelected)
                     }
-                }
-            }
-            is Event.NextPage -> {
-                val current = viewState.value as? State.Default
-                when (event.page) {
-                    1 -> {
-                        if (current?.selectedFileUri == null) {
-                            setEffect { Effect.Error }
-                            return
-                        }
-                        setEffect { NavigateToPage(1) }
-                    }
-                    2 -> {
-                        val words = current?.words ?: emptyList()
-                        val allValid = words.size == 12 && words.none { it.isBlank() }
-                        if (!allValid) {
-                            setEffect { Effect.Error }
-                            return
-                        }
-                        setEffect { NavigateToPage(2) }
-                    }
-                    0 -> {
-                        setEffect { NavigateToPage(0) }
-                    }
-                }
-            }
-            is Restore -> TODO()
+                },
+                onRestore = {
+                    val chosen = (state as? State.Default)?.selectedOptions ?: emptySet()
+                    viewModel.setEvent(Event.Restore(chosen))
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+private fun RestoreGrid() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = SPACING_SMALL.dp),
+        verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
+    ) {
+        RestoreGridItem(
+            icon = Icons.Default.Info,
+            title = stringResource(R.string.consent_backup_first_page_title),
+            description = stringResource(R.string.select_file_button)
+        )
+        RestoreGridItem(
+            icon = Icons.Default.Info,
+            title = stringResource(R.string.consent_backup_phase_page_title),
+            description = stringResource(R.string.backup_recovery_phrase)
+        )
+        RestoreGridItem(
+            icon = Icons.Default.Info,
+            title = stringResource(R.string.consent_backup_third_page_restore_wallet_title),
+            description = stringResource(R.string.consent_backup_third_page_restore_wallet_description)
+        )
+    }
+}
+
+@Composable
+private fun RestoreGridItem(
+    icon: ImageVector,
+    title: String,
+    description: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = Color.Transparent,
+                shape = RoundedCornerShape(0.dp)
+            )
+            .padding( horizontal = SPACING_MEDIUM.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(ICON_SIZE_40.dp)
+        )
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color =  MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

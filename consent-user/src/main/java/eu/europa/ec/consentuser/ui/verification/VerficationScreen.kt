@@ -218,7 +218,7 @@ private fun VerificationCard(
             WrapIcon(
                 modifier = Modifier.size(24.dp),
                 iconData = AppIcons.eID,
-                customTint = MaterialTheme.colorScheme.primary
+                customTint = Color(0xFF0D0D0D)
             )
 
             HSpacer.Small()
@@ -227,7 +227,7 @@ private fun VerificationCard(
                     text = "Electronic Identification",
                     textConfig = TextConfig(
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color(0xFF0D0D0D)
                     )
                 )
                 VSpacer.ExtraSmall()

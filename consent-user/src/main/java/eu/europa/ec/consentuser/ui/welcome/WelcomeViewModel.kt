@@ -17,6 +17,11 @@
 package eu.europa.ec.consentuser.ui.welcome
 
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.Icon
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.mvi.MviViewModel
@@ -47,19 +52,22 @@ class WelcomeViewModel :  MviViewModel<Event, State, Effect>() {
     override fun setInitialState(): State = State(
         pages = listOf(
             SinglePageConfig(
-                title = R.string.user_consent_step_1_title,
-                description = R.string.user_consent_step_1_description,
-                icon = AppIcons.PresentDocumentInPerson
+                title = R.string.user_consent_step_sigle_page_first_title,
+                description = R.string.user_consent_step_sigle_page_first_description,
+                icon = AppIcons.PresentDocumentInPerson,
+                iconIfo = Icons.Default.Badge
             ),
             SinglePageConfig(
-                title = R.string.user_consent_step_2_title,
-                description = R.string.user_consent_step_2_description,
-                icon = AppIcons.WalletActivated
+                title = R.string.user_consent_step_sigle_page_secound_title,
+                description = R.string.user_consent_step_sigle_page_secound_description,
+                icon = AppIcons.WalletActivated,
+                iconIfo = Icons.Default.CheckCircle
             ),
             SinglePageConfig(
-                title = R.string.user_consent_step_3_title,
-                description = R.string.user_consent_step_3_description,
-                icon = AppIcons.WalletSecured
+                title = R.string.user_consent_step_sigle_page_thrid_title,
+                description = R.string.user_consent_step_sigle_page_thrid_description,
+                icon = AppIcons.WalletSecured,
+                iconIfo = Icons.Default.Security
             )
         )
     )

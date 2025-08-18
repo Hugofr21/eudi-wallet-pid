@@ -17,6 +17,7 @@
 package eu.europa.ec.consentuser.ui.consent
 
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,10 +49,12 @@ import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
 import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
+import eu.europa.ec.uilogic.component.utils.ICON_SIZE_40
 import eu.europa.ec.uilogic.component.utils.SPACING_EXTRA_LARGE
 import eu.europa.ec.uilogic.component.utils.SPACING_LARGE
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
+import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.ButtonConfig
 import eu.europa.ec.uilogic.component.wrap.ButtonType
 import eu.europa.ec.uilogic.component.wrap.CheckboxDataUi
@@ -135,7 +142,9 @@ private fun Content(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(paddingValues)
+            .padding(paddingValues),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
     ) {
         TopStepBar(currentStep = 1)
         ConsentAndTosSection(
@@ -178,9 +187,9 @@ fun ConsentAndTosSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = SPACING_EXTRA_LARGE.dp, horizontal = SPACING_LARGE.dp)
+            .padding(vertical = SPACING_EXTRA_LARGE.dp, horizontal = SPACING_LARGE.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Title
         WrapText(
             modifier = Modifier
                 .fillMaxWidth(),
@@ -191,9 +200,15 @@ fun ConsentAndTosSection(
             )
         )
 
-        Spacer(modifier = Modifier.height(SPACING_MEDIUM.dp))
+        VSpacer.Small()
 
-        // Description
+        Icon(
+            imageVector = Icons.Default.Security,
+            contentDescription = stringResource(R.string.consent_icon_cd),
+            modifier = Modifier.size(56.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+
         WrapText(
             modifier = Modifier
                 .fillMaxWidth(),
@@ -204,9 +219,8 @@ fun ConsentAndTosSection(
             )
         )
 
-        Spacer(modifier = Modifier.height(SPACING_EXTRA_LARGE.dp))
+        VSpacer.Small()
 
-        // Terms of Service Checkbox
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -232,7 +246,7 @@ fun ConsentAndTosSection(
             )
         }
 
-        Spacer(modifier = Modifier.height(SPACING_SMALL.dp))
+        VSpacer.Small()
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -247,8 +261,7 @@ fun ConsentAndTosSection(
                     onCheckedChange = dataProtectionCheckBoxData.onCheckedChange ?: {}
                 )
             )
-
-            Spacer(modifier = Modifier.width(SPACING_SMALL.dp))
+            VSpacer.Small()
 
             WrapLink(
                 data = WrapLinkData(

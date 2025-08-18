@@ -18,6 +18,9 @@ package eu.europa.ec.consentuser.di
 
 
 
+import eu.europa.ec.backuplogic.controller.BackupController
+import eu.europa.ec.consentuser.interactor.BackupRestoreInteractor
+import eu.europa.ec.consentuser.interactor.BackupRestoreInteractorImpl
 import eu.europa.ec.consentuser.interactor.ConsentInteractor
 import eu.europa.ec.consentuser.interactor.ConsentInteractorImpl
 import org.koin.core.annotation.ComponentScan
@@ -30,4 +33,8 @@ class FeatureConsentUserModule
 
 @Factory
 fun provideConsentInteractor(): ConsentInteractor = ConsentInteractorImpl()
+
+@Factory
+fun provideBackupRestoreInteractor(backupController: BackupController):
+        BackupRestoreInteractor = BackupRestoreInteractorImpl(backupController)
 
