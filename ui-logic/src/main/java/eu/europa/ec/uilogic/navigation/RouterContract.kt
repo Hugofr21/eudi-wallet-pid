@@ -114,6 +114,11 @@ sealed class VerifierScreens{
         parameters = "?requestUriConfig={requestUriConfig}"
     )
 
+    data object VerifierOther : Screen(
+        name = "VERIFIER_OTHER",
+        parameters = "?documentId={documentId}"
+    )
+
     data object PresentationLoadingVerifier : Screen(name = "PRESENTATION_LOADING_VERIFIER")
 
     data object PresentationSuccessVerifier : Screen(name = "PRESENTATION_SUCCESS_VERIFIER")

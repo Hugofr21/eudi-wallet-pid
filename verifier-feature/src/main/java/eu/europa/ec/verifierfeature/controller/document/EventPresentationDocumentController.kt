@@ -155,7 +155,7 @@ interface EventPresentationDocumentController {
     val disclosedDocuments: MutableList<DisclosedDocument>?
 
     suspend fun getDocumentDetails(documentId: DocumentId): DocumentDetailsInteractorPartialState.Success
-    suspend fun intFlowVerifierOther(documentId: DocumentId, fields: List<String>, format: String):String
+    suspend fun intFlowVerifierOther():String
 
 
     suspend fun intFlowVerifierAge(documentId: DocumentId, fields: List<FieldLabel>): String
@@ -325,7 +325,7 @@ class EventPresentationDocumentControllerImpl(
     }
 
 
-    override suspend fun intFlowVerifierOther(documentId: DocumentId, fields: List<String>, format: String): String {
+    override suspend fun intFlowVerifierOther(): String {
         val metadata = verifierAgeProofController.metadataVerifier()
         val pres = verifierAgeProofController.createPresentationRequestOther()
         println("transaction_id = ${pres.transaction_id}")
@@ -333,7 +333,7 @@ class EventPresentationDocumentControllerImpl(
         println("request        = ${pres.request}")
         println("request_uri_method        = ${pres.request_uri_method}")
         println("request_uri        = ${pres.request_uri}")
-        fields.forEach { println("Fields {$it.key}") }
+//        fields.forEach { println("Fields {$it.key}") }
 
         val nonce = verifierAgeProofController.getLastNonce()
 
@@ -452,6 +452,7 @@ class EventPresentationDocumentControllerImpl(
                 println("\n--- onResponseSent ---")
                 println("Resposta enviada para o verificador")
                 println("-----------------------\n")
+
                 listenerScope.launch { _events.emit(TransferEventVerifiedPartialState.ResponseSent) }
             }
         )
@@ -459,6 +460,15 @@ class EventPresentationDocumentControllerImpl(
         currentListener = listener
         eudiWallet.addTransferEventListener(listener)
         println(" Listener registrado\n")
+    }
+
+
+    private fun transactionState(){
+        val transactionId = getSavedTransactionId() ?: return
+        listenerScope.launch {
+            verifierAgeProofController.getPresentationState(transactionId)
+            verifierAgeProofController.getTransactionEventsLogs(transactionId)
+        }
     }
 
     override fun checkForKeyUnlock() = flow {
@@ -576,7 +586,7 @@ class EventPresentationDocumentControllerImpl(
             when (response) {
 
                 // Fix: Wallet core should return Success state here
-                is TransferEventPartialState.Error -> {
+                is TransferEventVerifiedPartialState.Error -> {
                     if (response.error == "Peer disconnected without proper session termination") {
                         ResponseReceivedPartialState.Success
                     } else {
@@ -584,18 +594,18 @@ class EventPresentationDocumentControllerImpl(
                     }
                 }
 
-                is TransferEventPartialState.Redirect -> {
+                is TransferEventVerifiedPartialState.Redirect -> {
                     ResponseReceivedPartialState.Redirect(uri = response.uri)
                 }
 
-                is TransferEventPartialState.Disconnected -> {
+                is TransferEventVerifiedPartialState.Disconnected -> {
                     when {
-                        events.replayCache.firstOrNull() is TransferEventPartialState.Redirect -> null
+                        events.replayCache.firstOrNull() is TransferEventVerifiedPartialState.Redirect -> null
                         else -> ResponseReceivedPartialState.Success
                     }
                 }
 
-                is TransferEventPartialState.ResponseSent -> ResponseReceivedPartialState.Success
+                is TransferEventVerifiedPartialState.ResponseSent -> ResponseReceivedPartialState.Success
 
                 else -> null
             }

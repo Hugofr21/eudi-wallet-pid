@@ -94,11 +94,23 @@ class ChoiceVerifierViewModel(
 
                 when(selectedVerifier.id){
                     "age" -> {
-                        println("")
                         setEffect {
                             Effect.Navigation.SwitchScreen(
                                 screenRoute = generateComposableNavigationLink(
                                     screen = VerifierScreens.FieldsLabels.screenRoute,
+                                    arguments = generateComposableArguments(
+                                        mapOf("documentId" to documentId)
+                                    )
+                                ),
+                                inclusive = false
+                            )
+                        }
+                    }
+                    "eudiw_other" -> {
+                        setEffect {
+                            Effect.Navigation.SwitchScreen(
+                                screenRoute = generateComposableNavigationLink(
+                                    screen = VerifierScreens.VerifierOther.screenRoute,
                                     arguments = generateComposableArguments(
                                         mapOf("documentId" to documentId)
                                     )
@@ -117,6 +129,13 @@ class ChoiceVerifierViewModel(
                         setState { copy(isLoading = true) }
                         viewModelScope.launch {
                             verifierEUDIController.launchTestVerifierEudiAndGetResult(context)
+                        }
+                    }
+
+                    "proof_age" ->{
+                        setState { copy(isLoading = true) }
+                        viewModelScope.launch {
+                            verifierEUDIController.launchTestVerifierAgeProofAndGetResult(context)
                         }
                     }
                 }

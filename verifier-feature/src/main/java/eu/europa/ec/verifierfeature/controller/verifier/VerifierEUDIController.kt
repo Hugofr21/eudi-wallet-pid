@@ -9,6 +9,8 @@ interface VerifierEUDIController {
     suspend fun launchTestVerifierAndGetResult(context: Context): VerifierResult
 
     suspend fun launchTestVerifierEudiAndGetResult(context: Context): VerifierResult
+
+    suspend fun launchTestVerifierAgeProofAndGetResult(context: Context): VerifierResult
 }
 
 data class VerifierResult(
@@ -34,4 +36,13 @@ class VerifierEUDIControllerImpl(
         context.startActivity(intent)
         return VerifierResult(clientId = "", requestUri = url)
     }
+
+    override suspend fun launchTestVerifierAgeProofAndGetResult(context: Context): VerifierResult {
+        val url = "https://verifier.ageverification.dev/"
+        val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        context.startActivity(intent)
+        return VerifierResult(clientId = "", requestUri = url)
+    }
+
 }

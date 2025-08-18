@@ -26,6 +26,14 @@ object VerifierModule {
                 recommended = true
             ),
             Verifier(
+                id = "eudiw_other",
+                name = "Verifier for other document categories",
+                url = "https://verifier.eudiw.dev/home",
+                schema = "eudi-openid4vp://",
+                description = "OpenID4VP demo verifier",
+                recommended = true
+            ),
+            Verifier(
                 id = "age",
                 name = "Age Verification Testing Verifier",
                 url = "https://verifier.ageverification.dev/",
@@ -37,6 +45,13 @@ object VerifierModule {
                 name = "Test Relying Party",
                 url = "https://tester.relyingparty.eudiw.dev/",
                 schema = "eudi-openid4vp://",
+                description = "Relying party de teste para fluxo EUDIW"
+            ),
+            Verifier(
+                id = "proof_age",
+                name = "Proof Age Relying Party",
+                url = "https://verifier.ageverification.dev/",
+                schema = "av://",
                 description = "Relying party de teste para fluxo EUDIW"
             )
         )

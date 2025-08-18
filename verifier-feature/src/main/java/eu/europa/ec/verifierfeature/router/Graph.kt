@@ -15,6 +15,7 @@ import eu.europa.ec.verifierfeature.ui.choiseVerifier.ChoiceVerifierScreen
 import eu.europa.ec.verifierfeature.ui.fieldLabelsPrrofAge.FieldLabelsProofAgeScreen
 import eu.europa.ec.verifierfeature.ui.initRequest.InitRequestVerifierScreen
 import eu.europa.ec.verifierfeature.ui.initRequest.InitRequestVerifierViewModel
+import eu.europa.ec.verifierfeature.ui.initVerifierOther.InitRequestVerifierOtherScreen
 import eu.europa.ec.verifierfeature.ui.loading.PresentationLoadingVerifierScreen
 import eu.europa.ec.verifierfeature.ui.request.PresentationRequestVerifierScreen
 import eu.europa.ec.verifierfeature.ui.success.PresentationSuccessVerifierScreen
@@ -157,6 +158,28 @@ fun NavGraphBuilder.featureVerifierGraph(navController: NavController) {
             PresentationSuccessVerifierScreen(
                 navController,
                 koinViewModel()
+            )
+        }
+
+        composable(
+            route = VerifierScreens.VerifierOther.screenRoute,
+            arguments = listOf(
+                navArgument("documentId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = ""
+                }
+            )
+        ) {
+            InitRequestVerifierOtherScreen(
+                navController,
+                koinViewModel(
+                    parameters = {
+                        parametersOf(
+                            it.arguments?.getString("documentId").orEmpty()
+                        )
+                    }
+                ),
             )
         }
 
