@@ -43,9 +43,9 @@ class KeystoreControllerImpl(
 
     companion object {
         private const val STORE_TYPE = "AndroidKeyStore"
-        private const val KEY__ALGORITHM  = KeyProperties.KEY_ALGORITHM_AES // KEY_ALGORITHM_EC
+        private const val KEY__ALGORITHM  = KeyProperties.KEY_ALGORITHM_AES
         private const val BLOCK_MODE = KeyProperties.BLOCK_MODE_GCM
-        private const val PADDING = KeyProperties.ENCRYPTION_PADDING_NONE // ENCRYPTION_PADDING_PKCS7
+        private const val PADDING = KeyProperties.ENCRYPTION_PADDING_NONE
         private const val KEY_SIZE = 256
     }
 

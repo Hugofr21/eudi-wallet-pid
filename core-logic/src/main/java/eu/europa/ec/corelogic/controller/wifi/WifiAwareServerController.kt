@@ -31,6 +31,12 @@ import java.net.Socket
 
 
 interface WifiAwareServerController {
+     var serverSocket: ServerSocket?
+     var wifiAwareSession: WifiAwareSession?
+     var  discoverySession:  DiscoverySession?
+     var publishSession: PublishDiscoverySession?
+     var networkCallback: ConnectivityManager.NetworkCallback?
+
     /**
      * Publish the service with the given configuration.
      * @param config publish parameters including service name and IDs
@@ -77,11 +83,12 @@ class WifiAwareServerControllerImpl(
     private val context: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) : WifiAwareServerController {
-    private var serverSocket: ServerSocket? = null
-    private var wifiAwareSession: WifiAwareSession? = null
-    private var  discoverySession:  DiscoverySession? = null
-    private var publishSession: PublishDiscoverySession? = null
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    override var serverSocket: ServerSocket? = null
+    override var wifiAwareSession: WifiAwareSession? = null
+    override var  discoverySession:  DiscoverySession? = null
+    override var publishSession: PublishDiscoverySession? = null
+
+    override var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     @RequiresPermission(allOf = [Manifest.permission.CHANGE_WIFI_STATE, Manifest.permission.ACCESS_WIFI_STATE])
     override fun publishService(
@@ -89,8 +96,17 @@ class WifiAwareServerControllerImpl(
         callback: PublishCallback
     ) {
         val awareManager = context.getSystemService(Context.WIFI_AWARE_SERVICE) as WifiAwareManager
+
+        if (!awareManager.isAvailable) {
+            println("[WifiAware] Wi-Fi Aware não está disponível")
+            callback.onPublishFailed(-4)
+            return
+        }
+
         val publishConfig = PublishConfig.Builder()
             .setServiceName(config.serviceName)
+            .setServiceSpecificInfo(config.serviceType.toByteArray())
+            .setPublishType(PublishConfig.PUBLISH_TYPE_UNSOLICITED)
             .build()
 
         awareManager.attach(object : AttachCallback() {

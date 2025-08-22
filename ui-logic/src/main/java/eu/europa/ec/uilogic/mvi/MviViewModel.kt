@@ -72,7 +72,7 @@ abstract class MviViewModel<Event : ViewEvent, UiState : ViewState, Effect : Vie
 
     abstract fun handleEvents(event: Event)
 
-    protected fun setEffect(builder: () -> Effect) {
+    fun setEffect(builder: () -> Effect) {
         val effectValue = builder()
         viewModelScope.launch { _effect.send(effectValue) }
     }

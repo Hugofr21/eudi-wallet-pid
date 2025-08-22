@@ -44,6 +44,7 @@ dependencies {
     implementation(libs.okhttp.mockwebserver)
     implementation(libs.timber)
     implementation(libs.transport.runtime)
+    implementation(libs.androidx.compiler)
 
     testImplementation(project(LibraryModule.TestLogic.path))
 }

@@ -8,7 +8,9 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import java.net.Inet4Address
 import android.net.ConnectivityManager
+import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
+import androidx.core.content.ContextCompat
 import java.net.NetworkInterface
 import java.util.Collections
 
@@ -17,6 +19,10 @@ interface WalletConfigNetworkConfig {
     fun getDeviceMacAddress(useIPv4: Boolean = true): String?
     fun isWifiAwareAvailable(): Boolean
     fun isNetworkAvailable(context: Context?): Boolean
+
+    fun checkAndRequestWifiAwarePermissions(): Boolean
+
+    fun getMissingPermissions(): List<String>
 }
 
 
@@ -69,6 +75,44 @@ class WalletConfigNetworkConfigImpl(
     override fun isWifiAwareAvailable(): Boolean {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                 context.packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_AWARE)
+    }
+
+    override fun checkAndRequestWifiAwarePermissions(): Boolean {
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(Manifest.permission.NEARBY_WIFI_DEVICES, Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        val permissionsToRequest = permissions.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+
+
+        return permissionsToRequest.isEmpty()
+    }
+
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    override fun getMissingPermissions(): List<String> {
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            listOf(
+                Manifest.permission.NEARBY_WIFI_DEVICES,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.FOREGROUND_SERVICE_LOCATION
+            )
+        } else {
+            listOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.FOREGROUND_SERVICE_LOCATION
+            )
+        }
+
+        val missing = permissions.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        return missing
     }
 
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)

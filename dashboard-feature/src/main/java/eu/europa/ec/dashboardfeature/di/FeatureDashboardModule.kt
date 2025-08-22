@@ -16,6 +16,7 @@
 
 package eu.europa.ec.dashboardfeature.di
 
+import android.content.Context
 import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.controller.storage.PrefKeys
@@ -23,9 +24,7 @@ import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.businesslogic.validator.FilterValidator
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
-import eu.europa.ec.corelogic.controller.WalletCorePresentationController
 import eu.europa.ec.corelogic.controller.WalletLiveDataController
-import eu.europa.ec.corelogic.di.WalletPresentationScope
 import eu.europa.ec.dashboardfeature.interactor.DashboardInteractor
 import eu.europa.ec.dashboardfeature.interactor.DashboardInteractorImpl
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractor
@@ -148,10 +147,12 @@ fun provideTransactionDetailsInteractor(
 @Factory
 fun providerPersonWifiAwareInteractor(
      resourceProvider: ResourceProvider,
-    walletLiveDataController: WalletLiveDataController
+    walletLiveDataController: WalletLiveDataController,
+     context: Context
 ): WifiAwareInteractor = WifiAwareInteractorImpl(
     resourceProvider,
-    walletLiveDataController
+    walletLiveDataController,
+    context
 )
 
 

@@ -1,16 +1,28 @@
 package eu.europa.ec.corelogic.controller
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.wifi.aware.PeerHandle
-import android.net.wifi.aware.PublishDiscoverySession
-import androidx.annotation.RequiresPermission
+import android.os.Build
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import eu.europa.ec.corelogic.config.WalletConfigNetworkConfig
-import eu.europa.ec.corelogic.controller.wifi.PublishCallback
-import eu.europa.ec.corelogic.controller.wifi.WifiAwareConfig
 import eu.europa.ec.corelogic.controller.wifi.WifiAwareServerController
-import eu.europa.ec.corelogic.controller.wifi.WifiAwareServerControllerImpl
+import eu.europa.ec.corelogic.service.WifiAwareService
+import eu.europa.ec.eudi.iso18013.transfer.response.RequestedDocument
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+import java.net.URI
 
 
 data class NetworkStatus(
@@ -19,63 +31,126 @@ data class NetworkStatus(
     val macAddress: String?
 )
 
-interface WalletLiveDataController {
-    fun isWifiAwareAvailable(): Boolean
 
-    fun scanPeers()
-    val peersLiveData: LiveData<List<PeerHandle>>
+sealed class TransferEventWifiAwarePartialState {
+    data object Connected : TransferEventWifiAwarePartialState()
+    data object Connecting : TransferEventWifiAwarePartialState()
+    data object Disconnected : TransferEventWifiAwarePartialState()
+    data class Error(val error: String) : TransferEventWifiAwarePartialState()
+    data class ReceiverReady(val msg: String) : TransferEventPartialState()
+    data class RequestReceivedPeer(
+        val host: String,
+        val mac: String?,
+        val name: String?,
+    ) : TransferEventWifiAwarePartialState()
 
-    fun checkAndRequestWifiAwarePermissions(): Boolean
+    data object ResponseSent : TransferEventWifiAwarePartialState()
+
 }
 
 
+interface WalletLiveDataController {
+
+    fun isWifiAwareAvailable(): Boolean
+
+    val broadcastReceiver: BroadcastReceiver
+    val peersLiveData: LiveData<List<PeerHandle>>
+
+    fun checkAndRequestWifiAwarePermissions(): Boolean
+    fun getMissingPermissions(): List<String>
+
+    val events: SharedFlow<TransferEventWifiAwarePartialState>
+
+    fun stopWifiAware()
+}
 class WalletLiveDataControllerImpl(
     private val walletConfigNetworkConfig: WalletConfigNetworkConfig,
     private val wifiAwareController: WifiAwareServerController,
+    private val context: Context
 ) : WalletLiveDataController {
 
-    companion object{
-        private const val REQUEST_WIFI_AWARE = 1001
-    }
+    private val _peersLiveData = MutableLiveData<List<PeerHandle>>(emptyList())
+    override val peersLiveData: LiveData<List<PeerHandle>> = _peersLiveData
 
+    private val _events = MutableSharedFlow<TransferEventWifiAwarePartialState>(replay = 0)
+    override val events: SharedFlow<TransferEventWifiAwarePartialState> = _events.asSharedFlow()
 
-    private val _peers = MutableLiveData<List<PeerHandle>>(emptyList())
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    override val peersLiveData: LiveData<List<PeerHandle>> = _peers
     override fun checkAndRequestWifiAwarePermissions(): Boolean {
-        TODO("Not yet implemented")
+        return walletConfigNetworkConfig.checkAndRequestWifiAwarePermissions()
     }
 
     override fun isWifiAwareAvailable(): Boolean {
         return walletConfigNetworkConfig.isWifiAwareAvailable()
     }
 
+    override fun getMissingPermissions(): List<String> {
+        return walletConfigNetworkConfig.getMissingPermissions()
+    }
 
-    override fun scanPeers() {
-
-        val config = WifiAwareConfig(
-            serviceName = "EUDI_WIFI",
-            serviceType = "_eudi._udp",
-            port        = 42424
-        )
-
-        _peers.postValue(emptyList())
-
-        wifiAwareController.publishService(config, object: PublishCallback {
-            @RequiresPermission(allOf = [Manifest.permission.CHANGE_WIFI_STATE,
-                Manifest.permission.ACCESS_WIFI_STATE])
-            override fun onPublished(session: PublishDiscoverySession) {
-                (wifiAwareController as WifiAwareServerControllerImpl)
-                    .publishService(config, this)
+    override val broadcastReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                WifiAwareService.ACTION_PEER_DISCOVERED -> {
+                    val peerHandle = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(WifiAwareService.EXTRA_PEER, PeerHandle::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(WifiAwareService.EXTRA_PEER) as? PeerHandle
+                    }
+                    peerHandle?.let {
+                        val currentPeers = _peersLiveData.value.orEmpty().toMutableList()
+                        if (!currentPeers.contains(it)) {
+                            currentPeers.add(it)
+                            _peersLiveData.postValue(currentPeers)
+                            scope.launch {
+                                _events.emit(TransferEventWifiAwarePartialState.Connected)
+                            }
+                        }
+                    }
+                }
+                WifiAwareService.ACTION_PUBLISH_STATUS -> {
+                    val isSuccess = intent.getBooleanExtra(WifiAwareService.EXTRA_STATUS, false)
+                    val errorCode = intent.getIntExtra(WifiAwareService.EXTRA_ERROR_CODE, -1)
+                    scope.launch {
+                        if (!isSuccess) {
+                            println("[WalletLiveDataController] Publish failed with code: $errorCode")
+                            _events.emit(TransferEventWifiAwarePartialState.Error("Publish failed with code: $errorCode"))
+                        } else {
+                            _events.emit(TransferEventWifiAwarePartialState.Connecting)
+                        }
+                    }
+                }
+                WifiAwareService.ACTION_SUBSCRIBE_STATUS -> {
+                    val isSuccess = intent.getBooleanExtra(WifiAwareService.EXTRA_STATUS, false)
+                    val errorCode = intent.getIntExtra(WifiAwareService.EXTRA_ERROR_CODE, -1)
+                    scope.launch {
+                        if (!isSuccess) {
+                            println("[WalletLiveDataController] Subscribe failed with code: $errorCode")
+                            _events.emit(TransferEventWifiAwarePartialState.Error("Subscribe failed with code: $errorCode"))
+                        } else {
+                            _events.emit(TransferEventWifiAwarePartialState.Connecting)
+                        }
+                    }
+                }
             }
-            override fun onPublishFailed(reason: Int) {
-                println("[WifiAware] publish failed, reason=$reason")
-            }
-            override fun onPeerDiscovered(peerHandle: PeerHandle) {
-                val updated = _peers.value.orEmpty() + peerHandle
-                _peers.postValue(updated)
-                println("[WifiAware] Peer discovered: $peerHandle")
-            }
-        })
+        }
+    }
+
+
+    init {
+        val filter = IntentFilter().apply {
+            addAction(WifiAwareService.ACTION_PEER_DISCOVERED)
+            addAction(WifiAwareService.ACTION_PUBLISH_STATUS)
+            addAction(WifiAwareService.ACTION_SUBSCRIBE_STATUS)
+        }
+        LocalBroadcastManager.getInstance(context).registerReceiver(broadcastReceiver, filter)
+    }
+
+
+   override fun stopWifiAware() {
+        LocalBroadcastManager.getInstance(context).unregisterReceiver(broadcastReceiver)
+        scope.cancel()
     }
 }

@@ -21,8 +21,6 @@ import com.google.android.datatransport.runtime.dagger.Provides
 import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.provider.UuidProvider
-import eu.europa.ec.corelogic.config.Issuer
-import eu.europa.ec.corelogic.config.OpenId4VciManagerRegistry
 import eu.europa.ec.corelogic.config.WalletConfigNetworkConfig
 import eu.europa.ec.corelogic.config.WalletConfigNetworkConfigImpl
 import eu.europa.ec.corelogic.config.WalletCoreConfig
@@ -142,8 +140,13 @@ fun providerWifiAwareServerController(
 @Factory
 fun provideWalletLiveDataControllerImpl(
     walletConfigNetworkConfig: WalletConfigNetworkConfig,
-    wifiAwareServerController: WifiAwareServerController
-): WalletLiveDataController = WalletLiveDataControllerImpl(walletConfigNetworkConfig, wifiAwareServerController)
+    wifiAwareServerController: WifiAwareServerController,
+    context: Context
+): WalletLiveDataController = WalletLiveDataControllerImpl(
+     walletConfigNetworkConfig = walletConfigNetworkConfig,
+    wifiAwareServerController,
+    context  = context
+    )
 
 
 /**

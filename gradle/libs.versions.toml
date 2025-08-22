@@ -78,6 +78,7 @@ treessence = "1.1.2"
 rqesUiSDK = "0.3.0"
 androidxRoom = "2.7.2"
 transportRuntime = "4.0.0"
+compiler = "3.2.0-alpha11"
 
 [libraries]
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
@@ -192,6 +193,7 @@ kotlinx-kover-gradlePlugin = { group = "org.jetbrains.kotlinx", name = "kover-gr
 baselineprofile-gradlePlugin = { group = "androidx.benchmark", name = "benchmark-baseline-profile-gradle-plugin", version.ref = "baselineprofile" }
 androidx-room-gradlePlugin = { group = "androidx.room", name = "room-gradle-plugin", version.ref = "androidxRoom" }
 transport-runtime = { group = "com.google.android.datatransport", name = "transport-runtime", version.ref = "transportRuntime" }
+androidx-compiler = { group = "androidx.databinding", name = "compiler", version.ref = "compiler" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

@@ -26,6 +26,7 @@ import org.koin.android.annotation.KoinViewModel
 
 
 data class State(
+    val isExistPhrase: Boolean =  false,
     val tosAccepted: Boolean = false,
     val isLoading: Boolean = false
 ) : ViewState
@@ -51,6 +52,7 @@ class BackupViewModel : MviViewModel<Event, State, Effect>() {
             Event.GoBack -> {
                 setEffect { Effect.Navigation.Pop }
             }
+
             Event.GoNext -> {
                 setEffect { Effect.Navigation.SwitchScreen(
                     screenRoute = BackupScreens.BackupPhraseList.screenRoute

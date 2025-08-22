@@ -235,6 +235,7 @@ private fun VerificationCard(
                     text = "Under applicable regulations and legislation, you may not create a profile solely to obtain identification. To verify your identity, please request credential validation directly from the PID provider.",
                     textConfig = TextConfig(
                         style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF0D0D0D)
                     )
                 )
             }
