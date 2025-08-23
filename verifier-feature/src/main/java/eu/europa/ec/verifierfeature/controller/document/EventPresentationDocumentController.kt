@@ -8,7 +8,6 @@ import eu.europa.ec.businesslogic.extension.toUri
 import eu.europa.ec.corelogic.controller.CheckKeyUnlockPartialState
 import eu.europa.ec.corelogic.controller.PresentationControllerConfig
 import eu.europa.ec.corelogic.controller.ResponseReceivedPartialState
-import eu.europa.ec.corelogic.controller.TransferEventPartialState
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.model.AuthenticationData
 import eu.europa.ec.corelogic.util.EudiWalletListenerWrapper
@@ -26,6 +25,7 @@ import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.verifierfeature.controller.verifier.VerifierAgeProofController
 import eu.europa.ec.verifierfeature.model.FieldLabel
 import eu.europa.ec.verifierfeature.model.PresentationResponse
+import eu.europa.ec.verifierfeature.ui.initVerifierOther.IntFlowVerifierOtherRequest
 import eu.europa.ec.verifierfeature.utils.authorizationRequest.AuthorizationRequest
 import eu.europa.ec.verifierfeature.utils.json.AuthRequestData
 import eu.europa.ec.verifierfeature.utils.json.DecodeUtils.decodeAuthRequest
@@ -155,7 +155,7 @@ interface EventPresentationDocumentController {
     val disclosedDocuments: MutableList<DisclosedDocument>?
 
     suspend fun getDocumentDetails(documentId: DocumentId): DocumentDetailsInteractorPartialState.Success
-    suspend fun intFlowVerifierOther():String
+    suspend fun intFlowVerifierOther(request: IntFlowVerifierOtherRequest):String
 
 
     suspend fun intFlowVerifierAge(documentId: DocumentId, fields: List<FieldLabel>): String
@@ -325,9 +325,9 @@ class EventPresentationDocumentControllerImpl(
     }
 
 
-    override suspend fun intFlowVerifierOther(): String {
+    override suspend fun intFlowVerifierOther(request: IntFlowVerifierOtherRequest): String {
         val metadata = verifierAgeProofController.metadataVerifier()
-        val pres = verifierAgeProofController.createPresentationRequestOther()
+        val pres = verifierAgeProofController.createPresentationRequestOther(request)
         println("transaction_id = ${pres.transaction_id}")
         println("client_id      = ${pres.client_id}")
         println("request        = ${pres.request}")

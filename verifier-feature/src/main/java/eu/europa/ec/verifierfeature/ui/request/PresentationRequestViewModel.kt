@@ -135,7 +135,6 @@ class PresentationRequestVerifierViewModel(
                     .catch { e ->
                         println("[doWork][flow] upstream exception: ${e.message}")
                         e.printStackTrace()
-                        // opcional: emitir um estado de erro aqui
                         setState {
                             copy(
                                 isLoading = false,

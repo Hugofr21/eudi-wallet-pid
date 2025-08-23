@@ -1,7 +1,6 @@
 package eu.europa.ec.verifierfeature.ui.initVerifierOther
 
 
-import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import eu.europa.ec.commonfeature.config.PresentationMode
 import eu.europa.ec.commonfeature.config.RequestUriConfig
@@ -18,12 +17,24 @@ import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import eu.europa.ec.uilogic.serializer.UiSerializer
 import eu.europa.ec.verifierfeature.controller.document.EventPresentationDocumentController
 import eu.europa.ec.verifierfeature.interactor.PresentationRequestVerifierInteractor
-import eu.europa.ec.verifierfeature.ui.fieldLabelsPrrofAge.model.RequestArgs
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.annotation.InjectedParam
 
+
+data class IntFlowVerifierOtherRequest(
+    val documentId: String,
+    val docName: String?,
+    val docIdentifier: String?,
+    val cleanDocumentId: String,
+    val issuerName: String?,
+    val issuerLogo: String?,
+    val isBookmarked: Boolean,
+    val isRevoked: Boolean,
+    val selectedFields: List<String>,
+    val allClaims: Map<String, String>,
+    val timestampUtc: Long = System.currentTimeMillis()
+)
 
 data class ListItemData(
     val itemId: String,
@@ -36,6 +47,13 @@ data class State(
     val isLoading: Boolean = false,
     val availableFields: List<ListItemData> = emptyList(),
     val selectedFieldLabels: Set<String> = emptySet(),
+    val issuerName: String? = null,
+    val issuerLogo: String? = null,
+    val docName: String? = null,
+    val documentIdentifier: String? = null,
+    val isRevoked: Boolean = false,
+    val isBookmarked: Boolean = false,
+    val allClaims: Map<String, String> = emptyMap(),
     val notifyOnAuthenticationFailure: Boolean = false
 ) : ViewState
 
@@ -71,6 +89,8 @@ class InitRequestVerifierOtherViewModel(
             .substringAfterLast("?")
     }
 
+
+
     override fun setInitialState(): State {
         println("[InitRequestVerifierOtherViewModel] documentId (raw): $documentId")
         println("[InitRequestVerifierOtherViewModel] documentId (clean): $cleanDocumentId")
@@ -100,30 +120,57 @@ class InitRequestVerifierOtherViewModel(
                 }
             }
 
+            val allClaims: Map<String, String> = success.documentDetailsDomain.documentClaims.mapNotNull { claim ->
+                when (claim) {
+                    is ClaimDomain.Primitive -> claim.key to (claim.value ?: "")
+                    else -> null
+                }
+            }.toMap()
+
+
             setState {
                 copy(
                     isLoading = false,
                     availableFields = availableFields,
+                    issuerName = success.issuerName,
+                    issuerLogo = success.issuerLogo?.toString(),
+                    docName = success.documentDetailsDomain.docName,
+                    documentIdentifier = success.documentDetailsDomain.documentIdentifier?.toString(),
+                    isRevoked = success.isRevoked,
+                    isBookmarked = success.documentIsBookmarked,
+                    allClaims = allClaims
                 )
             }
 
 
         }
 
-        return State(
-            isLoading = true,
-            availableFields = emptyList(),
-        )
-
+        return State(isLoading = true)
     }
 
     override fun handleEvents(event: Event) {
         when (event) {
             Event.SubmitSelection -> {
                 val selected = viewState.value.selectedFieldLabels.toList()
+                val current = viewState.value
+
+                val request = IntFlowVerifierOtherRequest(
+                    documentId = documentId,
+                    docName = current.docName,
+                    docIdentifier = current.documentIdentifier,
+                    cleanDocumentId = cleanDocumentId,
+                    issuerName = current.issuerName,
+                    issuerLogo = current.issuerLogo,
+                    isBookmarked = current.isBookmarked,
+                    isRevoked = current.isRevoked,
+                    selectedFields = selected,
+                    allClaims = current.allClaims,
+                    timestampUtc = System.currentTimeMillis()
+                )
+
               viewModelScope.launch {
                   val uri =  eventPresentationDocumentController
-                        .intFlowVerifierOther( )
+                        .intFlowVerifierOther(request)
 
                     setEffect {
                         Effect.Navigation.SwitchScreen(

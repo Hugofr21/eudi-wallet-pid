@@ -1,9 +1,9 @@
 package eu.europa.ec.verifierfeature.model
 
 
+import eu.europa.ec.eudi.openid4vci.ClaimPath
+import eu.europa.ec.eudi.openid4vci.ClaimPathElement
 import eu.europa.ec.eudi.openid4vp.OpenId4VPSpec
-import eu.europa.ec.eudi.sdjwt.vc.ClaimPath
-import eu.europa.ec.eudi.sdjwt.vc.ClaimPathElement
 import eu.europa.ec.verifierfeature.utils.jsonSupport
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName

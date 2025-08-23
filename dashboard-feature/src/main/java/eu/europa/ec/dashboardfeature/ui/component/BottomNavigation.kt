@@ -47,8 +47,6 @@ import eu.europa.ec.dashboardfeature.ui.home.compoment.ScanButton
 val LightSkyBlue   = Color(0xFFCAE6FD)
 val OceanBlue      = Color(0xFF2A5ED9)
 val DeepBlue       = Color(0xFF0048D2)
-val SoftYellow     = Color(0xFFFFF1BA)
-val CoralRed       = Color(0xFFFF6E70)
 
 sealed class BottomNavigationItem(
     val route: String,
@@ -94,7 +92,7 @@ fun BottomNavigationBar(navController: NavController, viewModel: DashboardViewMo
     val currentDestination = navBackStackEntry?.destination
 
     NavigationBar(
-        containerColor = LightSkyBlue.copy(alpha = 0.3f),
+        containerColor = OceanBlue.copy(alpha = 0.6f),
     ) {
         navItems.forEach { screen ->
             NavigationBarItem(

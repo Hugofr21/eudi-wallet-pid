@@ -16,15 +16,12 @@ import kotlinx.serialization.json.putJsonObject
 import retrofit2.Response
 import com.nimbusds.openid.connect.sdk.Nonce
 import eu.europa.ec.businesslogic.provider.UuidProvider
-import eu.europa.ec.eudi.openid4vp.Format
 import eu.europa.ec.eudi.openid4vp.JwkSetSource
 import eu.europa.ec.eudi.openid4vp.PreregisteredClient
-import eu.europa.ec.eudi.wallet.document.NameSpace
+import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.verifierfeature.model.WalletResponse
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.descriptors.PrimitiveKind
+import eu.europa.ec.verifierfeature.ui.initVerifierOther.IntFlowVerifierOtherRequest
 import kotlinx.serialization.json.Json
-import retrofit2.http.Field
 
 interface VerifierAgeProofController {
     suspend fun metadataVerifier(): Response<ClientMetadata>
@@ -42,7 +39,7 @@ interface VerifierAgeProofController {
     ): Response<WalletResponse>
 
     suspend fun directPost(state: String, vpToken: String): Response<JsonObject>
-    suspend fun createPresentationRequestOther(): PresentationResponse
+    suspend fun createPresentationRequestOther(request: IntFlowVerifierOtherRequest): PresentationResponse
 }
 
 class VerifierAgeProofControllerImpl(
@@ -166,35 +163,66 @@ class VerifierAgeProofControllerImpl(
         return response.body()!!
     }
 
-    override suspend fun createPresentationRequestOther(): PresentationResponse {
+    override suspend fun createPresentationRequestOther(request: IntFlowVerifierOtherRequest): PresentationResponse {
+        println("------------------------------ createPresentationRequestOther -------------------------------------")
+        println("Issuer: ${request.issuerName}")
+        println("Logo URI: ${request.issuerLogo}")
+        println("Is bookmarked: ${request.isBookmarked}")
+        println("Is revoked: ${request.isRevoked}")
+        println("Claims: ${request.allClaims}")
+        println("Doc Name: ${request.issuerName}")
+        println("Document Name: ${request.docName}")
+        println("Document Identifier (raw): ${request.docIdentifier}")
+        println("-------------------------------------------------------------------------\n")
+
         val nonce = randomNonce()
         val credentialId = uuidProvider.provideUuid()
-//        val pem = "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----".trimIndent()
+        val pem = R.raw.pidissuerca02_eu
 
-        val fields = listOf(
-            "family_name",
-            "given_name",
-            "birth_date",
-            "place_of_birth",
-            "nationality",
-            "issuance_date",
-            "expiry_date",
-            "issuing_authority",
-            "issuing_country"
-        )
+        val rawDocIdentifier = request.docIdentifier?.toString() ?: "eu.europa.ec.eudi.pid.1"
+
+        val normalizedDocIdentifier = when {
+            rawDocIdentifier.equals("MdocPid", ignoreCase = true) -> {
+                "eu.europa.ec.eudi.pid.1"
+            }
+            rawDocIdentifier.equals("SdJwtPid", ignoreCase = true) -> {
+                "urn:eudi:pid:1"
+            }
+            rawDocIdentifier.startsWith("OTHER(", ignoreCase = true) -> {
+                val regex = Regex("formatType=([^)]*)")
+                val match = regex.find(rawDocIdentifier)
+                match?.groupValues?.get(1) ?: rawDocIdentifier
+            }
+            else -> {
+                rawDocIdentifier
+            }
+        }
+        println("Document Identifier (normalized): $normalizedDocIdentifier")
+
+        val excludedClaims = setOf("un_distinguishing_sign")
+
+        val fields = request.allClaims.keys
+            .filterNot { it in excludedClaims }
+            .toList()
+
+        val credentialFormat = when {
+            normalizedDocIdentifier.contains("SdJwt", ignoreCase = true) -> "vc+sd-jwt"
+            else -> "mso_mdoc"
+        }
+        println("Using credential format: $credentialFormat")
 
         val credentialsArray = buildJsonArray {
             add(buildJsonObject {
                 put("id", JsonPrimitive(credentialId))
-                put("format", JsonPrimitive("mso_mdoc"))
+                put("format", JsonPrimitive(credentialFormat))
                 putJsonObject("meta") {
-                    put("doctype_value", JsonPrimitive("eu.europa.ec.eudi.pid.1"))
+                    put("doctype_value", JsonPrimitive(normalizedDocIdentifier))
                 }
                 putJsonArray("claims") {
                     fields.forEach { fld ->
                         add(buildJsonObject {
                             putJsonArray("path") {
-                                add(JsonPrimitive("eu.europa.ec.eudi.pid.1"))
+                                add(JsonPrimitive(normalizedDocIdentifier))
                                 add(JsonPrimitive(fld))
                             }
                         })
@@ -203,47 +231,41 @@ class VerifierAgeProofControllerImpl(
             })
         }
 
-
         val dcqlQuery = buildJsonObject {
             putJsonArray("credentials") {
                 credentialsArray.forEach { add(it) }
             }
         }
 
-        val request = PresentationRequest(
+        val presentationRequest = PresentationRequest(
             type = "vp_token",
             dcqlQuery = dcqlQuery,
             jarMode = "by_reference",
             nonce = nonce,
             requestUriMethod = "get",
-//            issuerChain = pem
+            // issuerChain = pem.toString().trimIndent()
         )
 
         println(
             "[createPresentationRequest] request JSON: ${
                 Json.encodeToString(JsonObject.serializer(), buildJsonObject {
-                    put("type", JsonPrimitive(request.type))
-                    put("dcql_query", request.dcqlQuery)
-                    put("nonce", JsonPrimitive(request.nonce))
-                    request.jarMode?.let { put("jar_mode", JsonPrimitive(it)) }
-                    request.requestUriMethod?.let {
-                        put(
-                            "request_uri_method",
-                            JsonPrimitive(it)
-                        )
+                    put("type", JsonPrimitive(presentationRequest.type))
+                    put("dcql_query", presentationRequest.dcqlQuery)
+                    put("nonce", JsonPrimitive(presentationRequest.nonce))
+                    presentationRequest.jarMode?.let { put("jar_mode", JsonPrimitive(it)) }
+                    presentationRequest.requestUriMethod?.let {
+                        put("request_uri_method", JsonPrimitive(it))
                     }
-                    request.issuerChain?.let { put("issuer_chain", JsonPrimitive(it)) }
+                    presentationRequest.issuerChain?.let { put("issuer_chain", JsonPrimitive(it)) }
                 })
             }"
         )
 
-        val response = api.createPresentation(request)
+        val response = api.createPresentation(presentationRequest)
 
         if (!response.isSuccessful) {
             throw RuntimeException(
-                "Error ${response.code()}: ${
-                    response.errorBody()?.string()
-                }"
+                "Error ${response.code()}: ${response.errorBody()?.string()}"
             )
         }
         println("Response presentation state: ${response.body()}")

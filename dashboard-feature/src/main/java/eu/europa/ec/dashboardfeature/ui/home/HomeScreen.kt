@@ -83,6 +83,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import eu.europa.ec.dashboardfeature.ui.home.compoment.ScanButton
+import eu.europa.ec.uilogic.component.wrap.LightSkyBlue
+import eu.europa.ec.uilogic.component.wrap.SoftYellow
 import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
 import eu.europa.ec.uilogic.component.wrap.StickyBottomType
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
@@ -249,7 +251,8 @@ private fun Content(
                 onEventSent(
                     Event.AuthenticateCard.LearnMorePressed
                 )
-            }
+            },
+            base = LightSkyBlue
         )
 
         WrapActionCard(
@@ -263,15 +266,9 @@ private fun Content(
                 onEventSent(
                     Event.SignDocumentCard.LearnMorePressed
                 )
-            }
+            },
+            base = SoftYellow
         )
-
-//        Row(
-//            modifier = Modifier.fillMaxWidth(),
-//            horizontalArrangement = Arrangement.Center
-//        ) {
-//            ScanButton(onEventSend = { event -> onEventSent(event) })
-//        }
 
     }
 

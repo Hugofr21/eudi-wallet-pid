@@ -136,7 +136,6 @@ fun WifiAwareScreen(
             isRequestingPermissions.value = true
             permissionLauncher.launch(next)
         } else if (permissionQueue.isEmpty()) {
-            // fila vazia -> sinalize estado final
             viewModel.setState { copy(hasPermissions = true) }
             viewModel.handleEvents(Event.CheckPermissions)
         }

@@ -676,10 +676,10 @@ private fun ButtonsSection(onEventSend: (Event) -> Unit) {
                 onClick = { onEventSend(Event.NavigateToVerifier) },
                 isWarning = true,
                 buttonColors = ButtonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiary,
-                    contentColor = MaterialTheme.colorScheme.onTertiary,
-                    disabledContainerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
-                    disabledContentColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.3f)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                    disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f)
                 )
             )
         ) {

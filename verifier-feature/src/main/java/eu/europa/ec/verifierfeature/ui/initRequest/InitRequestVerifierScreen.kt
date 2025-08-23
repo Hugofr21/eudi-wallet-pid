@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +37,8 @@ import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
 import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.ButtonConfig
 import eu.europa.ec.uilogic.component.wrap.ButtonType
+import eu.europa.ec.uilogic.component.wrap.LightSkyBlue
+import eu.europa.ec.uilogic.component.wrap.SoftYellow
 import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
 import eu.europa.ec.uilogic.component.wrap.StickyBottomType
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
@@ -106,23 +109,32 @@ private fun RequestVerifierBody(
     onToggle: (String, Boolean) -> Unit,
     onNavigationRequested: (Effect.Navigation) -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val base = LightSkyBlue
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
     ) {
         Text(
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                color = colorScheme.primary
+            ),
             text = stringResource(R.string.sharing_data_title),
             modifier = Modifier.padding(horizontal = 16.dp)
         )
+
         VSpacer.Small()
+
         Text(
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = colorScheme.onBackground
+            ),
             text = stringResource(R.string.sharing_data_description),
             modifier = Modifier.padding(horizontal = 16.dp)
         )
-        VSpacer.Small()
+
+        VSpacer.ExtraLarge()
 
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 180.dp),
@@ -141,8 +153,9 @@ private fun RequestVerifierBody(
                     onClick = {
                         if (!item.isMandatory) onToggle(item.itemId, !isChecked)
                     },
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(0.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = base),
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 100.dp)
@@ -156,17 +169,23 @@ private fun RequestVerifierBody(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = item.title,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        color = Color(0xFF0D0D0D)
+                                    ),
+                                    color = Color(0xFF0D0D0D),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
+
                             item.subtitle?.let {
-                             VSpacer.ExtraSmall()
+                                VSpacer.ExtraSmall()
                                 Text(
                                     text = it,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = Color(0xFF0D0D0D)
+                                    ),
+                                    color = Color(0xFF0D0D0D).copy(alpha = 0.7f),
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -177,7 +196,7 @@ private fun RequestVerifierBody(
                                 Text(
                                     text = "(Mandatory)",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
+                                    color = Color(0xFF0D0D0D).copy(alpha = 0.7f)
                                 )
                             }
                         }
@@ -188,6 +207,11 @@ private fun RequestVerifierBody(
                                 if (!item.isMandatory) onToggle(item.itemId, it)
                             },
                             enabled = !item.isMandatory,
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = colorScheme.primary,
+                                uncheckedColor = Color(0xFF0D0D0D).copy(alpha = 0.6f),
+                                checkmarkColor = colorScheme.onPrimary
+                            ),
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(8.dp)
@@ -195,7 +219,6 @@ private fun RequestVerifierBody(
                     }
                 }
             }
-
         }
     }
 
@@ -208,12 +231,14 @@ private fun RequestVerifierBody(
 
 @Composable
 private fun AlertFooter() {
+    val base = SoftYellow
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = base)
     ) {
         Column(
             modifier = Modifier
@@ -223,16 +248,21 @@ private fun AlertFooter() {
         ) {
             Text(
                 style = MaterialTheme.typography.titleMedium,
+                color = Color(0xFF0D0D0D),
                 text = stringResource(R.string.sharing_data_footer_title)
             )
             VSpacer.Small()
             Text(
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = Color(0xFF0D0D0D)
+                ),
+                color = Color(0xFF0D0D0D).copy(alpha = 0.85f),
                 text = stringResource(R.string.sharing_data_footer_description)
             )
         }
     }
 }
+
 
 @Composable
 private fun DoubleBtn(

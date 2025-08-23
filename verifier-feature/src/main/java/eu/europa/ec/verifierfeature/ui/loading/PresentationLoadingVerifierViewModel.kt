@@ -71,7 +71,7 @@ class PresentationLoadingVerifierViewModel(
             interactor.observeResponse().collect {
                 when (it) {
                     is PresentationLoadingVerifierObserveResponsePartialState.Failure -> {
-                        println("❌ Failure: ${it.error}")
+                        println("Failure: ${it.error}")
 
                         setState {
                             copy(
@@ -88,22 +88,22 @@ class PresentationLoadingVerifierViewModel(
                     }
 
                     is PresentationLoadingVerifierObserveResponsePartialState.Success -> {
-                        println("✅ Success: ${it}")
+                        println(" Success: ${it}")
                         onSuccess()
                     }
 
                     is PresentationLoadingVerifierObserveResponsePartialState.Redirect -> {
-                        println("➡️ Redirect: ${it}")
+                        println("Redirect: ${it}")
                         onSuccess()
                     }
 
                     is PresentationLoadingVerifierObserveResponsePartialState.RequestReadyToBeSent -> {
-                        println("📤 RequestReadyToBeSent: ${it}")
+                        println(" RequestReadyToBeSent: ${it}")
                         sendRequestedDocuments(Event.DoWork(context))
                     }
 
                     is PresentationLoadingVerifierObserveResponsePartialState.UserAuthenticationRequired -> {
-                        println("🔐 UserAuthenticationRequired: ${it.authenticationData}")
+                        println("UserAuthenticationRequired: ${it.authenticationData}")
 
                         val popEffect = Effect.Navigation.PopBackStackUpTo(
                             screenRoute = VerifierScreens.PresentationRequestVerifier.screenRoute,
@@ -115,7 +115,7 @@ class PresentationLoadingVerifierViewModel(
                             popEffect,
                             it.authenticationData,
                             {
-                                println("✅ Authentication done, sending documents again")
+                                println("Authentication done, sending documents again")
                                 sendRequestedDocuments(Event.DoWork(context))
                             }
                         )
