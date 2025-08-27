@@ -23,7 +23,7 @@ import eu.europa.ec.verifierfeature.model.WalletResponse
 import eu.europa.ec.verifierfeature.ui.initVerifierOther.IntFlowVerifierOtherRequest
 import kotlinx.serialization.json.Json
 
-interface VerifierAgeProofController {
+interface VerifierController {
     suspend fun metadataVerifier(): Response<ClientMetadata>
     suspend fun createPresentationRequest(fields: List<FieldLabel>): PresentationResponse
     suspend fun getPresentationState(transactionID: String): PresentationState
@@ -42,10 +42,10 @@ interface VerifierAgeProofController {
     suspend fun createPresentationRequestOther(request: IntFlowVerifierOtherRequest): PresentationResponse
 }
 
-class VerifierAgeProofControllerImpl(
+class VerifierControllerImpl(
     private val api: VerifierApiSwaggerController,
     private val uuidProvider: UuidProvider
-) : VerifierAgeProofController {
+) : VerifierController {
 
     private var lastNonce: String? = null
 

@@ -7,14 +7,14 @@ import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.dashboardfeature.interactor.DocumentDetailsInteractor
 import eu.europa.ec.eudi.wallet.EudiWallet
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
-import eu.europa.ec.verifierfeature.controller.verifier.VerifierAgeProofController
-import eu.europa.ec.verifierfeature.controller.verifier.VerifierAgeProofControllerImpl
 import eu.europa.ec.verifierfeature.controller.verifier.VerifierApiSwaggerController
 import eu.europa.ec.verifierfeature.controller.verifier.VerifierApiSwaggerControllerImpl
 import eu.europa.ec.verifierfeature.controller.verifier.VerifierEUDIController
 import eu.europa.ec.verifierfeature.controller.verifier.VerifierEUDIControllerImpl
 import eu.europa.ec.verifierfeature.controller.document.EventPresentationDocumentController
 import eu.europa.ec.verifierfeature.controller.document.EventPresentationDocumentControllerImpl
+import eu.europa.ec.verifierfeature.controller.verifier.VerifierController
+import eu.europa.ec.verifierfeature.controller.verifier.VerifierControllerImpl
 import eu.europa.ec.verifierfeature.interactor.PresentationLoadingVerifierInteractor
 import eu.europa.ec.verifierfeature.interactor.PresentationLoadingVerifierInteractorImpl
 import eu.europa.ec.verifierfeature.interactor.PresentationRequestVerifierInteractor
@@ -32,8 +32,6 @@ import org.koin.core.annotation.Single
 @ComponentScan("eu.europa.ec.verifierfeature")
 class FeatureVerifierModule
 
-
-
 @Single
 fun provideVerifierApiSwaggerController(
     okHttpClient: OkHttpClient
@@ -45,10 +43,11 @@ fun provideVerifierApiSwaggerController(
 fun provideVerifierAgeProofController(
     api: VerifierApiSwaggerController,
     uuidProvider: UuidProvider
-): VerifierAgeProofController = VerifierAgeProofControllerImpl(
+): VerifierController = VerifierControllerImpl(
     api = api,
     uuidProvider = uuidProvider
 )
+
 
 
 
@@ -59,7 +58,7 @@ fun provideVerifierEUDIController(
 
 @Single
 fun providerEventPresentationDocumentController(
-    verifierAgeProofController: VerifierAgeProofController,
+    verifierProofController: VerifierController,
     resourceProvider: ResourceProvider,
     uuidProvider: UuidProvider,
     walletCoreDocumentsController: WalletCoreDocumentsController,
@@ -67,7 +66,7 @@ fun providerEventPresentationDocumentController(
     deviceAuthenticationInteractor: DeviceAuthenticationInteractor,
     eudiWallet: EudiWallet,
 ): EventPresentationDocumentController = EventPresentationDocumentControllerImpl(
-    verifierAgeProofController = verifierAgeProofController,
+    api = verifierProofController,
     resourceProvider = resourceProvider,
     walletCoreDocumentsController = walletCoreDocumentsController,
     documentDetailsInteractor = documentDetailsInteractor,

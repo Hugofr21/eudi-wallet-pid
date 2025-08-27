@@ -18,6 +18,7 @@ package eu.europa.ec.uilogic.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -211,22 +212,26 @@ enum class ClickableArea {
  * @param modifier A [Modifier] that can be used to customize the appearance of the list item.
  * @param hideSensitiveContent A boolean flag indicating whether to hide sensitive content by blurring it. Defaults to false.
  * @param mainContentVerticalPadding An optional value specifying the vertical padding */
+
+
 @Composable
 fun ListItem(
     item: ListItemDataUi,
-    onItemClick: ((item: ListItemDataUi) -> Unit)?,
+    onItemClick: ((ListItemDataUi) -> Unit)?,
     modifier: Modifier = Modifier,
     hideSensitiveContent: Boolean = false,
     mainContentVerticalPadding: Dp? = null,
     clickableAreas: List<ClickableArea> = listOf(TRAILING_CONTENT),
-    overlineTextStyle: TextStyle = MaterialTheme.typography.labelMedium.copy(
+    overlineTextStyle: TextStyle? = MaterialTheme.typography.labelMedium.copy(
         color = MaterialTheme.colorScheme.onSurfaceVariant
     ),
     supportingTextColor: Color? = null,
     mainContentTextStyle: TextStyle? = null,
+    mainContentMaxLines: Int = 3,
+    supportingTextMaxLines: Int = 2,
+    mainContentUseEllipsis: Boolean = false,
+    hideIconsWhenNarrow: Boolean = true,
 ) {
-    val maxSecondaryTextLines = 1
-    val textOverflow = TextOverflow.Ellipsis
     val mainTextStyle = mainContentTextStyle ?: MaterialTheme.typography.bodyLarge.copy(
         color = MaterialTheme.colorScheme.onSurface
     )
@@ -234,73 +239,61 @@ fun ListItem(
     val blurModifier = remember(hideSensitiveContent) {
         if (hideSensitiveContent) {
             Modifier.blur(10.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-        } else {
-            Modifier
-        }
+        } else Modifier
     }
 
-    // Determines the appropriate click handling for a list item's row based on its trailing content.
-    // - If the trailing content is a radiobutton, checkbox or switch, the handling is only enabled if it is enabled.
-    // - If the trailing content is an icon, or there is no trailing content, the handling is always the provided `onItemClick` function.
     val handleRowItemClick = when (val trailingContentData = item.trailingContentData) {
         is ListItemTrailingContentDataUi.RadioButton ->
-            if (trailingContentData.radioButtonData.enabled) onItemClick
-            else null
-
+            if (trailingContentData.radioButtonData.enabled) onItemClick else null
         is ListItemTrailingContentDataUi.Checkbox ->
-            if (trailingContentData.checkboxData.enabled) onItemClick
-            else null
-
+            if (trailingContentData.checkboxData.enabled) onItemClick else null
         is ListItemTrailingContentDataUi.Switch ->
-            if (trailingContentData.switchData.enabled) onItemClick
-            else null
-
+            if (trailingContentData.switchData.enabled) onItemClick else null
         is ListItemTrailingContentDataUi.Icon -> onItemClick
         is ListItemTrailingContentDataUi.TextWithIcon -> onItemClick
         null -> onItemClick
     }
 
-    with(item) {
+    BoxWithConstraints {
+        val availableWidth = maxWidth
+        val shouldHideIcons = hideIconsWhenNarrow && availableWidth < 320.dp
+
         Row(
             modifier = if (clickableAreas.contains(ENTIRE_ROW) && handleRowItemClick != null) {
-                Modifier.clickable {
-                    handleRowItemClick(item)
-                }
+                Modifier.clickable { handleRowItemClick(item) }
             } else {
                 Modifier
-            }.then(
-                other = modifier.padding(horizontal = SPACING_MEDIUM.dp)
-            ),
+            }.then(modifier.padding(horizontal = SPACING_MEDIUM.dp)),
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Leading Content
-            leadingContentData?.let { safeLeadingContentData ->
-                val leadingContentModifier = Modifier
-                    .padding(end = SIZE_MEDIUM.dp)
-                    .size(safeLeadingContentData.size.dp)
-                    .then(blurModifier)
+            if (!shouldHideIcons) {
+                item.leadingContentData?.let { safeLeadingContentData ->
+                    val leadingContentModifier = Modifier
+                        .padding(end = SIZE_MEDIUM.dp)
+                        .size(safeLeadingContentData.size.dp)
+                        .then(blurModifier)
 
-                when (safeLeadingContentData) {
-                    is ListItemLeadingContentDataUi.Icon -> WrapIcon(
-                        modifier = leadingContentModifier,
-                        iconData = safeLeadingContentData.iconData,
-                        customTint = safeLeadingContentData.tint
-                            ?: MaterialTheme.colorScheme.primary,
-                    )
+                    when (safeLeadingContentData) {
+                        is ListItemLeadingContentDataUi.Icon -> WrapIcon(
+                            modifier = leadingContentModifier,
+                            iconData = safeLeadingContentData.iconData,
+                            customTint = safeLeadingContentData.tint ?: MaterialTheme.colorScheme.primary,
+                        )
 
-                    is ListItemLeadingContentDataUi.UserImage -> ImageOrPlaceholder(
-                        modifier = leadingContentModifier,
-                        base64Image = safeLeadingContentData.userBase64Image,
-                    )
+                        is ListItemLeadingContentDataUi.UserImage -> ImageOrPlaceholder(
+                            modifier = leadingContentModifier,
+                            base64Image = safeLeadingContentData.userBase64Image,
+                        )
 
-                    is ListItemLeadingContentDataUi.AsyncImage -> WrapAsyncImage(
-                        modifier = leadingContentModifier,
-                        source = safeLeadingContentData.imageUrl,
-                        error = safeLeadingContentData.errorImage,
-                        placeholder = safeLeadingContentData.placeholderImage,
-                        contentDescription = safeLeadingContentData.contentDescription
-                    )
+                        is ListItemLeadingContentDataUi.AsyncImage -> WrapAsyncImage(
+                            modifier = leadingContentModifier,
+                            source = safeLeadingContentData.imageUrl,
+                            error = safeLeadingContentData.errorImage,
+                            placeholder = safeLeadingContentData.placeholderImage,
+                            contentDescription = safeLeadingContentData.contentDescription
+                        )
+                    }
                 }
             }
 
@@ -311,20 +304,20 @@ fun ListItem(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.Start
             ) {
-                // Overline Text
-                overlineText?.let { safeOverlineText ->
-                    Text(
-                        text = safeOverlineText,
-                        style = overlineTextStyle,
-                    )
+                item.overlineText?.let { safeOverlineText ->
+                    if (overlineTextStyle != null) {
+                        Text(
+                            text = safeOverlineText,
+                            style = overlineTextStyle,
+                        )
+                    }
                 }
 
-                // Main Content
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    when (mainContentData) {
+                    when (val mainContentData = item.mainContentData) {
                         is ListItemMainContentDataUi.Image -> ImageOrPlaceholder(
                             modifier = Modifier
                                 .wrapContentWidth()
@@ -340,15 +333,17 @@ fun ListItem(
                                 .then(blurModifier),
                             text = mainContentData.text,
                             style = mainTextStyle,
-                            overflow = textOverflow,
+                            maxLines = mainContentMaxLines,
+                            softWrap = true,
+                            overflow = if (mainContentUseEllipsis) TextOverflow.Ellipsis else TextOverflow.Clip
                         )
                     }
 
-                    if (trailingContentData is ListItemTrailingContentDataUi.TextWithIcon) {
+                    if (!shouldHideIcons && item.trailingContentData is ListItemTrailingContentDataUi.TextWithIcon) {
+                        val trailingContent = item.trailingContentData as ListItemTrailingContentDataUi.TextWithIcon
                         WrapText(
-                            modifier = Modifier
-                                .padding(start = SIZE_MEDIUM.dp),
-                            text = trailingContentData.text,
+                            modifier = Modifier.padding(start = SIZE_MEDIUM.dp),
+                            text = trailingContent.text,
                             textConfig = TextConfig(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -360,79 +355,76 @@ fun ListItem(
                             modifier = Modifier
                                 .padding(start = SPACING_SMALL.dp)
                                 .size(DEFAULT_ICON_SIZE.dp),
-                            iconData = trailingContentData.iconData,
-                            customTint = trailingContentData.tint
-                                ?: MaterialTheme.colorScheme.primary,
-                            onClick = if (clickableAreas.contains(TRAILING_CONTENT)) {
-                                { onItemClick?.invoke(item) }
-                            } else null,
+                            iconData = trailingContent.iconData,
+                            customTint = trailingContent.tint ?: MaterialTheme.colorScheme.primary,
+                            onClick = if (clickableAreas.contains(TRAILING_CONTENT)) { { onItemClick?.invoke(item) } } else null,
                             throttleClicks = false,
                         )
                     }
                 }
 
-                // Supporting Text
-                supportingText?.let { safeSupportingText ->
+                item.supportingText?.let { safeSupportingText ->
                     Text(
                         text = safeSupportingText,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = supportingTextColor
-                                ?: MaterialTheme.colorScheme.onSurfaceVariant
+                            color = supportingTextColor ?: MaterialTheme.colorScheme.onSurfaceVariant
                         ),
-                        maxLines = maxSecondaryTextLines,
-                        overflow = textOverflow,
+                        maxLines = supportingTextMaxLines,
+                        softWrap = true,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            // Trailing Content
-            trailingContentData?.let { safeTrailingContentData ->
-                when (safeTrailingContentData) {
-                    is ListItemTrailingContentDataUi.Checkbox -> WrapCheckbox(
-                        checkboxData = safeTrailingContentData.checkboxData.copy(
+            if (!shouldHideIcons) {
+                item.trailingContentData?.let { safeTrailingContentData ->
+                    when (safeTrailingContentData) {
+                        is ListItemTrailingContentDataUi.Checkbox -> WrapCheckbox(
+                            checkboxData = safeTrailingContentData.checkboxData.copy(
+                                onCheckedChange = if (clickableAreas.contains(TRAILING_CONTENT)) {
+                                    { onItemClick?.invoke(item) }
+                                } else null
+                            ),
+                            modifier = Modifier.padding(start = SIZE_MEDIUM.dp),
+                        )
+
+                        is ListItemTrailingContentDataUi.Icon -> WrapIconButton(
+                            modifier = Modifier
+                                .padding(start = SIZE_MEDIUM.dp)
+                                .size(DEFAULT_ICON_SIZE.dp),
+                            iconData = safeTrailingContentData.iconData,
+                            customTint = safeTrailingContentData.tint ?: MaterialTheme.colorScheme.primary,
+                            onClick = if (clickableAreas.contains(TRAILING_CONTENT)) {
+                                { onItemClick?.invoke(item) }
+                            } else null,
+                            throttleClicks = false,
+                        )
+
+                        is ListItemTrailingContentDataUi.RadioButton -> WrapRadioButton(
+                            radioButtonData = safeTrailingContentData.radioButtonData.copy(
+                                onCheckedChange = if (clickableAreas.contains(TRAILING_CONTENT)) {
+                                    { onItemClick?.invoke(item) }
+                                } else null
+                            ),
+                            modifier = Modifier.padding(start = SIZE_MEDIUM.dp),
+                        )
+
+                        is ListItemTrailingContentDataUi.Switch -> WrapSwitch(
+                            switchData = safeTrailingContentData.switchData,
                             onCheckedChange = if (clickableAreas.contains(TRAILING_CONTENT)) {
                                 { onItemClick?.invoke(item) }
-                            } else null
-                        ),
-                        modifier = Modifier.padding(start = SIZE_MEDIUM.dp),
-                    )
+                            } else null,
+                            modifier = Modifier.padding(start = SIZE_MEDIUM.dp),
+                        )
 
-                    is ListItemTrailingContentDataUi.Icon -> WrapIconButton(
-                        modifier = Modifier
-                            .padding(start = SIZE_MEDIUM.dp)
-                            .size(DEFAULT_ICON_SIZE.dp),
-                        iconData = safeTrailingContentData.iconData,
-                        customTint = safeTrailingContentData.tint
-                            ?: MaterialTheme.colorScheme.primary,
-                        onClick = if (clickableAreas.contains(TRAILING_CONTENT)) {
-                            { onItemClick?.invoke(item) }
-                        } else null,
-                        throttleClicks = false,
-                    )
-
-                    is ListItemTrailingContentDataUi.RadioButton -> WrapRadioButton(
-                        radioButtonData = safeTrailingContentData.radioButtonData.copy(
-                            onCheckedChange = if (clickableAreas.contains(TRAILING_CONTENT)) {
-                                { onItemClick?.invoke(item) }
-                            } else null
-                        ),
-                        modifier = Modifier.padding(start = SIZE_MEDIUM.dp),
-                    )
-
-                    is ListItemTrailingContentDataUi.TextWithIcon -> Unit // No-op, it is handled by the main content.
-
-                    is ListItemTrailingContentDataUi.Switch -> WrapSwitch(
-                        switchData = safeTrailingContentData.switchData,
-                        onCheckedChange = if (clickableAreas.contains(TRAILING_CONTENT)) {
-                            { onItemClick?.invoke(item) }
-                        } else null,
-                        modifier = Modifier.padding(start = SIZE_MEDIUM.dp),
-                    )
+                        is ListItemTrailingContentDataUi.TextWithIcon -> Unit // já foi tratada acima
+                    }
                 }
             }
-        }
-    }
+        } // Row
+    } // BoxWithConstraints
 }
+
 
 @ThemeModePreviews
 @Composable

@@ -18,6 +18,7 @@ moduleConfig {
 dependencies {
     implementation(project(LibraryModule.BusinessLogic.path))
     implementation(project(LibraryModule.StorageLogic.path))
+    implementation(libs.androidx.material.icons.extended)
 }
 
 // Current Module Kover Report

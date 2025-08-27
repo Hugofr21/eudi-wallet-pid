@@ -248,10 +248,11 @@ private fun MainContent(
         ) {
             state.options.forEach { option ->
                 item {
+
                     WrapListItem(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1f),
+                            .aspectRatio(2f),
                         item = option.itemData,
                         mainContentVerticalPadding = SPACING_LARGE.dp,
                         mainContentTextStyle = MaterialTheme.typography.titleMedium,

@@ -34,6 +34,9 @@ import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
+import eu.europa.ec.uilogic.navigation.BackupScreens
+import eu.europa.ec.uilogic.navigation.DashboardScreens
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import org.koin.android.annotation.KoinViewModel
@@ -125,6 +128,14 @@ class ViewBackupViewModel(
                                 chooserTitle = resourceProvider.getString(R.string.settings_intent_chooser_logs_share_title)
                             )
                         }
+                    }
+
+                    delay(600)
+
+                    setEffect {
+                        Effect.Navigation.SwitchScreen(
+                            screenRoute = DashboardScreens.Dashboard.screenRoute
+                        )
                     }
                 }
             }

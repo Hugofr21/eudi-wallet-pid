@@ -99,8 +99,11 @@ fun provideWalletCoreConfig(
 
 
 @Single
-fun provideWalletCoreLogController(logController: LogController): WalletCoreLogController =
-    WalletCoreLogControllerImpl(logController)
+fun provideWalletCoreLogController(
+    logController: LogController,
+    uuidProvider: UuidProvider
+): WalletCoreLogController =
+    WalletCoreLogControllerImpl(logController, uuidProvider)
 
 @Single
 fun provideWalletCoreTransactionLogController(

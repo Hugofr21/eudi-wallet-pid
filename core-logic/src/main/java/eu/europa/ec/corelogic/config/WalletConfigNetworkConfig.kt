@@ -23,6 +23,8 @@ interface WalletConfigNetworkConfig {
     fun checkAndRequestWifiAwarePermissions(): Boolean
 
     fun getMissingPermissions(): List<String>
+
+    fun isInternetAvailable(context: Context): Boolean
 }
 
 
@@ -79,7 +81,11 @@ class WalletConfigNetworkConfigImpl(
 
     override fun checkAndRequestWifiAwarePermissions(): Boolean {
         val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            arrayOf(Manifest.permission.NEARBY_WIFI_DEVICES, Manifest.permission.ACCESS_FINE_LOCATION)
+            arrayOf(
+                Manifest.permission.NEARBY_WIFI_DEVICES,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
         } else {
             arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
         }
@@ -143,6 +149,23 @@ class WalletConfigNetworkConfigImpl(
             }
         }
         return false
+    }
+
+
+   @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+   override fun isInternetAvailable(context: Context): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val network = connectivityManager.activeNetwork ?: return false
+            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        } else {
+            @Suppress("DEPRECATION")
+            val networkInfo = connectivityManager.activeNetworkInfo ?: return false
+            @Suppress("DEPRECATION")
+            networkInfo.isConnected
+        }
     }
 
 

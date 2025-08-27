@@ -17,6 +17,7 @@
 package eu.europa.ec.corelogic.controller
 
 import eu.europa.ec.businesslogic.controller.log.LogController
+import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.eudi.wallet.logging.Logger
 import kotlinx.serialization.json.Json
 import java.util.UUID
@@ -35,6 +36,7 @@ interface WalletCoreLogController : Logger
 
 class WalletCoreLogControllerImpl(
     private val logController: LogController,
+    private val uuidProvider: UuidProvider,
     private val json: Json = Json { encodeDefaults = true }
 ) : WalletCoreLogController {
     private data class Rule(
@@ -62,7 +64,7 @@ class WalletCoreLogControllerImpl(
 
         if (matched != null) {
             val payload = raw.removePrefix(matched.prefix)
-            val corrId  = UUID.randomUUID().toString()
+            val corrId  = uuidProvider.provideUuid()
             val event   = LogEvent(
                 event = matched.event,
                 correlationId = corrId,

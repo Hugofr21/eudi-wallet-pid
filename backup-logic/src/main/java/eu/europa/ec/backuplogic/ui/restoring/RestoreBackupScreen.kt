@@ -32,7 +32,10 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -74,11 +77,7 @@ import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
 import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.WrapPageIndicator
 
-val LightSkyBlue   = Color(0xFFCAE6FD)
-val OceanBlue      = Color(0xFF2A5ED9)
-val DeepBlue       = Color(0xFF0048D2)
-val SoftYellow     = Color(0xFFFFF1BA)
-val CoralRed       = Color(0xFFFF6E70)
+
 
 @Composable
 fun RestoreBackupScreen(navController: NavController, viewModel: RestoreBackupViewModel) {
@@ -307,17 +306,17 @@ private fun RestoreGrid() {
         verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
     ) {
         RestoreGridItem(
-            icon = Icons.Default.Info,
+            icon = Icons.Default.FileOpen,
             title = stringResource(R.string.consent_backup_first_page_title),
             description = stringResource(R.string.select_file_button)
         )
         RestoreGridItem(
-            icon = Icons.Default.Info,
+            icon = Icons.Default.TextIncrease,
             title = stringResource(R.string.consent_backup_phase_page_title),
             description = stringResource(R.string.backup_recovery_phrase)
         )
         RestoreGridItem(
-            icon = Icons.Default.Info,
+            icon = Icons.Default.Restore,
             title = stringResource(R.string.consent_backup_third_page_restore_wallet_title),
             description = stringResource(R.string.consent_backup_third_page_restore_wallet_description)
         )

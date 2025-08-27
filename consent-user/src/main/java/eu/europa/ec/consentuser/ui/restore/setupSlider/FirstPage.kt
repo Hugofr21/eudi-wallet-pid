@@ -19,6 +19,7 @@ package eu.europa.ec.consentuser.ui.restore.setupSlider
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -60,7 +61,6 @@ import eu.europa.ec.uilogic.component.utils.SIZE_EXTRA_LARGE
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
 import eu.europa.ec.uilogic.component.utils.VSpacer
-
 @Composable
 fun FirstPage(
     onFileSelected: (Uri) -> Unit,
@@ -68,17 +68,39 @@ fun FirstPage(
 ) {
     val context = LocalContext.current
     var selectedFileName by remember { mutableStateOf<String?>(null) }
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri: Uri? ->
-            uri?.let {
-                context.contentResolver.takePersistableUriPermission(
-                    it,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-                onFileSelected(it)
-                val doc = DocumentFile.fromSingleUri(context, it)
-                selectedFileName = doc?.name
+            uri?.let { selectedUri ->
+
+                val doc = DocumentFile.fromSingleUri(context, selectedUri)
+                val name = doc?.name?.trim()
+                val mime = context.contentResolver.getType(selectedUri)
+                val lower = name?.lowercase()
+                val isByExtension = lower != null && (lower.endsWith(".zip.enc") || lower.endsWith(".enc"))
+                val isByMime = mime != null && (
+                        mime == "application/zip" ||
+                                mime == "application/octet-stream" ||
+                                mime == "application/x-zip-compressed" ||
+                                mime.startsWith("application/")
+                        )
+                if (isByExtension || isByMime) {
+                    context.contentResolver.takePersistableUriPermission(
+                        selectedUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                    selectedFileName = name ?: selectedUri.lastPathSegment
+                    onFileSelected(selectedUri)
+                } else {
+
+                    val displayName = name ?: selectedUri.lastPathSegment ?: "selected file"
+                    Toast.makeText(
+                        context,
+                        "Invalid file: $displayName!.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     )
@@ -139,6 +161,7 @@ fun FirstPage(
                 }
             }
         )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -146,7 +169,13 @@ fun FirstPage(
             horizontalArrangement = Arrangement.End
         ) {
             Button(
-                onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                onClick = { filePickerLauncher.launch(
+                    arrayOf(
+                        "application/zip",
+                        "application/x-zip-compressed",
+                        "application/octet-stream"
+                    )
+                ) },
                 modifier = Modifier
                     .height(36.dp)
                     .wrapContentWidth()

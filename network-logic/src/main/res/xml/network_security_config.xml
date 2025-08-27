@@ -16,4 +16,9 @@
 
 <network-security-config>
     <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="localhost">localhost</domain>
+        <domain includeSubdomains="loopback">127.0.0.1</domain>
+        <domain includeSubdomains="IPv4Address">192.168.1.71</domain>
+    </domain-config>
 </network-security-config>

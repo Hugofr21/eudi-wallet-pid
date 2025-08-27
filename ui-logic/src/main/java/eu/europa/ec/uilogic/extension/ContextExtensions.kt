@@ -24,6 +24,7 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import eu.europa.ec.uilogic.container.EudiComponentActivity
+import android.app.Activity
 
 fun Context.openDeepLink(deepLink: Uri) {
     val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -54,14 +55,6 @@ fun Context.finish() {
     (this as? EudiComponentActivity)?.finish()
 }
 
-fun Context.findActivity(): ComponentActivity {
-    var context = this
-    while (context is ContextWrapper) {
-        if (context is ComponentActivity) return context
-        context = context.baseContext
-    }
-    throw IllegalStateException("No Activity found.")
-}
 
 private fun Context.clearPendingDeepLink() {
     (this as? EudiComponentActivity)?.pendingDeepLink = null
@@ -97,6 +90,16 @@ fun Context.openWifiSettings() {
     val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     startActivity(intent)
+}
+
+
+fun Context.findActivity(): Activity? {
+    var ctx: Context? = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 

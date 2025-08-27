@@ -17,12 +17,12 @@
 package eu.europa.ec.uilogic.component.wrap
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -44,11 +44,22 @@ fun WrapCard(
     colors: CardColors? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    
     val cardShape = shape ?: RoundedCornerShape(0.dp)
+
     val cardColors = colors ?: CardDefaults.cardColors(
-        containerColor = Color(0xFFCAE6FD).copy(alpha = 0.1f),
-        contentColor = Color(0xFF2A5ED9),
+        containerColor = if (isSystemInDarkTheme()) {
+            OceanBlue.copy(alpha = 0.1f)
+        } else {
+            LightSkyBlue.copy(alpha = 1f)
+        },
+        contentColor = if (isSystemInDarkTheme()) {
+            SoftYellow
+        } else {
+            Color(0xFF0D0D0D)
+        }
     )
+
     val cardModifier = Modifier
         .clip(cardShape)
         .then(modifier)

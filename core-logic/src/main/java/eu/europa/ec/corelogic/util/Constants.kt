@@ -24,4 +24,5 @@ object CoreActions {
     const val REVOCATION_WORK_MESSAGE_ACTION = "revocation.message.action"
     const val REVOCATION_IDS_EXTRA = "revocation.ids.extra"
     const val REVOCATION_IDS_DETAILS_EXTRA = "revocation.ids_details.extra"
+
 }

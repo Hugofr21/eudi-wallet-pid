@@ -14,6 +14,7 @@ import eu.europa.ec.corelogic.config.WalletConfigNetworkConfig
 import eu.europa.ec.corelogic.controller.wifi.WifiAwareServerController
 import eu.europa.ec.corelogic.service.WifiAwareService
 import eu.europa.ec.eudi.iso18013.transfer.response.RequestedDocument
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,19 +34,17 @@ data class NetworkStatus(
 
 
 sealed class TransferEventWifiAwarePartialState {
-    data object Connected : TransferEventWifiAwarePartialState()
-    data object Connecting : TransferEventWifiAwarePartialState()
-    data object Disconnected : TransferEventWifiAwarePartialState()
-    data class Error(val error: String) : TransferEventWifiAwarePartialState()
-    data class ReceiverReady(val msg: String) : TransferEventPartialState()
+    object Connected : TransferEventWifiAwarePartialState()
+    object Connecting : TransferEventWifiAwarePartialState()
+    object Disconnected : TransferEventWifiAwarePartialState()
+    data class Error(val code: Int, val message: String) : TransferEventWifiAwarePartialState()
+    data class ReceiverReady(val msg: String) : TransferEventWifiAwarePartialState()
     data class RequestReceivedPeer(
         val host: String,
         val mac: String?,
         val name: String?,
     ) : TransferEventWifiAwarePartialState()
-
-    data object ResponseSent : TransferEventWifiAwarePartialState()
-
+    object ResponseSent : TransferEventWifiAwarePartialState()
 }
 
 
@@ -63,19 +62,21 @@ interface WalletLiveDataController {
 
     fun stopWifiAware()
 }
+
 class WalletLiveDataControllerImpl(
     private val walletConfigNetworkConfig: WalletConfigNetworkConfig,
     private val wifiAwareController: WifiAwareServerController,
-    private val context: Context
+    private val context: Context,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : WalletLiveDataController {
 
     private val _peersLiveData = MutableLiveData<List<PeerHandle>>(emptyList())
     override val peersLiveData: LiveData<List<PeerHandle>> = _peersLiveData
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val _events = MutableSharedFlow<TransferEventWifiAwarePartialState>(replay = 1)
 
-    private val _events = MutableSharedFlow<TransferEventWifiAwarePartialState>(replay = 0)
     override val events: SharedFlow<TransferEventWifiAwarePartialState> = _events.asSharedFlow()
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun checkAndRequestWifiAwarePermissions(): Boolean {
         return walletConfigNetworkConfig.checkAndRequestWifiAwarePermissions()
@@ -116,7 +117,9 @@ class WalletLiveDataControllerImpl(
                     scope.launch {
                         if (!isSuccess) {
                             println("[WalletLiveDataController] Publish failed with code: $errorCode")
-                            _events.emit(TransferEventWifiAwarePartialState.Error("Publish failed with code: $errorCode"))
+                            _events.emit(TransferEventWifiAwarePartialState.Error(  -5,
+                                message = "Subscribe failed with code: ${errorCode}"
+                            ))
                         } else {
                             _events.emit(TransferEventWifiAwarePartialState.Connecting)
                         }
@@ -128,7 +131,10 @@ class WalletLiveDataControllerImpl(
                     scope.launch {
                         if (!isSuccess) {
                             println("[WalletLiveDataController] Subscribe failed with code: $errorCode")
-                            _events.emit(TransferEventWifiAwarePartialState.Error("Subscribe failed with code: $errorCode"))
+                            _events.emit(TransferEventWifiAwarePartialState.Error(
+                                -5,
+                                message = "Subscribe failed with code: ${errorCode}"
+                            ))
                         } else {
                             _events.emit(TransferEventWifiAwarePartialState.Connecting)
                         }

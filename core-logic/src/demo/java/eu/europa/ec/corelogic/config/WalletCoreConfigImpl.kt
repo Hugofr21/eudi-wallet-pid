@@ -47,7 +47,12 @@ internal class WalletCoreConfigImpl(
                         useStrongBoxForKeys = true
                     )
                     configureOpenId4Vp {
-                        withEncryptionAlgorithms(listOf(EncryptionAlgorithm.ECDH_ES))
+                        withEncryptionAlgorithms(
+                            listOf(
+                                EncryptionAlgorithm.ECDH_ES,
+                            EncryptionAlgorithm.ECDH_1PU
+                        )
+                        )
                         withEncryptionMethods(
                             listOf(
                                 EncryptionMethod.A128CBC_HS256,
@@ -79,15 +84,14 @@ internal class WalletCoreConfigImpl(
                         )
                     }
 
-//                    VCI_ISSUER_URLS.forEach { issuerUrl ->
-//                        configureOpenId4Vci {
-//                            withIssuerUrl(issuerUrl = issuerUrl)
-//                            withClientId(clientId = VCI_CLIENT_ID)
-//                            withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
-//                            withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-//                            withUseDPoPIfSupported(true)
-//                        }
+//                    configureOpenId4Vci {
+//                        withIssuerUrl(issuerUrl = issuerUrl)
+//                        withClientId(clientId = VCI_CLIENT_ID)
+//                        withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
+//                        withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
+//                        withUseDPoPIfSupported(true)
 //                    }
+
 
 
                     // reader C.A
@@ -100,6 +104,7 @@ internal class WalletCoreConfigImpl(
                         R.raw.pidissuerca02_nl,
                         R.raw.pidissuerca02_pt,
                         R.raw.pidissuerca02_ut,
+                        R.raw.av_issuer_ca01,
 
                         // lissi cert root
                         R.raw.pidissuercalissi01,

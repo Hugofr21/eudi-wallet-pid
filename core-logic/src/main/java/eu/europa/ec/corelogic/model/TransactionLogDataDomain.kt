@@ -19,6 +19,7 @@ package eu.europa.ec.corelogic.model
 import eu.europa.ec.corelogic.extension.getLocalizedDocumentName
 import eu.europa.ec.eudi.wallet.transactionLogging.TransactionLog
 import eu.europa.ec.eudi.wallet.transactionLogging.presentation.PresentedDocument
+import eu.europa.ec.resourceslogic.R
 
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import java.time.LocalDate
@@ -49,6 +50,7 @@ sealed interface TransactionLogDataDomain {
         override val status: TransactionLog.Status,
         override val creationLocalDateTime: LocalDateTime,
         override val creationLocalDate: LocalDate,
+        val documents: List<PresentedDocument>,
     ) : TransactionLogDataDomain
 
     data class SigningLog(
@@ -57,25 +59,20 @@ sealed interface TransactionLogDataDomain {
         override val status: TransactionLog.Status,
         override val creationLocalDateTime: LocalDateTime,
         override val creationLocalDate: LocalDate,
+        val documents: List<PresentedDocument>,
     ) : TransactionLogDataDomain
 
     companion object {
         fun TransactionLogDataDomain.getTransactionTypeLabel(resourceProvider: ResourceProvider): String {
             return when (this) {
-                is PresentationLog -> resourceProvider.getString(eu.europa.ec.resourceslogic.R.string.transactions_screen_filters_filter_by_transaction_type_presentation)
-                is IssuanceLog -> resourceProvider.getString(eu.europa.ec.resourceslogic.R.string.transactions_screen_filters_filter_by_transaction_type_issuance)
-                is SigningLog -> resourceProvider.getString(eu.europa.ec.resourceslogic.R.string.transactions_screen_filters_filter_by_transaction_type_signing)
+                is PresentationLog -> resourceProvider.getString(R.string.transactions_screen_filters_filter_by_transaction_type_presentation)
+                is IssuanceLog -> resourceProvider.getString(R.string.transactions_screen_filters_filter_by_transaction_type_issuance)
+                is SigningLog -> resourceProvider.getString(R.string.transactions_screen_filters_filter_by_transaction_type_signing)
             }
         }
 
         fun TransactionLogDataDomain.getTransactionDocumentNames(userLocale: Locale): List<String> {
             return when (this) {
-                is IssuanceLog -> {
-                    //TODO change this once Core supports more transaction types
-
-                    emptyList()
-                }
-
                 is PresentationLog -> {
                     this.documents.mapNotNull { document ->
                         document.metadata.getLocalizedDocumentName(
@@ -90,9 +87,32 @@ sealed interface TransactionLogDataDomain {
                     }
                 }
 
+                is IssuanceLog -> {
+                    this.documents.mapNotNull { document ->
+                        document.metadata.getLocalizedDocumentName(
+                            userLocale = userLocale,
+                            fallback = ""
+                        ).takeIf { it.isNotBlank() }
+                    }.flatMap { documentName ->
+                        listOf(
+                            documentName,
+                            documentName.replace(regex = "\\s".toRegex(), replacement = "")
+                        )
+                    }
+                }
+
                 is SigningLog -> {
-                    //TODO change this once Core supports more transaction types
-                    emptyList()
+                    this.documents.mapNotNull { document ->
+                        document.metadata.getLocalizedDocumentName(
+                            userLocale = userLocale,
+                            fallback = ""
+                        ).takeIf { it.isNotBlank() }
+                    }.flatMap { documentName ->
+                        listOf(
+                            documentName,
+                            documentName.replace(regex = "\\s".toRegex(), replacement = "")
+                        )
+                    }
                 }
             }
         }

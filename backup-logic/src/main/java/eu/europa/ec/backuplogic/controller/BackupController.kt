@@ -70,9 +70,7 @@ interface BackupController {
 
 }
 
-/**
- * TODO: refute code duplication
- */
+
 class BackupControllerImpl(
     private val context: Context,
     private val walletCoreDocumentsController: WalletCoreDocumentsController,
@@ -89,6 +87,8 @@ class BackupControllerImpl(
 
     }
 
+    @Volatile
+    private var cachedDecryptedCredentials: List<String> = emptyList()
     private val logsDir = File(context.filesDir.absolutePath + "/backup").apply { mkdirs() }
 
 
@@ -180,28 +180,30 @@ class BackupControllerImpl(
         val bundle = Gson().fromJson(jsonString, BackupBundle::class.java)
         println(">>> BackupBundle carregado com sucesso")
 
-        val saltB64 = bundle.securityParams.mnemonicPhrase?.salt
         val expectedHashB64 = bundle.securityParams.mnemonicPhrase?.hash
-        println(">>> Salt recebido (Base64): $saltB64")
         println(">>> Hash esperado (Base64): $expectedHashB64")
 
-        val saltBytes = Base64.decode(saltB64, Base64.NO_WRAP)
+        val saltBytes = cryptoController.generateSaltFromMnemonic(passPhrase)
         val derivedKeyBytes = cryptoController.deriveKeyFromMnemonic(passPhrase, saltBytes)
         val derivedHashB64 = Base64.encodeToString(derivedKeyBytes, Base64.NO_WRAP)
         println(">>> Hash derivado (Base64): $derivedHashB64")
 
         if (!derivedHashB64.contentEquals(expectedHashB64)) {
             println("!!! Passphrase inválida")
-            throw SecurityException("Passphrase invalid!!!!")
+            return emptyList()
         }
 
         println(">>> Passphrase válida, iniciando decriptação das credenciais")
 
         val decryptedCredentials = decryptCredentials(bundle, derivedKeyBytes)
-        decryptedCredentials.forEachIndexed { index, credentialJson ->
-            val documentDto = Gson().fromJson(credentialJson, DocumentDto::class.java)
-            println(">>> Credential #$index: $documentDto")
-        }
+        println(">>> Decriptação  das credenciais $decryptedCredentials")
+
+//        decryptedCredentials.forEachIndexed { index, credentialJson ->
+//            val documentDto = Gson().fromJson(credentialJson, DocumentDto::class.java)
+//            println(">>> Credential #$index: $documentDto")
+//        }
+
+        cachedDecryptedCredentials = decryptedCredentials.toList()
 
         val result = listOfNotNull(
             bundle.securityParams.biometric?.hash?.let { "Biometric" },

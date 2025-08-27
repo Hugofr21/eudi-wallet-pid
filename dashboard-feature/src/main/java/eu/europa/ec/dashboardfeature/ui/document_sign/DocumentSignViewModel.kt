@@ -19,6 +19,7 @@ package eu.europa.ec.dashboardfeature.ui.document_sign
 import android.content.Context
 import android.net.Uri
 import eu.europa.ec.dashboardfeature.interactor.DocumentSignInteractor
+import eu.europa.ec.dashboardfeature.ui.document_sign.Effect.*
 import eu.europa.ec.dashboardfeature.ui.document_sign.model.DocumentSignButtonUi
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
@@ -34,13 +35,16 @@ data class State(
     val error: ContentErrorConfig? = null,
     val title: String,
     val subtitle: String,
-    val buttonUi: DocumentSignButtonUi
+    val buttonUi: DocumentSignButtonUi,
+    val errorDoc: ContentErrorConfig? = null
 ) : ViewState
 
 sealed class Event : ViewEvent {
     data object Pop : Event()
     data object OnSelectDocument : Event()
     data class DocumentUriRetrieved(val context: Context, val uri: Uri) : Event()
+
+    data class InvalidDocumentName(val fileName: String) : Event()
 }
 
 sealed class Effect : ViewSideEffect {
@@ -66,7 +70,7 @@ class DocumentSignViewModel(
     override fun handleEvents(event: Event) {
         when (event) {
             is Event.OnSelectDocument -> {
-                setEffect { Effect.OpenDocumentSelection(listOf("application/pdf")) }
+                setEffect { OpenDocumentSelection(listOf("application/pdf")) }
             }
 
             is Event.Pop -> setEffect { Effect.Navigation.Pop }
@@ -74,6 +78,21 @@ class DocumentSignViewModel(
                 event.context,
                 event.uri
             )
+
+            is Event.InvalidDocumentName -> {
+                setState {
+                    copy(
+                        errorDoc = ContentErrorConfig(
+                            errorTitle = resourceProvider.getString(R.string.error_title),
+                            errorSubTitle = resourceProvider.getString(
+                                R.string.invalid_document_name_error,
+                                event.fileName
+                            ),
+                            onCancel = { setState { copy(errorDoc = null) } }
+                        )
+                    )
+                }
+            }
         }
     }
 }

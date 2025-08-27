@@ -1,5 +1,6 @@
 package eu.europa.ec.verifierfeature.ui.choiseVerifier
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
@@ -17,9 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,8 +43,10 @@ import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapImage
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
 import eu.europa.ec.uilogic.component.wrap.WrapText
+import eu.europa.ec.uilogic.extension.openWifiSettings
 import eu.europa.ec.verifierfeature.ui.choiseVerifier.compoment.TrustListGrid
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 
@@ -53,6 +58,7 @@ fun ChoiceVerifierScreen(
 ) {
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     val effectFlow = viewModel.effect
+    val context = LocalContext.current
 
     ContentScreen(
         isLoading = state.isLoading,
@@ -65,7 +71,11 @@ fun ChoiceVerifierScreen(
                     type = ButtonType.PRIMARY,
                     onClick = { viewModel.setEvent(Event.SubmitSelection) },
                     enabled = !state.isLoading
-                )
+                ),
+                isInternetAvailable = state.isInternetAvailable,
+                onOpenWifiSettings = {
+                    context.openWifiSettings()
+                }
             )
         }
     ) { paddingValues ->
@@ -186,16 +196,36 @@ private fun MainContent(
 private fun ContinueButton(
     paddingValues: PaddingValues,
     config: ButtonConfig,
+    isInternetAvailable: Boolean,
+    onOpenWifiSettings: () -> Unit
 ) {
     WrapStickyBottomContent(
         stickyBottomModifier = Modifier
             .fillMaxWidth()
             .padding(paddingValues),
         stickyBottomConfig = StickyBottomConfig(
-            type = StickyBottomType.OneButton(config = config), showDivider = false
+            type = StickyBottomType.OneButton(
+                config = config.copy(
+                    enabled = config.enabled && isInternetAvailable
+                )
+            ),
+            showDivider = false
         )
     ) {
-        Text(text = stringResource(R.string.backup_screen_skip_button))
+        if (!isInternetAvailable) {
+            Text(
+                text = stringResource(R.string.no_internet_open_wifi_settings),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenWifiSettings() }
+                    .padding(16.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
+        } else {
+            Text(text = stringResource(R.string.backup_screen_skip_button))
+        }
     }
 }
 
@@ -213,7 +243,9 @@ private fun ContentPreview() {
             stickyBottom = {
                 ContinueButton(
                     paddingValues = it,
-                    config = buttonConfig
+                    config = buttonConfig,
+                    isInternetAvailable =  false,
+                    onOpenWifiSettings = {}
                 )
             }
         ) { paddingValues ->

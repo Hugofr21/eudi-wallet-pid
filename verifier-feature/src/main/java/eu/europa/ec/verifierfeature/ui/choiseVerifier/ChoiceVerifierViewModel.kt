@@ -1,7 +1,9 @@
 package eu.europa.ec.verifierfeature.ui.choiseVerifier
 
+import android.R
 import android.content.Context
 import androidx.lifecycle.viewModelScope
+import eu.europa.ec.corelogic.config.WalletConfigNetworkConfig
 import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
@@ -21,13 +23,14 @@ data class VerifierItem(
     val id: String,
     val displayName: String,
     val url: String,
-    val isSelected: Boolean
+    val isSelected: Boolean,
 )
 
 data class State(
     val isLoading: Boolean = false,
     val trustListVerifier: List<String> = emptyList(),
-    val verifiers: List<VerifierItem> = emptyList()
+    val verifiers: List<VerifierItem> = emptyList(),
+    val isInternetAvailable: Boolean = false
 ) : ViewState
 
 sealed class Event : ViewEvent {
@@ -52,6 +55,7 @@ sealed class Effect : ViewSideEffect {
 @KoinViewModel
 class ChoiceVerifierViewModel(
     private val verifierEUDIController: VerifierEUDIController,
+    private val walletConfigNetworkConfig : WalletConfigNetworkConfig,
     private val context: Context,
     @InjectedParam private val documentId: DocumentId,
 ) : MviViewModel<Event, State, Effect>() {
@@ -59,18 +63,21 @@ class ChoiceVerifierViewModel(
         val trustList = trustListVerifier()
         val options = trustList.map { it.name }
 
+        val stateNetwork = walletConfigNetworkConfig.isInternetAvailable(context)
+
         val items = trustList.map { v ->
             VerifierItem(
                 id = v.id,
                 displayName = v.name,
                 url = v.url,
-                isSelected = false
+                isSelected = false,
             )
         }
 
         return State(
             trustListVerifier = options,
-            verifiers = items
+            verifiers = items,
+            isInternetAvailable = stateNetwork
         )
     }
 

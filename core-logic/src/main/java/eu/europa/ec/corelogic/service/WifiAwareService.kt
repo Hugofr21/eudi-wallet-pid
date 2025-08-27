@@ -51,6 +51,8 @@ import kotlin.collections.plus
 import android.net.wifi.WifiManager
 import androidx.core.app.ActivityCompat
 
+
+
 @Parcelize
 data class NetworkStatus(
     val isConnected: Boolean,
@@ -76,6 +78,8 @@ interface SubscribeCallback {
     fun onSubscribeFailed(reason: Int)
     fun onPeerDiscovered(peerHandle: PeerHandle)
 }
+
+
 class WifiAwareService : Service() {
 
     companion object {
@@ -84,6 +88,7 @@ class WifiAwareService : Service() {
         private const val CHANNEL_ID = "WifiAwareServiceChannel"
         private const val CHANNEL_NAME = "Wi-Fi Aware"
         private const val PERMISSION_DENIED = -5
+
 
         const val ACTION_START_PUBLISH = "eu.europa.ec.corelogic.action.START_PUBLISH"
         const val ACTION_STOP_PUBLISH = "eu.europa.ec.corelogic.action.STOP_PUBLISH"
@@ -101,6 +106,7 @@ class WifiAwareService : Service() {
         const val EXTRA_ERROR_CODE = "eu.europa.ec.corelogic.extra.ERROR_CODE"
         const val EXTRA_MESSAGE = "eu.europa.ec.corelogic.extra.MESSAGE"
         const val EXTRA_NETWORK_STATUS = "eu.europa.ec.corelogic.extra.NETWORK_STATUS"
+
 
         fun createStartIntent(context: Context): Intent {
             return Intent(context, WifiAwareService::class.java).apply { action = ACTION_START_PUBLISH }
@@ -141,14 +147,22 @@ class WifiAwareService : Service() {
         createNotificationChannel()
     }
 
+
+
     @RequiresPermission(allOf = [Manifest.permission.CHANGE_WIFI_STATE, Manifest.permission.ACCESS_WIFI_STATE])
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        println("INTENT1 ${intent?.action}")
-        println("INTENT1 ${intent?.data}")
-        if (!checkLocationPermissionIsGiven()) return START_NOT_STICKY
+//        println("INTENT1 ${intent?.action}")
+//        println("INTENT1 ${intent?.data}")
+//
+        if (!checkRequiredPermissions()) {
+            println("[WifiAwareService] Required permissions not granted:")
 
-        println("INTENT ${intent?.action}")
-        println("INTENT ${intent?.data}")
+            broadcastStatus(false, PERMISSION_DENIED, isPublish = intent?.action == ACTION_START_PUBLISH)
+            stopForeground(true)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         when (intent?.action) {
             ACTION_START_PUBLISH -> {
                 val notification = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -579,24 +593,24 @@ class WifiAwareService : Service() {
         }
     }
 
-    private fun checkLocationPermissionIsGiven() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        ActivityCompat.checkSelfPermission(
-            this,
+    private fun checkRequiredPermissions(): Boolean {
+        val permissions = mutableListOf(
+            Manifest.permission.ACCESS_WIFI_STATE,
+            Manifest.permission.CHANGE_WIFI_STATE,
             Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_BACKGROUND_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-    } else {
-        ActivityCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            permissions.add(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+        }
+
+        return permissions.all {
+            val granted = ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+            println("[WifiAwareService] Permission $it: ${if (granted) "GRANTED" else "DENIED"}")
+            granted
+        }
     }
 }

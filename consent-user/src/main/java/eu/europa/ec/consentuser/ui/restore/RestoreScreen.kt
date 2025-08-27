@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material3.Icon
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import eu.europa.ec.consentuser.ui.restore.Event.*
+import eu.europa.ec.consentuser.ui.restore.RestorePage
 import eu.europa.ec.consentuser.ui.restore.setupSlider.FirstPage
 import eu.europa.ec.consentuser.ui.restore.setupSlider.SecondEnterPhraseContentPage
 import eu.europa.ec.consentuser.ui.restore.setupSlider.ThirdRestoreWalletContent
@@ -155,19 +157,20 @@ private fun MainContent(
             .padding(paddingValues)
     ) {
 
-        Icon(
-            imageVector = Icons.Default.Backup,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(ICON_SIZE_40.dp)
-        )
-
-        VSpacer.Small()
-
         Text(
             text = stringResource(R.string.backup_you_wallet),
             style = MaterialTheme.typography.titleLarge
         )
+        VSpacer.Small()
+        Icon(
+            imageVector = Icons.Default.Backup,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+             modifier = Modifier
+                .size(ICON_SIZE_40.dp)
+                .align(Alignment.CenterHorizontally)
+        )
+
         VSpacer.Small()
         Text(
             text = stringResource(R.string.consent_backup_third_page_restore_wallet_description),
@@ -175,7 +178,10 @@ private fun MainContent(
 
         )
 
-        RestoreGrid()
+        if (state?.page != RestorePage.Second){
+            RestoreGrid()
+        }
+
         VSpacer.Small()
         StepFormContent(state = state, viewModel = viewModel)
     }
@@ -191,7 +197,7 @@ private fun RestoreGrid() {
         verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
     ) {
         RestoreGridItem(
-            icon = Icons.Default.Backup,
+            icon = Icons.Default.FileOpen,
             title = stringResource(R.string.consent_backup_first_page_title),
             description = stringResource(R.string.select_file_button)
         )

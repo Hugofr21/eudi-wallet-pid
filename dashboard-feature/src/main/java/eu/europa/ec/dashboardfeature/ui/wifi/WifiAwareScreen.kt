@@ -3,12 +3,14 @@ package eu.europa.ec.dashboardfeature.ui.wifi
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,6 +75,8 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import eu.europa.ec.uilogic.extension.findActivity
 import eu.europa.ec.uilogic.extension.openAppSettings
 import eu.europa.ec.uilogic.extension.openWifiSettings
 
@@ -84,59 +88,200 @@ fun WifiAwareScreen(
     onDashboardEventSent: (DashboardEvent) -> Unit,
 ) {
     val context = LocalContext.current
+    val activity = remember { context.findActivity() }
     val state by viewModel.viewState.collectAsStateWithLifecycle()
     val effects = viewModel.effect
-    val isRequestingPermissions = remember { mutableStateOf(false) }
+
     val showRationale = remember { mutableStateOf(false) }
     val rationalePermissions = remember { mutableStateOf<List<String>>(emptyList()) }
-    val currentPermission = remember { mutableStateOf<String?>(null) }
-    val permissionQueue = remember {
-        mutableStateListOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-            Manifest.permission.NEARBY_WIFI_DEVICES
-        )
+    val isRequesting = remember { mutableStateOf(false) }
+    val needsBackgroundLocation = remember { mutableStateOf(false) }
+    fun isGranted(permission: String): Boolean =
+        ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+    val fineLocationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        isRequesting.value = false
+        if (granted) {
+            viewModel.setState { copy(hasPermissions = true) }
+            viewModel.handleEvents(Event.CheckPermissions)
+        } else {
+            val perm = Manifest.permission.ACCESS_FINE_LOCATION
+            val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
+            if (shouldShow) {
+                rationalePermissions.value = listOf(perm)
+                showRationale.value = true
+            } else {
+                context.openAppSettings()
+            }
+        }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            println("[WifiAwareScreen] Permission result for ${currentPermission.value}: $isGranted")
-            isRequestingPermissions.value = false
-            currentPermission.value?.let { perm ->
-                if (!isGranted) {
-                    val shouldShowRationale = ActivityCompat.shouldShowRequestPermissionRationale(
-                        context as Activity,
-                        perm
-                    )
-                    if (shouldShowRationale) {
-                        rationalePermissions.value = listOf(perm)
-                        showRationale.value = true
-                    } else {
-                        context.openAppSettings()
-                    }
-                } else {
-                    println("[WifiAwareScreen] Permission granted: $perm")
-                }
-            }
-            if (permissionQueue.isNotEmpty()) {
-                permissionQueue.removeAt(0)
+    val coarseLocationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        isRequesting.value = false
+        if (granted) {
+            // Coarse granted, now request FINE_LOCATION
+            if (!isGranted(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                isRequesting.value = true
+                fineLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             } else {
                 viewModel.setState { copy(hasPermissions = true) }
                 viewModel.handleEvents(Event.CheckPermissions)
             }
+        } else {
+            val perm = Manifest.permission.ACCESS_COARSE_LOCATION
+            val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
+            if (shouldShow) {
+                rationalePermissions.value = listOf(perm)
+                showRationale.value = true
+            } else {
+                context.openAppSettings()
+            }
         }
-    )
+    }
 
 
-    LaunchedEffect(permissionQueue.size) {
-        if (permissionQueue.isNotEmpty() && !isRequestingPermissions.value) {
-            val next = permissionQueue[0]
-            currentPermission.value = next
-            isRequestingPermissions.value = true
-            permissionLauncher.launch(next)
-        } else if (permissionQueue.isEmpty()) {
+    val foregroundServiceLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        isRequesting.value = false
+        if (granted) {
             viewModel.setState { copy(hasPermissions = true) }
+            viewModel.handleEvents(Event.CheckPermissions)
+        } else {
+            val perm = Manifest.permission.FOREGROUND_SERVICE_LOCATION
+            val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
+            if (shouldShow) {
+                rationalePermissions.value = listOf(perm)
+                showRationale.value = true
+            } else {
+                context.openAppSettings()
+            }
+        }
+    }
+
+    val nearbyWifiLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        isRequesting.value = false
+        if (granted) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !isGranted(Manifest.permission.FOREGROUND_SERVICE_LOCATION)) {
+                isRequesting.value = true
+                foregroundServiceLauncher.launch(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+            } else {
+                viewModel.setState { copy(hasPermissions = true) }
+                viewModel.handleEvents(Event.CheckPermissions)
+            }
+        } else {
+            val perm = Manifest.permission.NEARBY_WIFI_DEVICES
+            val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
+            if (shouldShow) {
+                rationalePermissions.value = listOf(perm)
+                showRationale.value = true
+            } else {
+                context.openAppSettings()
+            }
+        }
+    }
+
+
+
+    val backgroundLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        isRequesting.value = false
+        if (granted) {
+            viewModel.setState { copy(hasPermissions = true) }
+            viewModel.handleEvents(Event.CheckPermissions)
+        } else {
+            val perm = Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
+            if (shouldShow) {
+                rationalePermissions.value = listOf(perm)
+                showRationale.value = true
+            } else {
+                context.openAppSettings()
+            }
+        }
+    }
+
+    LaunchedEffect(effects) {
+        effects.collect { effect ->
+            when (effect) {
+                is Effect.RequestPermissions -> {
+                    if (isRequesting.value) return@collect
+
+                    val permsToRequest = effect.permissions.distinct().toList()
+                    when {
+                        permsToRequest.contains(Manifest.permission.ACCESS_COARSE_LOCATION) && !isGranted(Manifest.permission.ACCESS_COARSE_LOCATION) -> {
+                            isRequesting.value = true
+                            coarseLocationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                        }
+                        permsToRequest.contains(Manifest.permission.ACCESS_FINE_LOCATION) && !isGranted(Manifest.permission.ACCESS_FINE_LOCATION) -> {
+                            isRequesting.value = true
+                            fineLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        }
+                        permsToRequest.contains(Manifest.permission.NEARBY_WIFI_DEVICES) && !isGranted(Manifest.permission.NEARBY_WIFI_DEVICES) -> {
+                            isRequesting.value = true
+                            nearbyWifiLauncher.launch(Manifest.permission.NEARBY_WIFI_DEVICES)
+                        }
+                        permsToRequest.contains(Manifest.permission.FOREGROUND_SERVICE_LOCATION) && !isGranted(Manifest.permission.FOREGROUND_SERVICE_LOCATION) -> {
+                            isRequesting.value = true
+                            foregroundServiceLauncher.launch(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+                        }
+                        permsToRequest.contains(Manifest.permission.ACCESS_BACKGROUND_LOCATION) && !isGranted(Manifest.permission.ACCESS_BACKGROUND_LOCATION) -> {
+                            isRequesting.value = true
+                            backgroundLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                        }
+                        else -> {
+                            viewModel.setState { copy(hasPermissions = true) }
+                            viewModel.handleEvents(Event.CheckPermissions)
+                        }
+                    }
+                }
+                is Effect.ShowPermissionDenied -> {
+                    context.openAppSettings()
+                }
+                is Effect.Navigation -> handleNavigationEffect(effect, navHostController, context)
+                is Effect.UpdatePeers -> println("[WifiAwareScreen] Peers updated: ${effect.peers}")
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!state.hasPermissions) {
+            val toRequest = mutableListOf<String>()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (!isGranted(Manifest.permission.NEARBY_WIFI_DEVICES)) {
+                    toRequest += Manifest.permission.NEARBY_WIFI_DEVICES
+                }
+                if (!isGranted(Manifest.permission.FOREGROUND_SERVICE_LOCATION) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    toRequest += Manifest.permission.FOREGROUND_SERVICE_LOCATION
+                }
+            } else {
+                if (!isGranted(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                    toRequest += Manifest.permission.ACCESS_COARSE_LOCATION
+                }
+                if (isGranted(Manifest.permission.ACCESS_COARSE_LOCATION) && !isGranted(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    toRequest += Manifest.permission.ACCESS_FINE_LOCATION
+                }
+            }
+            if (needsBackgroundLocation.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (!isGranted(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                    toRequest += Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                }
+            }
+
+            if (toRequest.isNotEmpty()) {
+                viewModel.setEffect { Effect.RequestPermissions(toRequest) }
+            } else {
+                viewModel.setState { copy(hasPermissions = true) }
+                viewModel.handleEvents(Event.CheckPermissions)
+            }
+        } else {
             viewModel.handleEvents(Event.CheckPermissions)
         }
     }
@@ -146,9 +291,28 @@ fun WifiAwareScreen(
             permissions = rationalePermissions.value,
             onConfirm = {
                 showRationale.value = false
-                isRequestingPermissions.value = true
-                currentPermission.value?.let { perm ->
-                    permissionLauncher.launch(perm)
+                val perms = rationalePermissions.value.toTypedArray()
+                when {
+                    perms.contains(Manifest.permission.ACCESS_COARSE_LOCATION) -> {
+                        isRequesting.value = true
+                        coarseLocationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    }
+                    perms.contains(Manifest.permission.ACCESS_FINE_LOCATION) -> {
+                        isRequesting.value = true
+                        fineLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    }
+                    perms.contains(Manifest.permission.NEARBY_WIFI_DEVICES) -> {
+                        isRequesting.value = true
+                        nearbyWifiLauncher.launch(Manifest.permission.NEARBY_WIFI_DEVICES)
+                    }
+                    perms.contains(Manifest.permission.FOREGROUND_SERVICE_LOCATION) -> {
+                        isRequesting.value = true
+                        foregroundServiceLauncher.launch(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+                    }
+                    perms.contains(Manifest.permission.ACCESS_BACKGROUND_LOCATION) -> {
+                        isRequesting.value = true
+                        backgroundLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    }
                 }
             },
             onDismiss = {
@@ -158,85 +322,19 @@ fun WifiAwareScreen(
         )
     }
 
-    LaunchedEffect(effects) {
-        effects.collect { effect ->
-            when (effect) {
-                is Effect.RequestPermissions -> {
-                    if (!isRequestingPermissions.value) {
-                        println("[WifiAwareScreen] Starting sequential permission requests")
-                        permissionQueue.clear()
-                        permissionQueue.addAll(effect.permissions)
-                        requestNextPermission(permissionQueue, permissionLauncher, currentPermission, isRequestingPermissions, rationalePermissions, showRationale, context)
-                    }
-                }
-                is Effect.ShowPermissionDenied -> {
-                    Toast.makeText(
-                        context,
-                        "Permissions denied: ${effect.missing.joinToString()}. Enable Wi-Fi and location services.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    context.openWifiSettings()
-                }
-                is Effect.Navigation -> {
-                    handleNavigationEffect(effect, navHostController, context)
-                }
-                is Effect.UpdatePeers -> {
-                    println("[WifiAwareScreen] Peers updated: ${effect.peers}")
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        println("[WifiAwareScreen] Initiating permission check")
-        viewModel.handleEvents(Event.CheckPermissions)
-    }
-
     ContentScreen(
         isLoading = state.isLoading == true,
         navigatableAction = ScreenNavigateAction.BACKABLE,
         onBack = { context.finish() },
-        topBar = {
-            TopBar(
-                onDashboardEventSent = onDashboardEventSent
-            )
-        }
+        topBar = { TopBar(onDashboardEventSent = onDashboardEventSent) }
     ) { paddingValues ->
         Content(
             state = state,
             effectFlow = viewModel.effect,
-            onNavigationRequested = { navigationEffect ->
-                handleNavigationEffect(navigationEffect, navHostController, context)
-            },
+            onNavigationRequested = { navigationEffect -> handleNavigationEffect(navigationEffect, navHostController, context) },
             paddingValues = paddingValues,
             viewModel = viewModel
         )
-    }
-}
-
-private fun requestNextPermission(
-    permissionQueue: SnapshotStateList<String>,
-    permissionLauncher: ActivityResultLauncher<String>,
-    currentPermission: MutableState<String?>,
-    isRequestingPermissions: MutableState<Boolean>,
-    rationalePermissions: MutableState<List<String>>,
-    showRationale: MutableState<Boolean>,
-    context: Context
-) {
-    if (permissionQueue.isNotEmpty()) {
-        val perm = permissionQueue.first()
-        currentPermission.value = perm
-        val shouldShowRationale = ActivityCompat.shouldShowRequestPermissionRationale(
-            context as Activity,
-            perm
-        )
-        if (shouldShowRationale) {
-            rationalePermissions.value = listOf(perm)
-            showRationale.value = true
-        } else {
-            isRequestingPermissions.value = true
-            permissionLauncher.launch(perm)
-        }
     }
 }
 
@@ -246,48 +344,35 @@ private fun PermissionRationaleDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val message = buildString {
+        append("The app needs the following permissions for Wi-Fi Aware operation:\n\n")
+        permissions.forEach { p ->
+            append(
+                when (p) {
+                    Manifest.permission.NEARBY_WIFI_DEVICES -> "• Nearby Wi-Fi Devices: Access nearby Wi-Fi devices.\n"
+                    Manifest.permission.ACCESS_COARSE_LOCATION -> "• Location (basic): Approximate detection of nearby devices.\n"
+                    Manifest.permission.ACCESS_FINE_LOCATION -> "• Location (precise): Precise detection of nearby devices.\n"
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION -> "• Background Location: Required for continuous background discovery.\n"
+                    Manifest.permission.FOREGROUND_SERVICE_LOCATION -> "• Foreground Service (Location): Required for running Wi-Fi Aware service in the foreground.\n"
+                    else -> "• $p\n"
+                }
+            )
+        }
+        append("\nIf you permanently deny these permissions, you will need to manually grant them in the app settings.")
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Permission Required",
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "This app needs the following permissions to enable Wi-Fi Aware functionality:",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                permissions.forEach { permission ->
-                    Text(
-                        text = when (permission) {
-                            Manifest.permission.ACCESS_FINE_LOCATION -> "• Location: Required to discover nearby devices."
-                            Manifest.permission.ACCESS_BACKGROUND_LOCATION -> "• Background Location: Required for continuous scanning."
-                            Manifest.permission.NEARBY_WIFI_DEVICES -> "• Nearby Wi-Fi Devices: Required to connect to devices via Wi-Fi Aware."
-                            else -> "• $permission: Required for app functionality."
-                        },
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        },
+        title = { Text(text = "Required Permissions", style = MaterialTheme.typography.headlineSmall) },
+        text = { Text(text = message, style = MaterialTheme.typography.bodyMedium) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("Grant Permission")
-            }
+            TextButton(onClick = onConfirm) { Text("Continue") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
-
-
 
 @Composable
 private fun TopBar(

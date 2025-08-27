@@ -63,7 +63,6 @@ class WalletLotlControllerImpl(
     override  fun init(){
         logsDir.mkdirs()
         scope.launch {
-            println("init json!!!!!!!!!!!!!!!!!!!!!")
             fetchAndSaveTslList()
         }
     }
@@ -72,9 +71,7 @@ class WalletLotlControllerImpl(
         val tslList = fetchAllQtsp()
         val json = Json.encodeToString(mapOf("trustList" to tslList))
         val jsonBytes = json.toByteArray()
-        println("init json!!!!!!!!!!!!!!!!!!!!!")
         if (jsonBytes.size <= FILE_SIZE_LIMIT) {
-            println("getRotatedFile")
             val file = getRotatedFile()
             file.writeBytes(jsonBytes)
             Timber.tag("TrustList").d("Trust list JSON saved to ${file.name}")
@@ -113,10 +110,10 @@ class WalletLotlControllerImpl(
         val lotlStream = httpGetAsStream(lotlUrl)
         val tslList = parseLotlLocationsWithCategory(lotlStream)
 
-        println("Trust List Providers:")
-        tslList.forEach {
-            println("${it.country} - ${it.tslUrl} - ${it.category}")
-        }
+//        println("Trust List Providers:")
+//        tslList.forEach {
+//            println("${it.country} - ${it.tslUrl} - ${it.category}")
+//        }
 
         tslList
     }

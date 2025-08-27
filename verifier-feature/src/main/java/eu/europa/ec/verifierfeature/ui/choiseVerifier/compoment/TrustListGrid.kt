@@ -18,14 +18,17 @@ fun TrustListGrid(
     items: List<VerifierItem>,
     onCheckedChange: (String, Boolean) -> Unit
 ) {
+
+    val sortedItems = items.sortedBy { it.displayName }
+
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(1),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(items.size) { index ->
-            val item = items.get(index)
+        items(sortedItems.size) { index ->
+            val item = sortedItems[index]
             WrapCheckboxWithLabel(
                 checkboxData = CheckboxWithTextData(
                     isChecked = item.isSelected,

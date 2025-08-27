@@ -21,6 +21,7 @@ sealed class RestorePage {
 }
 
 data class State(
+    val isLoading: Boolean = false,
     val page: RestorePage = RestorePage.First,
     val selectedFileUri: Uri? = null,
     val mnemonicWords: List<String> = List(12) { "" },
@@ -65,7 +66,12 @@ class RestoreViewModel(
             Event.GoBack -> setEffect { Effect.Navigation.Pop }
 
             is Event.FileSelected -> {
-                setState { copy(selectedFileUri = event.uri) }
+                setState {
+                    copy(
+                        selectedFileUri = event.uri,
+                        page = RestorePage.Second
+                    )
+                }
                 setEffect { Effect.ShowError("File selected: ${event.uri.lastPathSegment}") }
             }
 
@@ -81,40 +87,35 @@ class RestoreViewModel(
 
                 viewModelScope.launch {
                     setState { copy(isButtonEnabled = false) }
+                    val passPhrase = current.mnemonicWords.filter { it.isNotBlank() }
 
-                    try {
-                        val passPhrase = current.mnemonicWords.filter { it.isNotBlank() }
-
-                        val listOptions: List<String> =
-                            interactor.restoreWallet(current.selectedFileUri, passPhrase)
-
-                        if (listOptions.isNotEmpty()) {
-                            setState {
-                                copy(
-                                    page = RestorePage.Third,
-                                    options = listOptions,
-                                    selectedOptions = emptySet()
-                                )
-                            }
-                        } else {
-                            setState { copy(page = RestorePage.Third) }
+                    val listOptions: List<String> =
+                        interactor.restoreWallet(current.selectedFileUri, passPhrase)
+                    print("ListOptions $listOptions")
+                    if (listOptions.isNotEmpty()) {
+                        setState {
+                            copy(
+                                page = RestorePage.Third,
+                                options = listOptions,
+                                selectedOptions = emptySet(),
+                                isButtonEnabled = true
+                            )
                         }
-                    } catch (iae: IllegalArgumentException) {
-                        setEffect { Effect.ShowError(iae.message ?: "Invalid input") }
-                    } catch (e: Exception) {
-                        setEffect { Effect.ShowError(e.message ?: "Error while restoring backup") }
-                    } finally {
-                        setState { copy(isButtonEnabled = true) }
+                    } else {
+                        setState { copy(page = RestorePage.Third) }
                     }
+                    setState { copy(isButtonEnabled = true) }
                 }
             }
 
             Event.SubmitWords -> {
-                if (viewState.value.mnemonicWords.any { it.isBlank() }) {
+                val current = viewState.value
+                if (current.mnemonicWords.any { it.isBlank() }) {
                     setEffect { Effect.ShowError("All mnemonic words must be filled.") }
-                } else {
-                    setState { copy(page = RestorePage.Third) }
+                    return
                 }
+                val passPhrase = current.mnemonicWords.filter { it.isNotBlank() }
+                perRestore(current.selectedFileUri, passPhrase)
             }
 
             is Event.WordsChanged -> setState { copy(mnemonicWords = event.words) }
@@ -132,4 +133,34 @@ class RestoreViewModel(
             screen = CommonScreens.QuickPin,
             arguments = generateComposableArguments(mapOf("pinFlow" to PinFlow.CREATE))
         )
+
+    private fun perRestore(selectedUri: Uri?, passPhrase: List<String>) {
+        if (selectedUri == null) {
+            setEffect { Effect.ShowError("No backup file selected.") }
+            return
+        }
+        viewModelScope.launch {
+            setState { copy(isButtonEnabled = false, isLoading = true) }
+            val listOptions: List<String> = interactor.restoreWallet(selectedUri, passPhrase)
+            if (listOptions.isNotEmpty()) {
+                setState {
+                    copy(
+                        page = RestorePage.Third,
+                        options = listOptions,
+                        selectedOptions = emptySet()
+                    )
+                }
+            } else {
+                setState {
+                    copy(
+                        page = RestorePage.Third,
+                        options = emptyList(),
+                        selectedOptions = emptySet()
+                    )
+                }
+                setEffect { Effect.ShowError("Backup restored but no options available.") }
+            }
+
+        }
+    }
 }

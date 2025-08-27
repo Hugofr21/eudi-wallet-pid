@@ -22,7 +22,7 @@ import eu.europa.ec.eudi.wallet.EudiWallet
 import eu.europa.ec.eudi.wallet.document.DocumentExtensions.getDefaultKeyUnlockData
 import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
-import eu.europa.ec.verifierfeature.controller.verifier.VerifierAgeProofController
+import eu.europa.ec.verifierfeature.controller.verifier.VerifierController
 import eu.europa.ec.verifierfeature.model.FieldLabel
 import eu.europa.ec.verifierfeature.model.PresentationResponse
 import eu.europa.ec.verifierfeature.ui.initVerifierOther.IntFlowVerifierOtherRequest
@@ -179,7 +179,7 @@ interface EventPresentationDocumentController {
 
 
 class EventPresentationDocumentControllerImpl(
-    private val verifierAgeProofController: VerifierAgeProofController,
+    private val api: VerifierController,
     private val resourceProvider: ResourceProvider,
     private val walletCoreDocumentsController: WalletCoreDocumentsController,
     private val documentDetailsInteractor: DocumentDetailsInteractor,
@@ -266,10 +266,10 @@ class EventPresentationDocumentControllerImpl(
 
 
     override suspend fun intFlowVerifierAge(documentId: DocumentId, fields: List<FieldLabel>): String {
-        val metadata = verifierAgeProofController.metadataVerifier()
+        val metadata = api.metadataVerifier()
 
-        val pres = verifierAgeProofController.createPresentationRequest(fields)
-//        val pres = verifierAgeProofController.createPresentationRequestOther()
+        val pres = api.createPresentationRequest(fields)
+//        val pres = api.createPresentationRequestOther()
         println("transaction_id = ${pres.transaction_id}")
         println("client_id      = ${pres.client_id}")
         println("request        = ${pres.request}")
@@ -277,7 +277,7 @@ class EventPresentationDocumentControllerImpl(
         println("request_uri        = ${pres.request_uri}")
         fields.forEach { println("Fields {$it.key}") }
 
-        val nonce = verifierAgeProofController.getLastNonce()
+        val nonce = api.getLastNonce()
 
         if (!pres.request.isNullOrBlank()) {
             val authData = decodeAuthRequest(pres.request)
@@ -326,8 +326,8 @@ class EventPresentationDocumentControllerImpl(
 
 
     override suspend fun intFlowVerifierOther(request: IntFlowVerifierOtherRequest): String {
-        val metadata = verifierAgeProofController.metadataVerifier()
-        val pres = verifierAgeProofController.createPresentationRequestOther(request)
+        val metadata = api.metadataVerifier()
+        val pres = api.createPresentationRequestOther(request)
         println("transaction_id = ${pres.transaction_id}")
         println("client_id      = ${pres.client_id}")
         println("request        = ${pres.request}")
@@ -335,7 +335,7 @@ class EventPresentationDocumentControllerImpl(
         println("request_uri        = ${pres.request_uri}")
 //        fields.forEach { println("Fields {$it.key}") }
 
-        val nonce = verifierAgeProofController.getLastNonce()
+        val nonce = api.getLastNonce()
 
         val deepLink = AuthorizationRequest.formatAuthorizationRequestApi(
             pres.client_id,
@@ -466,8 +466,8 @@ class EventPresentationDocumentControllerImpl(
     private fun transactionState(){
         val transactionId = getSavedTransactionId() ?: return
         listenerScope.launch {
-            verifierAgeProofController.getPresentationState(transactionId)
-            verifierAgeProofController.getTransactionEventsLogs(transactionId)
+            api.getPresentationState(transactionId)
+            api.getTransactionEventsLogs(transactionId)
         }
     }
 
@@ -666,9 +666,9 @@ class EventPresentationDocumentControllerImpl(
             }
 
             val response = if (vpTokenString != null) {
-                verifierAgeProofController.directPost(authData.state, vpTokenString)
+                api.directPost(authData.state, vpTokenString)
             } else {
-                verifierAgeProofController.directPost(authData.state, "{}")
+                api.directPost(authData.state, "{}")
             }
 
             if (!response.isSuccessful) {

@@ -560,6 +560,9 @@
     <string name="user_consent_step_sigle_page_first_description">EUDI Wallet allows you to securely store your digital identity,\nofficial documents, and personal credentials directly on your device.</string>
     <string name="user_consent_step_sigle_page_secound_description">With Wallet, you can prove your identity online or in person,\naccess public and private services, digitally sign, and share only\nnecessary data.</string>
     <string name="user_consent_step_sigle_page_thrid_description">Os seus dados permanecem sempre sob o seu controlo. \nA partilha é feita apenas com o seu consentimento, em conformidade com o regulamento eIDAS 2.0 \ne as normas EUDI ARF.</string>
+    <string name="no_internet_open_wifi_settings">Sem ligação à internet. Toque em para abrir as definições de Wi-Fi.</string>
+    <string name="invalid_document_name_error">Invalid file name: %1$s. Please select a PDF with a lowercase name.</string>
+    <string name="error_title">Invalid file</string>
 
     <!-- Logs Screen -->
 </resources>

@@ -16,6 +16,9 @@
 
 package eu.europa.ec.dashboardfeature.ui.document_sign
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -39,6 +42,7 @@ import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.ListItemDataUi
 import eu.europa.ec.uilogic.component.ListItemMainContentDataUi
 import eu.europa.ec.uilogic.component.ListItemTrailingContentDataUi
+import eu.europa.ec.uilogic.component.content.ContentErrorConfig
 import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ContentTitle
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
@@ -65,7 +69,7 @@ internal fun DocumentSignScreen(
         isLoading = state.isLoading,
         navigatableAction = ScreenNavigateAction.CANCELABLE,
         onBack = { viewModel.setEvent(Event.Pop) },
-        contentErrorConfig = state.error
+        contentErrorConfig = (state.error ?: state.errorDoc)
     ) { contentPadding ->
         Content(
             state = state,
@@ -116,7 +120,13 @@ private fun Content(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         uri?.let {
-            onEventSend(Event.DocumentUriRetrieved(context, it))
+            val fileName = getFileNameFromUri(context, it)
+            val regex = Regex("^[a-z0-9_-]+\\.pdf$")
+            if (fileName != null && regex.matches(fileName)) {
+                onEventSend(Event.DocumentUriRetrieved(context, it))
+            } else {
+                onEventSend(Event.InvalidDocumentName(fileName ?: "Unknown"))
+            }
         }
     }
 
@@ -129,6 +139,23 @@ private fun Content(
                 )
             }
         }.collect()
+    }
+}
+
+
+private fun getFileNameFromUri(context: Context, uri: Uri): String? {
+    val cursor = context.contentResolver.query(uri, null, null, null, null)
+    return cursor?.use {
+        if (it.moveToFirst()) {
+            val displayNameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (displayNameIndex != -1) {
+                it.getString(displayNameIndex)
+            } else {
+                null
+            }
+        } else {
+            null
+        }
     }
 }
 

@@ -108,7 +108,7 @@ class VerifierApiSwaggerControllerImpl(
     companion object{
         val BASE_URL  = "https://verifier-backend.eudiw.dev/"
 //        val BASE_URL = "https://dev.verifier-backend.eudiw.dev"
-//        val BASE_URL = "http://localhost:8080/"
+//        val BASE_URL = "http://192.168.1.71:8080/"
     //        val BASE_URL  = "https://verifier-backend.ageverification.dev/"
     }
 

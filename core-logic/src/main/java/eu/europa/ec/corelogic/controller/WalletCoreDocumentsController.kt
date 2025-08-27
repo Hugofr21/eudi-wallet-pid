@@ -90,6 +90,7 @@ sealed class IssueDocumentPartialState {
     ) : IssueDocumentPartialState()
 }
 
+
 sealed class IssueDocumentsPartialState {
     data class Success(val documentIds: List<DocumentId>) : IssueDocumentsPartialState()
     data class DeferredSuccess(val deferredDocuments: Map<DocumentId, FormatType>) :
