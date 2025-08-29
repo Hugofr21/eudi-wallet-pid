@@ -102,111 +102,34 @@ fun WifiAwareScreen(
     val fineLocationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        isRequesting.value = false
-        if (granted) {
-            viewModel.setState { copy(hasPermissions = true) }
-            viewModel.handleEvents(Event.CheckPermissions)
+        val perm = Manifest.permission.ACCESS_FINE_LOCATION
+        val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
+        if (shouldShow) {
+            rationalePermissions.value = listOf(perm)
+            showRationale.value = true
         } else {
-            val perm = Manifest.permission.ACCESS_FINE_LOCATION
-            val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
-            if (shouldShow) {
-                rationalePermissions.value = listOf(perm)
-                showRationale.value = true
-            } else {
-                context.openAppSettings()
-            }
+            context.openAppSettings()
         }
     }
 
-    val coarseLocationLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        isRequesting.value = false
-        if (granted) {
-            // Coarse granted, now request FINE_LOCATION
-            if (!isGranted(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                isRequesting.value = true
-                fineLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-            } else {
-                viewModel.setState { copy(hasPermissions = true) }
-                viewModel.handleEvents(Event.CheckPermissions)
-            }
-        } else {
-            val perm = Manifest.permission.ACCESS_COARSE_LOCATION
-            val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
-            if (shouldShow) {
-                rationalePermissions.value = listOf(perm)
-                showRationale.value = true
-            } else {
-                context.openAppSettings()
-            }
-        }
-    }
-
-
-    val foregroundServiceLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        isRequesting.value = false
-        if (granted) {
-            viewModel.setState { copy(hasPermissions = true) }
-            viewModel.handleEvents(Event.CheckPermissions)
-        } else {
-            val perm = Manifest.permission.FOREGROUND_SERVICE_LOCATION
-            val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
-            if (shouldShow) {
-                rationalePermissions.value = listOf(perm)
-                showRationale.value = true
-            } else {
-                context.openAppSettings()
-            }
-        }
-    }
 
     val nearbyWifiLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        isRequesting.value = false
-        if (granted) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !isGranted(Manifest.permission.FOREGROUND_SERVICE_LOCATION)) {
-                isRequesting.value = true
-                foregroundServiceLauncher.launch(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
-            } else {
-                viewModel.setState { copy(hasPermissions = true) }
-                viewModel.handleEvents(Event.CheckPermissions)
-            }
+
+        val perm = Manifest.permission.NEARBY_WIFI_DEVICES
+        val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
+        if (shouldShow) {
+            rationalePermissions.value = listOf(perm)
+            showRationale.value = true
         } else {
-            val perm = Manifest.permission.NEARBY_WIFI_DEVICES
-            val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
-            if (shouldShow) {
-                rationalePermissions.value = listOf(perm)
-                showRationale.value = true
-            } else {
-                context.openAppSettings()
-            }
+            context.openAppSettings()
         }
     }
 
 
 
-    val backgroundLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        isRequesting.value = false
-        if (granted) {
-            viewModel.setState { copy(hasPermissions = true) }
-            viewModel.handleEvents(Event.CheckPermissions)
-        } else {
-            val perm = Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            val shouldShow = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, perm) } == true
-            if (shouldShow) {
-                rationalePermissions.value = listOf(perm)
-                showRationale.value = true
-            } else {
-                context.openAppSettings()
-            }
-        }
-    }
+
 
     LaunchedEffect(effects) {
         effects.collect { effect ->
@@ -216,10 +139,6 @@ fun WifiAwareScreen(
 
                     val permsToRequest = effect.permissions.distinct().toList()
                     when {
-                        permsToRequest.contains(Manifest.permission.ACCESS_COARSE_LOCATION) && !isGranted(Manifest.permission.ACCESS_COARSE_LOCATION) -> {
-                            isRequesting.value = true
-                            coarseLocationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-                        }
                         permsToRequest.contains(Manifest.permission.ACCESS_FINE_LOCATION) && !isGranted(Manifest.permission.ACCESS_FINE_LOCATION) -> {
                             isRequesting.value = true
                             fineLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -228,14 +147,7 @@ fun WifiAwareScreen(
                             isRequesting.value = true
                             nearbyWifiLauncher.launch(Manifest.permission.NEARBY_WIFI_DEVICES)
                         }
-                        permsToRequest.contains(Manifest.permission.FOREGROUND_SERVICE_LOCATION) && !isGranted(Manifest.permission.FOREGROUND_SERVICE_LOCATION) -> {
-                            isRequesting.value = true
-                            foregroundServiceLauncher.launch(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
-                        }
-                        permsToRequest.contains(Manifest.permission.ACCESS_BACKGROUND_LOCATION) && !isGranted(Manifest.permission.ACCESS_BACKGROUND_LOCATION) -> {
-                            isRequesting.value = true
-                            backgroundLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                        }
+
                         else -> {
                             viewModel.setState { copy(hasPermissions = true) }
                             viewModel.handleEvents(Event.CheckPermissions)
@@ -254,21 +166,7 @@ fun WifiAwareScreen(
     LaunchedEffect(Unit) {
         if (!state.hasPermissions) {
             val toRequest = mutableListOf<String>()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                if (!isGranted(Manifest.permission.NEARBY_WIFI_DEVICES)) {
-                    toRequest += Manifest.permission.NEARBY_WIFI_DEVICES
-                }
-                if (!isGranted(Manifest.permission.FOREGROUND_SERVICE_LOCATION) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    toRequest += Manifest.permission.FOREGROUND_SERVICE_LOCATION
-                }
-            } else {
-                if (!isGranted(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                    toRequest += Manifest.permission.ACCESS_COARSE_LOCATION
-                }
-                if (isGranted(Manifest.permission.ACCESS_COARSE_LOCATION) && !isGranted(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                    toRequest += Manifest.permission.ACCESS_FINE_LOCATION
-                }
-            }
+
             if (needsBackgroundLocation.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 if (!isGranted(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
                     toRequest += Manifest.permission.ACCESS_BACKGROUND_LOCATION
@@ -293,10 +191,6 @@ fun WifiAwareScreen(
                 showRationale.value = false
                 val perms = rationalePermissions.value.toTypedArray()
                 when {
-                    perms.contains(Manifest.permission.ACCESS_COARSE_LOCATION) -> {
-                        isRequesting.value = true
-                        coarseLocationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-                    }
                     perms.contains(Manifest.permission.ACCESS_FINE_LOCATION) -> {
                         isRequesting.value = true
                         fineLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -305,14 +199,7 @@ fun WifiAwareScreen(
                         isRequesting.value = true
                         nearbyWifiLauncher.launch(Manifest.permission.NEARBY_WIFI_DEVICES)
                     }
-                    perms.contains(Manifest.permission.FOREGROUND_SERVICE_LOCATION) -> {
-                        isRequesting.value = true
-                        foregroundServiceLauncher.launch(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
-                    }
-                    perms.contains(Manifest.permission.ACCESS_BACKGROUND_LOCATION) -> {
-                        isRequesting.value = true
-                        backgroundLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                    }
+
                 }
             },
             onDismiss = {
