@@ -1,4 +1,4 @@
-package eu.europa.ec.verifierfeature.controller.verifier
+package eu.europa.ec.verifierfeature.controller.verifier.age
 
 import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.verifierfeature.model.ClientMetadata
@@ -18,14 +18,12 @@ import com.nimbusds.openid.connect.sdk.Nonce
 import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.eudi.openid4vp.JwkSetSource
 import eu.europa.ec.eudi.openid4vp.PreregisteredClient
-import eu.europa.ec.eudi.wallet.document.format.MsoMdocData
-import eu.europa.ec.eudi.wallet.document.format.SdJwtVcData
 import eu.europa.ec.resourceslogic.R
+import eu.europa.ec.verifierfeature.controller.verifier.VerifierApiSwaggerController
 import eu.europa.ec.verifierfeature.model.WalletResponse
-import eu.europa.ec.verifierfeature.ui.initVerifierOther.IntFlowVerifierOtherRequest
 import kotlinx.serialization.json.Json
 
-interface VerifierController {
+interface VerifierAgeProofController {
     suspend fun metadataVerifier(): Response<ClientMetadata>
     suspend fun createPresentationRequest(fields: List<FieldLabel>): PresentationResponse
     suspend fun getPresentationState(transactionID: String): PresentationState
@@ -41,13 +39,13 @@ interface VerifierController {
     ): Response<WalletResponse>
 
     suspend fun directPost(state: String, vpToken: String): Response<JsonObject>
-    suspend fun createPresentationRequestOther(request: IntFlowVerifierOtherRequest): PresentationResponse
 }
 
-class VerifierControllerImpl(
-    private val api: VerifierApiSwaggerController,
+
+class VerifierAgeProofControllerImpl(
+    private val api: VerifierAgeProofApiSwaggerController,
     private val uuidProvider: UuidProvider
-) : VerifierController {
+) : VerifierAgeProofController {
 
     private var lastNonce: String? = null
 
@@ -99,6 +97,7 @@ class VerifierControllerImpl(
     ): PresentationResponse {
         val nonce = randomNonce()
         val credentialId = "proof_of_age"
+        val pem = R.raw.av_issuer_ca01
 
         val credentialsArray = buildJsonArray {
             add(buildJsonObject {
@@ -165,121 +164,6 @@ class VerifierControllerImpl(
         return response.body()!!
     }
 
-    override suspend fun createPresentationRequestOther(request: IntFlowVerifierOtherRequest): PresentationResponse {
-        println("------------------------------ createPresentationRequestOther -------------------------------------")
-        println("Issuer: ${request.issuerName}")
-        println("Logo URI: ${request.issuerLogo}")
-        println("Is bookmarked: ${request.isBookmarked}")
-        println("Is revoked: ${request.isRevoked}")
-        println("Claims: ${request.allClaims}")
-        println("Doc Name: ${request.issuerName}")
-        println("Document Name: ${request.docName}")
-        println("Document Identifier (raw): ${request.docIdentifier}")
-        println("-------------------------------------------------------------------------\n")
-
-        val nonce = randomNonce()
-        val credentialId = uuidProvider.provideUuid()
-        val pem = R.raw.pidissuerca02_eu
-
-        val rawDocIdentifier = request.docIdentifier?.toString() ?: "eu.europa.ec.eudi.pid.1"
-
-//        val givenNameClaim = when (val data = request.docIdentifier) {
-//            is MsoMdocData ->
-//
-//            is SdJwtVcData ->
-//
-//            else -> {}
-//        }
-
-
-        val normalizedDocIdentifier = when {
-            rawDocIdentifier.equals("MdocPid", ignoreCase = true) -> {
-                "eu.europa.ec.eudi.pid.1"
-            }
-            rawDocIdentifier.startsWith("OTHER(", ignoreCase = true) -> {
-                val regex = Regex("formatType=([^)]*)")
-                val match = regex.find(rawDocIdentifier)
-                match?.groupValues?.get(1) ?: rawDocIdentifier
-            }
-            else -> {
-                rawDocIdentifier
-            }
-        }
-        println("Document Identifier (normalized): $normalizedDocIdentifier")
-
-        val excludedClaims = setOf("un_distinguishing_sign")
-
-        val fields = request.allClaims.keys
-            .filterNot { it in excludedClaims }
-            .toList()
-
-        val credentialFormat = when {
-            normalizedDocIdentifier.contains("SdJwt", ignoreCase = true) -> "vc+sd-jwt"
-            else -> "mso_mdoc"
-        }
-        println("Using credential format: $credentialFormat")
-
-        val credentialsArray = buildJsonArray {
-            add(buildJsonObject {
-                put("id", JsonPrimitive(credentialId))
-                put("format", JsonPrimitive(credentialFormat))
-                putJsonObject("meta") {
-                    put("doctype_value", JsonPrimitive(normalizedDocIdentifier))
-                }
-                putJsonArray("claims") {
-                    fields.forEach { fld ->
-                        add(buildJsonObject {
-                            putJsonArray("path") {
-                                add(JsonPrimitive(normalizedDocIdentifier))
-                                add(JsonPrimitive(fld))
-                            }
-                        })
-                    }
-                }
-            })
-        }
-
-        val dcqlQuery = buildJsonObject {
-            putJsonArray("credentials") {
-                credentialsArray.forEach { add(it) }
-            }
-        }
-
-        val presentationRequest = PresentationRequest(
-            type = "vp_token",
-            dcqlQuery = dcqlQuery,
-            jarMode = "by_reference",
-            nonce = nonce,
-            requestUriMethod = "get",
-            // issuerChain = pem.toString().trimIndent()
-        )
-
-        println(
-            "[createPresentationRequest] request JSON: ${
-                Json.encodeToString(JsonObject.serializer(), buildJsonObject {
-                    put("type", JsonPrimitive(presentationRequest.type))
-                    put("dcql_query", presentationRequest.dcqlQuery)
-                    put("nonce", JsonPrimitive(presentationRequest.nonce))
-                    presentationRequest.jarMode?.let { put("jar_mode", JsonPrimitive(it)) }
-                    presentationRequest.requestUriMethod?.let {
-                        put("request_uri_method", JsonPrimitive(it))
-                    }
-                    presentationRequest.issuerChain?.let { put("issuer_chain", JsonPrimitive(it)) }
-                })
-            }"
-        )
-
-        val response = api.createPresentation(presentationRequest)
-
-        if (!response.isSuccessful) {
-            throw RuntimeException(
-                "Error ${response.code()}: ${response.errorBody()?.string()}"
-            )
-        }
-        println("Response presentation state: ${response.body()}")
-        return response.body()!!
-    }
-
 
     override suspend fun getPresentationState(transactionID: String): PresentationState {
         val response = api.getPresentation(transactionID)
@@ -323,7 +207,6 @@ class VerifierControllerImpl(
         val err = response.errorBody()?.string().orEmpty()
         throw RuntimeException("Err ${response.code()} when validating SD-JWT-VC: $err")
     }
-
 
 
     override fun getLastNonce(): String =

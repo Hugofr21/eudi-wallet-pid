@@ -63,7 +63,11 @@ internal class WalletCoreConfigImpl(
                         )
 
                         withClientIdSchemes(
-                            listOf(ClientIdScheme.X509SanDns)
+                            listOf(
+                                ClientIdScheme.X509SanDns,
+                                ClientIdScheme.RedirectUri,
+                                ClientIdScheme.X509SanUri
+                            )
                         )
                         // problems with the deeplink add scheme
                         withSchemes(

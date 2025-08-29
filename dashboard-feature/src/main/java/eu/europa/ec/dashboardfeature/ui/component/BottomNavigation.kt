@@ -17,9 +17,13 @@
 package eu.europa.ec.dashboardfeature.ui.component
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -27,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -40,13 +45,30 @@ import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.wrap.WrapIcon
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import eu.europa.ec.dashboardfeature.ui.dashboard.DashboardViewModel
 import eu.europa.ec.dashboardfeature.ui.home.compoment.ScanButton
 
 
-val LightSkyBlue   = Color(0xFFCAE6FD)
-val OceanBlue      = Color(0xFF2A5ED9)
-val DeepBlue       = Color(0xFF0048D2)
+
+private val NightSky       = Color(0xFF071523)
+private val OceanBlueDark  = Color(0xFF113865)
+private val AccentCobalt   = Color(0xFF2F6CF0)
+private val SoftHighlight  = Color(0xFFCFE9FF)
+
+
+private val LightOceanBg   = Color(0xFFEFF7FF)
+private val LightOceanBar  = Color(0xFFD9EDFF)
+private val LightAccent    = Color(0xFF2A5ED9)
+private val LightHighlight = Color(0xFF0048D2)
+private val LightUnselected= Color(0xFF345A8A)
+
+data class NavPalette(
+    val containerColor: Color,
+    val accent: Color,
+    val highlight: Color,
+    val unselected: Color
+)
 
 sealed class BottomNavigationItem(
     val route: String,
@@ -91,23 +113,41 @@ fun BottomNavigationBar(navController: NavController, viewModel: DashboardViewMo
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
+    val isDark = isSystemInDarkTheme()
+
+    val palette = if (isDark) {
+        NavPalette(
+            containerColor = OceanBlueDark.copy(alpha = 0.96f),
+            accent = AccentCobalt,
+            highlight = SoftHighlight,
+            unselected = Color.White
+        )
+    } else {
+        NavPalette(
+            containerColor = LightOceanBar,
+            accent = LightAccent,
+            highlight = LightHighlight,
+            unselected = LightUnselected
+        )
+    }
+
     NavigationBar(
-        containerColor = OceanBlue.copy(alpha = 0.6f),
+        modifier = Modifier
+            .fillMaxWidth(),
+        containerColor = palette.containerColor,
     ) {
         navItems.forEach { screen ->
             NavigationBarItem(
                 icon = {
-                    WrapIcon(
-                        iconData = screen.icon,
-                    )
+                    WrapIcon(iconData = screen.icon)
                 },
                 label = { Text(text = stringResource(screen.titleRes)) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color.White,
-                    selectedTextColor = DeepBlue,
-                    indicatorColor = DeepBlue,
-                    unselectedIconColor = Color.White.copy(alpha = 0.5f),
-                    unselectedTextColor = DeepBlue.copy(alpha = 0.9f)
+                    selectedIconColor = palette.highlight,
+                    selectedTextColor = palette.highlight,
+                    indicatorColor = palette.accent.copy(alpha = 0.14f),
+                    unselectedIconColor = palette.unselected.copy(alpha = 0.70f),
+                    unselectedTextColor = palette.unselected.copy(alpha = 0.70f)
                 ),
                 selected = currentDestination?.hierarchy?.any {
                     it.route == screen.route

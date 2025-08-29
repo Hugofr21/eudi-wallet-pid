@@ -1,6 +1,7 @@
 package eu.europa.ec.verifierfeature.controller.document
 
 import android.net.Uri
+import android.text.BoringLayout
 import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
 import eu.europa.ec.businesslogic.extension.addOrReplace
 import eu.europa.ec.businesslogic.extension.safeAsync
@@ -23,12 +24,14 @@ import eu.europa.ec.eudi.wallet.document.DocumentExtensions.getDefaultKeyUnlockD
 import eu.europa.ec.eudi.wallet.document.DocumentId
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.verifierfeature.controller.verifier.VerifierController
+import eu.europa.ec.verifierfeature.controller.verifier.age.VerifierAgeProofController
 import eu.europa.ec.verifierfeature.model.FieldLabel
 import eu.europa.ec.verifierfeature.model.PresentationResponse
 import eu.europa.ec.verifierfeature.ui.initVerifierOther.IntFlowVerifierOtherRequest
 import eu.europa.ec.verifierfeature.utils.authorizationRequest.AuthorizationRequest
 import eu.europa.ec.verifierfeature.utils.json.AuthRequestData
 import eu.europa.ec.verifierfeature.utils.json.DecodeUtils.decodeAuthRequest
+import eu.europa.ec.verifierfeature.utils.security.verifyNonce
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -110,6 +113,7 @@ sealed class WalletCoreVerifiedPartialState {
 
 private data class VerifierSessionData(
     val transactionId: String?,
+    val isProofAge: Boolean? = false,
     val clientId: String?,
     val nonce: String?,
     val state: String?,
@@ -180,6 +184,7 @@ interface EventPresentationDocumentController {
 
 class EventPresentationDocumentControllerImpl(
     private val api: VerifierController,
+    private val apiVerifierAgeProofController: VerifierAgeProofController,
     private val resourceProvider: ResourceProvider,
     private val walletCoreDocumentsController: WalletCoreDocumentsController,
     private val documentDetailsInteractor: DocumentDetailsInteractor,
@@ -266,10 +271,9 @@ class EventPresentationDocumentControllerImpl(
 
 
     override suspend fun intFlowVerifierAge(documentId: DocumentId, fields: List<FieldLabel>): String {
-        val metadata = api.metadataVerifier()
+        val metadata = apiVerifierAgeProofController.metadataVerifier()
 
-        val pres = api.createPresentationRequest(fields)
-//        val pres = api.createPresentationRequestOther()
+        val pres = apiVerifierAgeProofController.createPresentationRequest(fields)
         println("transaction_id = ${pres.transaction_id}")
         println("client_id      = ${pres.client_id}")
         println("request        = ${pres.request}")
@@ -277,51 +281,48 @@ class EventPresentationDocumentControllerImpl(
         println("request_uri        = ${pres.request_uri}")
         fields.forEach { println("Fields {$it.key}") }
 
-        val nonce = api.getLastNonce()
+        val nonce = apiVerifierAgeProofController.getLastNonce()
 
-        if (!pres.request.isNullOrBlank()) {
-            val authData = decodeAuthRequest(pres.request)
-            println("request_uri    = ${authData.requestUri}")
-            println("method         = ${authData.responseMode}")
-            println("state          = ${authData.state}")
-            println("responseType   = ${authData.responseType}")
+        val authData = decodeAuthRequest(pres.request)
+        println("request_uri    = ${authData.requestUri}")
+        println("method         = ${authData.responseMode}")
+        println("state          = ${authData.state}")
+        println("responseType   = ${authData.responseType}")
 
-            val deepLink = AuthorizationRequest.formatAuthorizationRequest(
-                pres.client_id,
-                authData.requestUri,
-                authData.responseMode,
-                authData.state,
-                nonce,
-                fields,
-                authData.responseType
-            )
+        val deepLink = AuthorizationRequest.formatAuthorizationRequest(
+            authData.requestUri,
+            authData.responseMode,
+            authData.state,
+            nonce,
+            fields,
+            authData.responseType
+        )
 
-            val deepLinkUri = deepLink.toString().toUri()
-            println("[intFlowVerifier] deepLink = $deepLinkUri")
+        val deepLinkUri = deepLink.toString().toUri()
 
-            listenerScope.launch {
-                startRemotePresentationAndListen(deepLinkUri)
-            }
+        println("[intFlowVerifier] deepLink = $deepLinkUri")
 
-            return deepLink.toString()
+        val session = VerifierSessionData(
+            transactionId = pres.transaction_id,
+            isProofAge = true,
+            clientId = pres.client_id,
+            nonce = nonce,
+            state = authData.state,
+            requestUri = pres.request_uri,
+            request = pres.request,
+            requestUriMethod = pres.request_uri_method,
+            responseType = authData.responseType,
+            responseMode = authData.responseMode,
+            fields = fields
+        )
 
-        } else {
-            val deepLink = AuthorizationRequest.formatAuthorizationRequestApi(
-                pres.client_id,
-                pres.request_uri,
-                pres.request_uri_method
-            )
+        saveVerifierSession(session)
 
-            val deepLinkUri = deepLink.toString().toUri()
-            println("[intFlowVerifier] deepLink = $deepLinkUri")
-
-            listenerScope.launch {
-                startRemotePresentationAndListen(deepLinkUri)
-            }
-
-            return deepLink.toString()
+        listenerScope.launch {
+            startRemotePresentationAndListen(deepLinkUri)
         }
-        return ""
+
+        return deepLink.toString()
     }
 
 
@@ -333,7 +334,6 @@ class EventPresentationDocumentControllerImpl(
         println("request        = ${pres.request}")
         println("request_uri_method        = ${pres.request_uri_method}")
         println("request_uri        = ${pres.request_uri}")
-//        fields.forEach { println("Fields {$it.key}") }
 
         val nonce = api.getLastNonce()
 
@@ -345,6 +345,22 @@ class EventPresentationDocumentControllerImpl(
 
         val deepLinkUri = deepLink.toString().toUri()
         println("[intFlowVerifier] deepLink = $deepLinkUri")
+
+        val session = VerifierSessionData(
+            transactionId = pres.transaction_id,
+            clientId = pres.client_id,
+            nonce = nonce,
+            state = null,
+            requestUri = pres.request_uri,
+            request = pres.request,
+            requestUriMethod = pres.request_uri_method,
+            responseType = null,
+            responseMode = null,
+            fields = null
+        )
+        saveVerifierSession(session)
+
+
         listenerScope.launch {
             startRemotePresentationAndListen(deepLinkUri)
         }
@@ -411,6 +427,7 @@ class EventPresentationDocumentControllerImpl(
                 println("Status: Conectado ao verificador")
                 println("--------------------\n")
                 listenerScope.launch { _events.emit(TransferEventVerifiedPartialState.Connected) }
+
             },
 
             onConnecting = {
@@ -450,10 +467,26 @@ class EventPresentationDocumentControllerImpl(
 
             onResponseSent = {
                 println("\n--- onResponseSent ---")
-                println("Resposta enviada para o verificador")
+                println("Response sent to verifier")
                 println("-----------------------\n")
 
                 listenerScope.launch { _events.emit(TransferEventVerifiedPartialState.ResponseSent) }
+
+                listenerScope.launch {
+                    _events.emit(TransferEventVerifiedPartialState.ResponseSent)
+                    val session = getVerifierSessionOrThrow()
+                    val transactionId = session.transactionId ?: return@launch
+                    val expectedNonce = session.nonce ?: return@launch
+
+                    if(session.isProofAge == true) {
+                        transactionStateAgeProof(expectedNonce , apiVerifierAgeProofController.getLastNonce())
+                    }else{
+                        transactionState(expectedNonce , api.getLastNonce())
+                    }
+
+                    clearVerifierSession()
+                }
+
             }
         )
 
@@ -463,13 +496,22 @@ class EventPresentationDocumentControllerImpl(
     }
 
 
-    private fun transactionState(){
+    private suspend fun transactionState(expected: String, actual: String){
         val transactionId = getSavedTransactionId() ?: return
-        listenerScope.launch {
-            api.getPresentationState(transactionId)
-            api.getTransactionEventsLogs(transactionId)
-        }
+        api.getPresentationState(transactionId)
+        api.getTransactionEventsLogs(transactionId)
+        verifyNonce(expected, actual)
+        clearVerifierSession()
     }
+
+    private suspend fun transactionStateAgeProof(expected: String, actual: String){
+        val transactionId = getSavedTransactionId() ?: return
+        apiVerifierAgeProofController.getPresentationState(transactionId)
+        apiVerifierAgeProofController.getTransactionEventsLogs(transactionId)
+        verifyNonce(expected, actual)
+        clearVerifierSession()
+    }
+
 
     override fun checkForKeyUnlock() = flow {
         disclosedDocuments?.let { documents ->
@@ -585,7 +627,6 @@ class EventPresentationDocumentControllerImpl(
         return events.mapNotNull { response ->
             when (response) {
 
-                // Fix: Wallet core should return Success state here
                 is TransferEventVerifiedPartialState.Error -> {
                     if (response.error == "Peer disconnected without proper session termination") {
                         ResponseReceivedPartialState.Success
@@ -648,37 +689,5 @@ class EventPresentationDocumentControllerImpl(
         }
         return block()
     }
-
-    private suspend fun postDirectWallet(authData:AuthRequestData, pres: PresentationResponse ){
-                    val vpTokenString: String? = if (authData.responseType?.contains("vp_token") == true) {
-                val key = pres.client_id ?: pres.transaction_id ?: "vp_token"
-
-                val vpJson = buildJsonObject {
-                    put(key, buildJsonArray {
-                        add(buildJsonObject {
-                            put("id", JsonPrimitive("proof_of_age"))
-                        })
-                    })
-                }
-                Json.encodeToString(JsonObject.serializer(), vpJson)
-            } else {
-                null
-            }
-
-            val response = if (vpTokenString != null) {
-                api.directPost(authData.state, vpTokenString)
-            } else {
-                api.directPost(authData.state, "{}")
-            }
-
-            if (!response.isSuccessful) {
-                val err = response.errorBody()?.string()
-                throw RuntimeException("directPost failed ${response.code()}: $err")
-            }
-
-            val body = response.body()
-            println("directPost response: $body")
-    }
-
 
 }

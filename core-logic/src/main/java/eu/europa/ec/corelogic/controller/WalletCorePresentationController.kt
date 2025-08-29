@@ -254,6 +254,7 @@ class WalletCorePresentationControllerImpl(
                 )
             },
             onError = { errorMessage ->
+                println("Erro message doc: $errorMessage")
                 trySendBlocking(
                     TransferEventPartialState.Error(
                         error = errorMessage.ifEmpty { genericErrorMessage }

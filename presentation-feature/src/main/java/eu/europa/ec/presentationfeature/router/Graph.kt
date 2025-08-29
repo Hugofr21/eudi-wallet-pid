@@ -54,6 +54,10 @@ fun NavGraphBuilder.presentationGraph(navController: NavController) {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + PresentationScreens.PresentationRequest.screenRoute
                 },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + PresentationScreens.PresentationRequest.screenRoute
+                },
 
             ),
             arguments = listOf(
@@ -98,7 +102,12 @@ fun NavGraphBuilder.presentationGraph(navController: NavController) {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + PresentationScreens.PresentationSuccess.screenRoute
                 },
-            ),
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + PresentationScreens.PresentationSuccess.screenRoute
+                },
+
+                ),
         ) {
             PresentationSuccessScreen(
                 navController,

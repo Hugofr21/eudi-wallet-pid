@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import eu.europa.ec.dashboardfeature.ui.document_sign.model.DocumentSignButtonUi
@@ -57,6 +58,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
+import java.io.File
+import java.util.Locale
 
 @Composable
 internal fun DocumentSignScreen(
@@ -118,18 +121,33 @@ private fun Content(
 
     val selectPdfLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        uri?.let {
-            val fileName = getFileNameFromUri(context, it)
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            val fileName = getFileNameFromUri(context, selectedUri)
             val regex = Regex("^[a-z0-9_-]+\\.pdf$")
-            if (fileName != null && regex.matches(fileName)) {
-                onEventSend(Event.DocumentUriRetrieved(context, it))
+
+            if (fileName != null) {
+                val normalizedName = fileName.lowercase(Locale.ROOT)
+                if (regex.matches(normalizedName)) {
+                    onEventSend(Event.DocumentUriRetrieved(context, selectedUri))
+                } else {
+                    val sanitized = sanitizeFileName(fileName)
+                        context.contentResolver.openInputStream(selectedUri)?.use { input ->
+                            val destFile = File(context.cacheDir, sanitized)
+                            destFile.outputStream().use { out ->
+                                input.copyTo(out)
+                            }
+                            val newUri = destFile.toUri()
+                            onEventSend(Event.DocumentUriRetrieved(context, newUri))
+                        } ?: run {
+                            onEventSend(Event.InvalidDocumentName(fileName))
+                        }
+                }
             } else {
-                onEventSend(Event.InvalidDocumentName(fileName ?: "Unknown"))
+                onEventSend(Event.InvalidDocumentName("Unknown"))
             }
         }
     }
-
     LaunchedEffect(Unit) {
         effectFlow.onEach { effect ->
             when (effect) {
@@ -157,6 +175,26 @@ private fun getFileNameFromUri(context: Context, uri: Uri): String? {
             null
         }
     }
+}
+
+
+fun sanitizeFileName(original: String): String {
+    val trimmed = original.trim()
+    val dotIndex = trimmed.lastIndexOf('.')
+    val base = if (dotIndex > 0) trimmed.substring(0, dotIndex) else trimmed
+    var ext = if (dotIndex > 0) trimmed.substring(dotIndex + 1) else ""
+    ext = ext.lowercase(Locale.ROOT)
+    if (ext != "pdf") ext = "pdf"
+
+    var baseNormalized = base.lowercase(Locale.ROOT)
+        .replace(Regex("[^a-z0-9_-]+"), "_")
+        .replace(Regex("_+"), "_")
+        .trim('_')
+
+    if (baseNormalized.isBlank()) baseNormalized = "document"
+    if (baseNormalized.length > 200) baseNormalized = baseNormalized.take(200)
+
+    return "$baseNormalized.$ext"
 }
 
 @Composable

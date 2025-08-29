@@ -16,6 +16,8 @@
 
 package eu.europa.ec.dashboardfeature.router
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -37,6 +39,7 @@ import eu.europa.ec.uilogic.navigation.ModuleRoute
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
     navigation(
         startDestination = DashboardScreens.Dashboard.screenRoute,
@@ -56,6 +59,10 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + DashboardScreens.Dashboard.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + DashboardScreens.Dashboard.screenRoute
                 },
             )
         ) {
@@ -83,6 +90,10 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + DashboardScreens.Settings.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + DashboardScreens.Settings.screenRoute
                 },
             ),
         ) {
@@ -112,6 +123,10 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + DashboardScreens.DocumentDetails.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + DashboardScreens.DocumentDetails.screenRoute
                 },
             ),
             arguments = listOf(
@@ -146,6 +161,10 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + DashboardScreens.TransactionDetails.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + DashboardScreens.TransactionDetails.screenRoute
                 },
             ),
             arguments = listOf(

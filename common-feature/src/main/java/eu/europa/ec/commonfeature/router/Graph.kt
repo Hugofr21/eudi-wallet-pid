@@ -35,6 +35,7 @@ import eu.europa.ec.commonfeature.ui.qr_scan.QrScanScreen
 import eu.europa.ec.commonfeature.ui.success.SuccessScreen
 import eu.europa.ec.uilogic.navigation.CommonScreens
 import eu.europa.ec.uilogic.navigation.ModuleRoute
+import eu.europa.ec.uilogic.navigation.PresentationScreens
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -57,6 +58,10 @@ fun NavGraphBuilder.featureCommonGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + CommonScreens.Biometric.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + CommonScreens.Biometric.screenRoute
                 },
 
             ),
@@ -92,6 +97,10 @@ fun NavGraphBuilder.featureCommonGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + CommonScreens.Success.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + CommonScreens.Success.screenRoute
                 },
 
             ),
@@ -131,7 +140,11 @@ fun NavGraphBuilder.featureCommonGraph(navController: NavController) {
                 },
                 navDeepLink {
                     uriPattern = BuildConfig.DEEPLINK_HAIP + CommonScreens.QuickPin.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + CommonScreens.QuickPin.screenRoute
+                },
 
             ),
             arguments = listOf(
@@ -168,7 +181,11 @@ fun NavGraphBuilder.featureCommonGraph(navController: NavController) {
                 navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + CommonScreens.QrScan.screenRoute
-                }
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR  + CommonScreens.QrScan.screenRoute
+                },
             ),
             arguments = listOf(
                 navArgument(QrScanUiConfig.serializedKeyName) {

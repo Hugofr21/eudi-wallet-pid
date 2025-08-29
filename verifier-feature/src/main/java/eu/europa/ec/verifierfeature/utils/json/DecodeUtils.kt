@@ -18,12 +18,12 @@ data class AuthRequestData(
 
 object DecodeUtils {
 
-    fun decodeAndEnrichPayload(jwt: String): JsonObject {
-        val parts = jwt.split(".")
-        require(parts.size == 3) { "Malformed JWT: Expected 3 parts, got ${parts.size}" }
+    fun decodeAndEnrichPayload(jwt: String?): JsonObject {
+        val parts = jwt?.split(".")
+        require(parts?.size == 3) { "Malformed JWT: Expected 3 parts, got ${parts?.size}" }
 
         val payload = Base64.getUrlDecoder()
-            .decode(parts[1])
+            .decode(parts?.get(1))
             .toString(Charsets.UTF_8)
         val jsonObj = Json.parseToJsonElement(payload).jsonObject
             .toMutableMap()
@@ -34,7 +34,7 @@ object DecodeUtils {
         return JsonObject(jsonObj)
     }
 
-    fun decodeAuthRequest(jwt: String): AuthRequestData {
+    fun decodeAuthRequest(jwt: String?): AuthRequestData {
         val payload = decodeAndEnrichPayload(jwt)
 
         val nonce = payload["nonce"]?.jsonPrimitive?.content

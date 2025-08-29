@@ -1,4 +1,4 @@
-package eu.europa.ec.verifierfeature.controller.verifier
+package eu.europa.ec.verifierfeature.controller.verifier.age
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import eu.europa.ec.verifierfeature.model.ClientMetadata
@@ -24,7 +24,7 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 
-interface VerifierApiSwaggerController {
+interface VerifierAgeProofApiSwaggerController {
 
     @POST("/ui/presentations")
     @Headers(
@@ -100,16 +100,13 @@ interface VerifierApiSwaggerController {
     ): Response<JsonObject>
 }
 
-class VerifierApiSwaggerControllerImpl(
+class VerifierAgeProofApiSwaggerControllerImpl(
     private val okHttpClient: OkHttpClient,
 
-    ):VerifierApiSwaggerController{
+    ):VerifierAgeProofApiSwaggerController{
 
     companion object{
-        val BASE_URL  = "https://verifier-backend.eudiw.dev/"
-//        val BASE_URL = "https://dev.verifier-backend.eudiw.dev"
-//        val BASE_URL = "http://192.168.1.71:8080/"
-    //        val BASE_URL  = "https://verifier-backend.ageverification.dev/"
+            val BASE_URL  = "https://verifier-backend.ageverification.dev/"
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -120,7 +117,7 @@ class VerifierApiSwaggerControllerImpl(
         .client(okHttpClient)
         .build()
 
-    private val api = retrofit.create(VerifierApiSwaggerController::class.java)
+    private val api = retrofit.create(VerifierAgeProofApiSwaggerController::class.java)
 
     override suspend fun createPresentation(request: PresentationRequest) =
         api.createPresentation(request)

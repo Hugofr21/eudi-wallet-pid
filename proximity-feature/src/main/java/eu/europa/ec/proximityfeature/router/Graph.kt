@@ -56,6 +56,11 @@ fun NavGraphBuilder.featureProximityGraph(navController: NavController) {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + ProximityScreens.QR.screenRoute
                 },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + ProximityScreens.QR.screenRoute
+                },
+
 
             ),
             arguments = listOf(
@@ -113,6 +118,10 @@ fun NavGraphBuilder.featureProximityGraph(navController: NavController) {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + ProximityScreens.Request.screenRoute
                 },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + ProximityScreens.Request.screenRoute
+                },
 
             ),
             arguments = listOf(
@@ -157,6 +166,10 @@ fun NavGraphBuilder.featureProximityGraph(navController: NavController) {
                 }, navDeepLink {
                     uriPattern =
                         BuildConfig.DEEPLINK_HAIP + ProximityScreens.Request.screenRoute
+                },
+                navDeepLink {
+                    uriPattern =
+                        BuildConfig.EUDI_OPENID4VP_SCHEME_QR + ProximityScreens.Request.screenRoute
                 },
             ),
         ) {

@@ -25,6 +25,9 @@ plugins {
 
 android {
     namespace = "eu.europa.ec.dashboardfeature"
+    kotlinOptions {
+        freeCompilerArgs = listOf("-XXLanguage:+PropertyParamAnnotationDefaultTargetMode")
+    }
 }
 
 moduleConfig {

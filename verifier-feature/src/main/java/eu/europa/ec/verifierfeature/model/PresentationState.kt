@@ -6,19 +6,18 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PresentationState(
     @SerialName("vp_token")
-    val vpToken: VpToken,
-
+    val vpToken: VpTokenSate,
     @SerialName("presentation_submission")
-    val presentationSubmission: PresentationSubmission,
-
+    val presentationSubmission: PresentationSubmission? = null,
     @SerialName("trust_info")
-    val trustInfo: List<TrustInfo>
+    val trustInfo: List<TrustInfoState>? = null
 )
 
 @Serializable
-data class VpToken(
+data class VpTokenSate(
     @SerialName("proof_of_age")
-    val proofOfAge: String
+    val proofOfAge: String? = null,
+    val token: Map<String, String>? = null
 )
 
 @Serializable
@@ -38,9 +37,8 @@ data class DescriptorMap(
 )
 
 @Serializable
-data class TrustInfo(
-    val issuer: String,
-    val status: String,
+data class TrustInfoState(
+    val issuer: String? = null,
+    val status: String? = null,
     val details: String? = null
 )
-

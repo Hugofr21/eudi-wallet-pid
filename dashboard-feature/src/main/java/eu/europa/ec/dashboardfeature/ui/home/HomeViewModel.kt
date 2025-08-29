@@ -337,25 +337,24 @@ class HomeViewModel(
     }
 
     private fun navigateToQrScan() {
-        val navigationEffect = Effect.Navigation.SwitchScreen(
-            screenRoute = generateComposableNavigationLink(
-                screen = CommonScreens.QrScan,
-                arguments = generateComposableArguments(
-                    mapOf(
-                        QrScanUiConfig.serializedKeyName to uiSerializer.toBase64(
-                            QrScanUiConfig(
-                                title = resourceProvider.getString(R.string.presentation_qr_scan_title),
-                                subTitle = resourceProvider.getString(R.string.presentation_qr_scan_subtitle),
-                                qrScanFlow = QrScanFlow.Presentation
-                            ),
-                            QrScanUiConfig.Parser
+        setEffect {
+            Effect.Navigation.SwitchScreen(
+                screenRoute = generateComposableNavigationLink(
+                    screen = CommonScreens.QrScan,
+                    arguments = generateComposableArguments(
+                        mapOf(
+                            QrScanUiConfig.serializedKeyName to uiSerializer.toBase64(
+                                QrScanUiConfig(
+                                    title = resourceProvider.getString(R.string.presentation_qr_scan_title),
+                                    subTitle = resourceProvider.getString(R.string.presentation_qr_scan_subtitle),
+                                    qrScanFlow = QrScanFlow.Presentation
+                                ),
+                                QrScanUiConfig.Parser
+                            )
                         )
                     )
                 )
             )
-        )
-        setEffect {
-            navigationEffect
         }
     }
 

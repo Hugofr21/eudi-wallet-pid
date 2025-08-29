@@ -4,6 +4,7 @@ import eu.europa.ec.verifierfeature.model.FieldLabel
 import java.net.URI
 import java.net.URLEncoder
 import android.net.Uri
+import java.nio.charset.StandardCharsets
 
 
 object AuthorizationRequest {
@@ -32,8 +33,8 @@ object AuthorizationRequest {
     }
 
 
+
     fun formatAuthorizationRequest(
-        clientId: String? = null,
         requestUri: String? = null,
         responseMode: String? = null,
         state: String? = null,
@@ -41,49 +42,35 @@ object AuthorizationRequest {
         fields: List<FieldLabel>,
         responseType: String?
     ): URI {
-        require(requestUri != null || clientId != null) {
-            "You must provide either inlineRequest or requestUri"
-        }
+        require(requestUri != null) { "You must provide either inlineRequest or requestUri" }
 
         val query = dcqlQuery(fields)
 
-        val clientIdWithPrefix = "x509_san_dns:${clientId}"
-        val encodedClientId = Uri.encode(clientIdWithPrefix)
-        val encodedRequestUri = Uri.encode(requestUri)
+        fun enc(value: String?): String = if (value == null) "" else URLEncoder.encode(value, StandardCharsets.UTF_8.toString())
 
-        val params = buildList<String> {
-            add("response_type=${Uri.encode(responseType)}")
-            add("response_mode=${Uri.encode(responseMode)}")
-            add("client_id=$encodedClientId")
-            add("request_uri=$encodedRequestUri")
-            add("dcql_query=${Uri.encode(query)}")
-            add("nonce=${Uri.encode(nonce)}")
-            add("state=${Uri.encode(state)}")
-        }.joinToString("&")
+        val clientIdValue = "redirect_uri:$requestUri"
 
-        return URI("eudi-openid4vp://verifier-backend.eudiw.dev/?$params")
+        val params = listOfNotNull(
+            "response_type=${enc(responseType)}",
+            "response_mode=${enc(responseMode)}",
+            "client_id=${enc(clientIdValue)}",
+            "response_uri=${enc(requestUri)}",
+            "dcql_query=${enc(query)}",
+            "nonce=${enc(nonce)}",
+            "state=${enc(state)}"
+        ).joinToString("&")
+
+        val uriString = "av://?$params"
+
+        return URI(uriString)
     }
 
     private fun dcqlQuery(fieldLabels: List<FieldLabel>): String {
         val claimsArray = fieldLabels.joinToString(",") { field ->
-            """{ "path": ["eu.europa.ec.av.1", "${field.key}"] }"""
+            """{"path":["eu.europa.ec.av.1","${field.key}"]}"""
         }
-        return """
-        {
-          "credentials": [
-            {
-              "id": "proof_of_age",
-              "format": "mso_mdoc",
-              "meta": {
-                "doctype_value": "eu.europa.ec.av.1"
-              },
-              "claims": [
-                $claimsArray
-              ]
-            }
-          ]
-        }
-        """.trimIndent()
+
+        return """{"credentials":[{"id":"proof_of_age","format":"mso_mdoc","meta":{"doctype_value":"eu.europa.ec.av.1"},"claims":[${claimsArray}]}]}"""
     }
 
 }

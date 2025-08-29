@@ -18,6 +18,7 @@ data class EventTransaction(
     val timestamp: Long,
     val event: String,
     val actor: String,
-    @SerialName("additionalProp1")
-    val additionalProp1: JsonObject? = null
+    val response: JsonObject? = null,
+    @SerialName("wallet_response")
+    val walletResponse: JsonObject? = null
 )

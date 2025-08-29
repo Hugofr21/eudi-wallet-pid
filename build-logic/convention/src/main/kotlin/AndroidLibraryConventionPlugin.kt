@@ -106,6 +106,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     addConfigField("DEEPLINK_HAIP", "$walletSchema_haip://")
 
                     addConfigField("EUDI_OPENID4VP_SCHEME", eudiOpenId4VpScheme)
+                    addConfigField("EUDI_OPENID4VP_SCHEME_QR", "$eudiOpenId4VpScheme://")
                     addConfigField("MDOC_OPENID4VP_SCHEME", mdocOpenId4VpScheme)
                     addConfigField("OPENID4VP_SCHEME", openId4VpScheme)
                     addConfigField("CREDENTIAL_OFFER_SCHEME", credentialOfferScheme)
