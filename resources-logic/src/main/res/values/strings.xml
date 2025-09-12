@@ -563,6 +563,7 @@
     <string name="no_internet_open_wifi_settings">Sem ligação à internet. Toque em para abrir as definições de Wi-Fi.</string>
     <string name="invalid_document_name_error">Invalid file name: %1$s. Please select a PDF with a lowercase name.</string>
     <string name="error_title">Invalid file</string>
+    <string name="wifi_aware_troubleshoot_title">Wifi Aware Troubleshoot</string>
 
     <!-- Logs Screen -->
 </resources>

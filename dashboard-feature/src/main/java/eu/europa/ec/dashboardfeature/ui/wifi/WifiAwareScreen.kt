@@ -63,9 +63,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WifiFind
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
@@ -76,9 +78,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.navigation.PopUpToBuilder
+import eu.europa.ec.dashboardfeature.ui.transactions.list.TransactionsScreen
+import eu.europa.ec.dashboardfeature.ui.wifi.info.InfoWifiAware
 import eu.europa.ec.uilogic.extension.findActivity
 import eu.europa.ec.uilogic.extension.openAppSettings
 import eu.europa.ec.uilogic.extension.openWifiSettings
+import eu.europa.ec.uilogic.navigation.WIFIScreens
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
@@ -126,8 +132,6 @@ fun WifiAwareScreen(
             context.openAppSettings()
         }
     }
-
-
 
 
 
@@ -215,6 +219,7 @@ fun WifiAwareScreen(
         onBack = { context.finish() },
         topBar = { TopBar(onDashboardEventSent = onDashboardEventSent) }
     ) { paddingValues ->
+
         Content(
             state = state,
             effectFlow = viewModel.effect,
@@ -224,6 +229,8 @@ fun WifiAwareScreen(
         )
     }
 }
+
+
 
 @Composable
 private fun PermissionRationaleDialog(
@@ -299,14 +306,16 @@ private fun handleNavigationEffect(
     when (navigationEffect) {
         is Effect.Navigation.Pop -> context.finish()
         is Effect.Navigation.SwitchScreen -> {
-            navController.navigate(navigationEffect.screenRoute) {
-                popUpTo(navigationEffect.popUpToScreenRoute) {
-                    inclusive = navigationEffect.inclusive
+            val dest = navigationEffect.screenRoute
+            navigationEffect.popUpToScreenRoute?.takeIf { it.isNotBlank() }?.let { popRoute ->
+                navController.navigate(dest) {
+                    popUpTo(popRoute) { inclusive = navigationEffect.inclusive }
                 }
-            }
+            } ?: navController.navigate(dest)
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -334,6 +343,7 @@ private fun Content(
                 end = paddingValues.calculateEndPadding(LayoutDirection.Ltr)
             )
     ) {
+
         println("[Content] State: isWifiAwareSupported=${state?.isWifiAwareSupported}, hasPermissions=${state?.hasPermissions}, isDiscovering=${state?.isDiscovering}, discoveredPeers=${state?.discoveredPeers}")
         if (state?.isWifiAwareSupported == true) {
             if (state.hasPermissions) {
@@ -344,7 +354,7 @@ private fun Content(
                         .padding(vertical = SPACING_MEDIUM.dp),
                     verticalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
                 ) {
-                    InitWifiAware(viewModel)
+                    InitWifiAware(viewModel, state)
                     if (state.isDiscovering == true) {
                         Text(
                             text = "Discovering peers...",
@@ -435,7 +445,7 @@ private fun PermissionLauncherDenied(
 }
 
 @Composable
-fun InitWifiAware(viewModel: WifiAwareViewModel?) {
+fun InitWifiAware(viewModel: WifiAwareViewModel?, state: State?) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -482,10 +492,27 @@ fun InitWifiAware(viewModel: WifiAwareViewModel?) {
             VSpacer.Medium()
 
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                DoubleBtn(
-                    onPublisher = { viewModel?.setEvent(Event.StartDiscovery) },
-                    onSubscriber = { viewModel?.setEvent(Event.StartSubscription) },
-                )
+                if (state?.isDiscovering == true) {
+                    WrapStickyBottomContent(
+                        stickyBottomModifier = Modifier.fillMaxWidth(),
+                        stickyBottomConfig = StickyBottomConfig(
+                            type = StickyBottomType.OneButton(
+                                ButtonConfig(
+                                    type = ButtonType.PRIMARY,
+                                    onClick = { viewModel?.setEvent(Event.StopDiscovery) }
+                                )
+                            ),
+                            showDivider = false
+                        )
+                    ) {
+                        Text(text = "Stop Discovery")
+                    }
+                } else {
+                    DoubleBtn(
+                        onPublisher = { viewModel?.setEvent(Event.StartDiscovery) },
+                        onSubscriber = { viewModel?.setEvent(Event.StartSubscription) },
+                    )
+                }
             }
         }
     }
@@ -518,6 +545,21 @@ private fun DoubleBtn(
     }
 }
 
+
+@Composable
+private fun IconLeftTutorial( viewModel: WifiAwareViewModel,){
+    IconButton(
+        onClick = { viewModel?.handleEvents(Event.Info) },
+        modifier = Modifier.size(48.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Settings,
+            contentDescription = "Open WiFi troubleshooting steps",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(32.dp)
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @ThemeModePreviews

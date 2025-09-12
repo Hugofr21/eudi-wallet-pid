@@ -113,6 +113,7 @@ class WifiAwareInteractorImpl(
     }
 
     override fun stopScan() {
+        println("Stop scan!!!!")
         walletLiveDataController.stopWifiAware()
         val intent = WifiAwareService.createStopIntent(context)
         context.startService(intent)

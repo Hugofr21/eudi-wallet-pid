@@ -33,9 +33,11 @@ import eu.europa.ec.dashboardfeature.ui.documents.detail.DocumentDetailsScreen
 import eu.europa.ec.dashboardfeature.ui.profile.ProfileScreen
 import eu.europa.ec.dashboardfeature.ui.settings.SettingsScreen
 import eu.europa.ec.dashboardfeature.ui.transactions.detail.TransactionDetailsScreen
+import eu.europa.ec.dashboardfeature.ui.wifi.info.InfoWifiAware
 import eu.europa.ec.uilogic.navigation.BackupScreens
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.ModuleRoute
+import eu.europa.ec.uilogic.navigation.WIFIScreens
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -189,5 +191,11 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
             ProfileScreen(
                 navController, koinViewModel())
         }
+
+        composable(WIFIScreens.Info.screenRoute) {
+                InfoWifiAware (navController, koinViewModel())
+        }
+
+
     }
 }

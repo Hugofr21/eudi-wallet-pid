@@ -12,6 +12,7 @@ import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
+import eu.europa.ec.uilogic.navigation.WIFIScreens
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 
@@ -31,7 +32,7 @@ sealed class Effect : ViewSideEffect {
     data class UpdatePeers(val peers: List<PeerHandle>) : Effect()
     sealed class Navigation : Effect() {
         data object Pop : Navigation()
-        data class SwitchScreen(val screenRoute: String, val popUpToScreenRoute: String, val inclusive: Boolean = false) : Navigation()
+        data class SwitchScreen(val screenRoute: String, val popUpToScreenRoute: String? = null, val inclusive: Boolean = false) : Navigation()
     }
 }
 
@@ -39,8 +40,11 @@ sealed class Event : ViewEvent {
     object GoBack : Event()
     object CheckPermissions : Event()
     object StartDiscovery : Event()
-
     object StartSubscription : Event()
+
+    object StopDiscovery : Event()
+
+    object Info : Event()
 }
 
 @KoinViewModel
@@ -75,22 +79,22 @@ class WifiAwareViewModel(
             Event.CheckPermissions -> {
                 if (!walletLiveDataController.checkAndRequestWifiAwarePermissions()) {
                     println("[WifiAwareViewModel] Permissões não concedidas, solicitando...")
-                    setEffect { Effect.RequestPermissions(walletLiveDataController.getMissingPermissions()) }
+                    setEffect { RequestPermissions(walletLiveDataController.getMissingPermissions()) }
                 } else {
                     println("[WifiAwareViewModel] Todas as permissões concedidas")
                     setState { copy(hasPermissions = true) }
                     if (interactor.isWifiAvailable()) {
                         handleEvents(Event.StartDiscovery)
                     } else {
-                        setEffect({ ShowPermissionDenied(listOf("Wi-Fi Aware não disponível")) })
+                        setEffect({ ShowPermissionDenied(listOf("Wi-Fi Aware not available")) })
                     }
                 }
             }
             Event.StartDiscovery -> {
                 if (!interactor.isWifiAvailable()) {
-                    println("[WifiAwareViewModel] Wi-Fi Aware não disponível")
+                    println("[WifiAwareViewModel] Wi-Fi Aware not available")
                     setState { copy(isWifiAwareSupported = false) }
-                    setEffect({ ShowPermissionDenied(listOf("Wi-Fi Aware não disponível")) })
+                    setEffect({ ShowPermissionDenied(listOf("Wi-Fi Aware not available")) })
                     return
                 }
                 if (!viewState.value.hasPermissions) {
@@ -103,7 +107,22 @@ class WifiAwareViewModel(
                 interactor.scanPeers()
             }
 
-            Event.StartSubscription -> TODO()
+            Event.StopDiscovery ->{
+                interactor.stopScan()
+                setState { copy(isDiscovering = false, isLoading = false) }
+            }
+
+            Event.StartSubscription -> {
+                 interactor.startSubscription()
+            }
+
+            Event.Info -> {
+//                setEffect {
+//                    Navigation.SwitchScreen(
+//                        screenRoute = WIFIScreens.Info.screenRoute,
+//                    )
+//                }
+            }
         }
     }
 }

@@ -612,20 +612,20 @@ class WalletCoreDocumentsControllerImpl(
      *         ?.resumeWithAuthorization(uri)
      */
     override fun resumeOpenId4VciWithAuthorization(uri: String) {
-        println(">> Resume OpenID4VCI with authorization: $uri")
+//        println(">> Resume OpenID4VCI with authorization: $uri")
         val containsIssuer = uri.contains("issuer.ageverification.dev")
-        println("Contains issuer.ageverification.dev? $containsIssuer")
+//        println("Contains issuer.ageverification.dev? $containsIssuer")
         val containsIssuer2 = uri.contains("issuer.eudiw.dev")
-        println("Contains issuer.eudiw.dev? $containsIssuer2")
+//        println("Contains issuer.eudiw.dev? $containsIssuer2")
 
         var resumed = false
 
         vciRegistry.allManagers().values.forEach { manager ->
-            println(">> Trying OpenID4VCI Manager: ${manager.getScopeName()}")
+//            println(">> Trying OpenID4VCI Manager: ${manager.getScopeName()}")
 
             try {
                 manager.resumeWithAuthorization(uri)
-                println(">> Successfully resumed with: ${manager.getScopeName()}")
+//                println(">> Successfully resumed with: ${manager.getScopeName()}")
                 resumed = true
                 return
             } catch (e: IllegalStateException) {

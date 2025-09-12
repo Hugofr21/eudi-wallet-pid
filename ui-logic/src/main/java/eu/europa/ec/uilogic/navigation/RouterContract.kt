@@ -80,6 +80,13 @@ sealed class DashboardScreens {
 
 }
 
+sealed class WIFIScreens {
+    data object Info : Screen(name = "WIFI_INFO")
+
+}
+
+
+
 sealed class BackupScreens {
     data object Backup : Screen(name = "BACKUP")
     data object BackupPhraseList : Screen(name = "PHRASE_LIST")
