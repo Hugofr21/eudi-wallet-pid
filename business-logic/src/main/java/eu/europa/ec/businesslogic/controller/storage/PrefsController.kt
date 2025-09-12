@@ -17,14 +17,21 @@
 package eu.europa.ec.businesslogic.controller.storage
 
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
-import androidx.core.content.edit
-import eu.europa.ec.businesslogic.extension.shuffle
-import eu.europa.ec.businesslogic.extension.unShuffle
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
+import android.util.Base64
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.google.crypto.tink.Aead
+import com.google.crypto.tink.KeyTemplates
+import com.google.crypto.tink.integration.android.AndroidKeysetManager
+import com.google.crypto.tink.aead.AeadConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlin.text.Charsets.UTF_8
+
 
 interface PrefsController {
 
@@ -143,68 +150,94 @@ interface PrefsController {
  * @property resourceProvider An instance of [ResourceProvider] used to access application resources,
  *                           including the application context for obtaining SharedPreferences.
  */
+
 class PrefsControllerImpl(
     private val resourceProvider: ResourceProvider
 ) : PrefsController {
 
 
-    /**
-     * Retrieves the SharedPreferences instance for the application.
-     *
-     * This function provides access to the SharedPreferences object used by the application
-     * for persistent storage of key-value pairs. The SharedPreferences are named "eudi-wallet-secure-prefs"
-     * and are accessed with private mode, meaning only this application can read or write to them.
-     *
-     * @return The SharedPreferences instance.
-     */
-    private fun getSharedPrefs(): SharedPreferences {
-        val context = resourceProvider.provideContext()
+    companion object{
+        private val datastoreName = "eudi-wallet-secure-datastore"
+        private val tinkKeysetPrefKey = "tink_master_keyset"
+        private const val masterKeyAlias = "android-keystore://tink_master_key"
+        private const val ALGORITHM = "AES256_GCM"
+    }
 
-        val masterKeyBuilder = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+    private val tinkKeysetPrefsName = "${resourceProvider.provideContext().packageName}.tink_keyset"
 
+    // https://github.com/osipxd/encrypted-datastore
+    // https://medium.com/@n20/encryptedsharedpreferences-is-deprecated-what-should-android-developers-use-now-7476140e8347
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
-            context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)) {
-            masterKeyBuilder.setRequestStrongBoxBacked(true)
-        }
+    private val aead: Aead by lazy {
+        AeadConfig.register()
+        
+        val manager = AndroidKeysetManager.Builder()
+            .withSharedPref(resourceProvider.provideContext(), tinkKeysetPrefsName, tinkKeysetPrefKey)
+            .withKeyTemplate(KeyTemplates.get(ALGORITHM))
+            .withMasterKeyUri(masterKeyAlias)
+            .build()
 
+        manager.keysetHandle.getPrimitive(Aead::class.java)
 
-        return EncryptedSharedPreferences.create(
-            context,
-            "eudi-wallet-secure-prefs",
-            masterKeyBuilder.build(),
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+    }
+    
+    
+    private val dataStore: DataStore<Preferences> by lazy {
+        val ctx = resourceProvider.provideContext()
+        PreferenceDataStoreFactory.create(
+            produceFile = { ctx.preferencesDataStoreFile(datastoreName) }
         )
+    }
+    
+    private val aad: ByteArray? = resourceProvider.provideContext().packageName.toByteArray(UTF_8)
+
+    private fun prefsKey(key: String) = stringPreferencesKey(key)
+
+    private fun encryptToBase64(plaintext: String): String {
+        val pt = plaintext.toByteArray(UTF_8)
+        val ct = aead.encrypt(pt, aad)
+        return Base64.encodeToString(ct, Base64.NO_WRAP)
+    }
+
+    private fun decryptFromBase64(base64Cipher: String): String? {
+        return try {
+            val ct = Base64.decode(base64Cipher, Base64.NO_WRAP)
+            val pt = aead.decrypt(ct, aad)
+            String(pt, UTF_8)
+        } catch (t: Exception) {
+            println("decryptFromBase64 fail!!!")
+            null
+        }
     }
 
     /**
-     * Defines if [SharedPreferences] contains a value for given [key]. This function will only
+     * Defines if [DataStore] contains a value for given [key]. This function will only
      * identify if a key exists in storage and will not check if corresponding value is valid.
      *
      * @param key The name of the preference to check.
      *
      * @return `true` if preferences contain given key. `false` otherwise.
      */
-    override fun contains(key: String): Boolean {
-        return getSharedPrefs().contains(key)
+    override fun contains(key: String): Boolean = runBlocking(Dispatchers.IO) {
+        val prefs = dataStore.data.first()
+        prefs[prefsKey(key)] != null
     }
 
     /**
      * Removes given preference key from shared preferences. Notice that this operation is
      * irreversible and may lead to data loss.
      */
-    override fun clear(key: String) {
-        getSharedPrefs().edit { remove(key) }
+
+    override fun clear(key: String): Unit = runBlocking(Dispatchers.IO) {
+        dataStore.edit { prefs -> prefs.remove(prefsKey(key)) }
     }
 
     /**
      * Removes all keys from shared preferences. Notice that this operation is
      * irreversible and may lead to data loss.
      */
-    override fun clear() {
-        getSharedPrefs().edit { clear() }
+    override fun clear(): Unit = runBlocking(Dispatchers.IO) {
+        dataStore.edit { prefs -> prefs.clear() }
     }
 
     /**
@@ -217,9 +250,13 @@ class PrefsControllerImpl(
      * @param key   Key used to add given [value].
      * @param value Value to add after given [key].
      */
-    override fun setString(key: String, value: String) {
-        getSharedPrefs().edit {
-            putString(key, value.shuffle())
+
+    override fun setString(key: String, value: String): Unit {
+        runBlocking(Dispatchers.IO) {
+            val cipher = encryptToBase64(value)
+            dataStore.edit { prefs ->
+                prefs[prefsKey(key)] = cipher
+            }
         }
     }
 
@@ -233,12 +270,9 @@ class PrefsControllerImpl(
      * @param key   Key used to add given [value].
      * @param value Value to add after given [key].
      */
-    override fun setLong(
-        key: String, value: Long
-    ) {
-        getSharedPrefs().edit {
-            putLong(key, value)
-        }
+    override fun setLong(key: String, value: Long): Unit = runBlocking(Dispatchers.IO) {
+        val cipher = encryptToBase64(value.toString())
+        dataStore.edit { it[prefsKey(key)] = cipher }
     }
 
     /**
@@ -251,9 +285,27 @@ class PrefsControllerImpl(
      * @param key   Key used to add given [value].
      * @param value Value to add after given [key].
      */
-    override fun setBool(key: String, value: Boolean) {
-        getSharedPrefs().edit {
-            putBoolean(key, value)
+    override fun setBool(key: String, value: Boolean): Unit {
+        runBlocking(Dispatchers.IO) {
+            val cipher = encryptToBase64(value.toString())
+            dataStore.edit { prefs ->
+                prefs[prefsKey(key)] = cipher
+            }
+        }
+    }
+
+    /**
+     * Sets an integer value in the shared preferences.
+     *
+     * @param key The key under which the value should be stored.
+     * @param value The integer value to be stored.
+     */
+    override fun setInt(key: String, value: Int): Unit {
+        runBlocking(Dispatchers.IO) {
+            val cipher = encryptToBase64(value.toString())
+            dataStore.edit { prefs ->
+                prefs[prefsKey(key)] = cipher
+            }
         }
     }
 
@@ -268,8 +320,11 @@ class PrefsControllerImpl(
      * @param defaultValue Default value to return if given [key] does not exist in prefs or if
      * key value is invalid.
      */
-    override fun getString(key: String, defaultValue: String): String {
-        return getSharedPrefs().getString(key, null)?.unShuffle() ?: defaultValue
+
+    override fun getString(key: String, defaultValue: String): String = runBlocking(Dispatchers.IO) {
+        val prefs = dataStore.data.first()
+        val base64 = prefs[prefsKey(key)] ?: return@runBlocking defaultValue
+        decryptFromBase64(base64) ?: defaultValue
     }
 
     /**
@@ -283,9 +338,13 @@ class PrefsControllerImpl(
      * @param defaultValue Default value to return if given [key] does not exist in prefs or if
      * key value is invalid.
      */
-    override fun getLong(key: String, defaultValue: Long): Long {
-        return getSharedPrefs().getLong(key, defaultValue)
+    override fun getLong(key: String, defaultValue: Long): Long = runBlocking(Dispatchers.IO) {
+        val prefs = dataStore.data.first()
+        val base64 = prefs[prefsKey(key)] ?: return@runBlocking defaultValue
+        val dec = decryptFromBase64(base64) ?: return@runBlocking defaultValue
+        dec.toLongOrNull() ?: defaultValue
     }
+
 
     /**
      * Retrieves a boolean value from device shared preferences that corresponds to given [key]. If
@@ -298,8 +357,12 @@ class PrefsControllerImpl(
      * @param defaultValue Default value to return if given [key] does not exist in prefs or if
      * key value is invalid.
      */
-    override fun getBool(key: String, defaultValue: Boolean): Boolean {
-        return getSharedPrefs().getBoolean(key, defaultValue)
+
+    override fun getBool(key: String, defaultValue: Boolean): Boolean = runBlocking(Dispatchers.IO) {
+        val prefs = dataStore.data.first()
+        val base64 = prefs[prefsKey(key)] ?: return@runBlocking defaultValue
+        val dec = decryptFromBase64(base64) ?: return@runBlocking defaultValue
+        dec.toBooleanStrictOrNull() ?: defaultValue
     }
 
     /**
@@ -310,22 +373,16 @@ class PrefsControllerImpl(
      * @param defaultValue The default integer value to return if no value is found for the key.
      * @return The integer value associated with the key, or the default value if no value is found.
      */
-    override fun getInt(key: String, defaultValue: Int): Int {
-        return getSharedPrefs().getInt(key, defaultValue)
+    override fun getInt(key: String, defaultValue: Int): Int = runBlocking(Dispatchers.IO) {
+        val prefs = dataStore.data.first()
+        val base64 = prefs[prefsKey(key)] ?: return@runBlocking defaultValue
+        val dec = decryptFromBase64(base64) ?: return@runBlocking defaultValue
+        dec.toIntOrNull() ?: defaultValue
     }
 
-    /**
-     * Sets an integer value in the shared preferences.
-     *
-     * @param key The key under which the value should be stored.
-     * @param value The integer value to be stored.
-     */
-    override fun setInt(key: String, value: Int) {
-        getSharedPrefs().edit {
-            putInt(key, value)
-        }
-    }
 }
+
+
 
 interface PrefKeys {
     fun getAlias(): String
@@ -337,6 +394,7 @@ interface PrefKeys {
 class PrefKeysImpl(
     private val prefsController: PrefsController
 ) : PrefKeys {
+
 
     /**
      * Returns the biometric alias in order to find the biometric secret key in android keystore.

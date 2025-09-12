@@ -42,6 +42,11 @@ dependencies {
     implementation(libs.moshi.kotlin)
     implementation(libs.moshi)
 
+
+    implementation(libs.datastore.core)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.tink.android)
+
     testImplementation(project(LibraryModule.TestLogic.path))
     androidTestImplementation(project(LibraryModule.TestLogic.path))
 }

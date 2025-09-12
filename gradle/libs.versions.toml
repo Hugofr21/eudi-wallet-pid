@@ -30,6 +30,8 @@ androidxBiometric = "1.2.0-alpha05"
 androidxAppAuth = "1.0.0-rc01"
 coil = "3.2.0"
 constraintlayoutVersion = "1.1.1"
+datastoreCore = "1.2.0-alpha02"
+datastorePreferencesVersion = "1.2.0-alpha02"
 eudiLibJvmSiopOpenid4vpKt = "0.9.2"
 gmsPlugin = "4.4.3"
 guice = "7.0.0"
@@ -54,6 +56,7 @@ retrofitVersion = "2.9.0"
 robolectric = "4.15.1"
 secrets = "2.0.1"
 securityCrypto = "1.0.0"
+tinkAndroid = "1.18.0"
 turbine = "1.2.1"
 koin = "4.1.0"
 koinAnnotations = "2.1.0"
@@ -105,6 +108,7 @@ androidx-constraintlayout-compose = { group = "androidx.constraintlayout", name 
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidxCore" }
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "androidxCoreSplashscreen" }
 androidx-dataStore-core = { group = "androidx.datastore", name = "datastore", version.ref = "androidxDataStore" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferencesVersion" }
 androidx-lifecycle-runtimeCompose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
 androidx-lifecycle-viewModelCompose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
@@ -130,6 +134,7 @@ coil-kt = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil" }
 coil-kt-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-kt-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
 coil-kt-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+datastore-core = { module = "androidx.datastore:datastore-core", version.ref = "datastoreCore" }
 eudi-lib-jvm-siop-openid4vp-kt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-siop-openid4vp-kt", version.ref = "eudiLibJvmSiopOpenid4vpKt" }
 guice = { module = "com.google.inject:guice", version.ref = "guice" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
@@ -154,6 +159,7 @@ retrofit-v290 = { module = "com.squareup.retrofit2:retrofit", version.ref = "ret
 retrofit2-kotlinx-serialization-converter = { module = "com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter", version.ref = "retrofit2KotlinxSerializationConverter" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 robolectric-shadows = { group = "org.robolectric", name = "shadows-framework", version.ref = "robolectric" }
+tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tinkAndroid" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
 koin-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin" }

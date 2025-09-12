@@ -25,45 +25,40 @@ class PrefsBiometryStorageProvider(
     private val prefsController: PrefsController
 ) : BiometryStorageProvider {
 
-    /**
-     * Returns the biometric data in order to validate that biometric is not tampered in any way.
-     */
+    private val gson = Gson()
+
     override fun getBiometricAuthentication(): BiometricAuthentication? {
+        val raw = prefsController.getString("BiometricAuthentication", "")
+        if (raw.isBlank() || raw == "null") return null
+
         return try {
-            Gson().fromJson(
-                prefsController.getString("BiometricAuthentication", ""),
-                BiometricAuthentication::class.java
-            )
+            gson.fromJson(raw, BiometricAuthentication::class.java)
         } catch (e: Exception) {
+            println("Failed to parse BiometricAuthentication JSON $e")
             null
         }
     }
 
-    /**
-     * Stores the biometric data used to validate that biometric is not tampered in any way.
-     *
-     * @param value the biometric data.
-     */
     override fun setBiometricAuthentication(value: BiometricAuthentication?) {
-        if (value == null) prefsController.clear("BiometricAuthentication")
-        prefsController.setString("BiometricAuthentication", Gson().toJson(value))
+        if (value == null) {
+            prefsController.clear("BiometricAuthentication")
+            return
+        }
+        val json = try {
+            gson.toJson(value)
+        } catch (e: Exception) {
+            println("Failed to serialize BiometricAuthentication $e")
+            return
+        }
+        prefsController.setString("BiometricAuthentication", json)
     }
 
-    /**
-     * Key to use Biometrics Auth instead of quick pin.
-     *
-     * Setting an empty value will clear the entry from shared prefs.
-     */
     override fun setUseBiometricsAuth(value: Boolean) {
         prefsController.setBool("UseBiometricsAuth", value)
     }
 
-    /**
-     * Key to use Biometrics Auth instead of quick pin.
-     *
-     * Setting an empty value will clear the entry from shared prefs.
-     */
     override fun getUseBiometricsAuth(): Boolean {
         return prefsController.getBool("UseBiometricsAuth", false)
     }
+
 }
