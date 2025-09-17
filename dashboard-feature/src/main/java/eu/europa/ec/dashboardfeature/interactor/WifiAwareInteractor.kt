@@ -112,6 +112,7 @@ class WifiAwareInteractorImpl(
         }
     }
 
+
     override fun stopScan() {
         println("Stop scan!!!!")
         walletLiveDataController.stopWifiAware()

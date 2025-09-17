@@ -161,10 +161,12 @@ fun providerPersonWifiAwareInteractor(
 fun providerPersonIdentificationDataInteractor(
     resourceProvider: ResourceProvider,
     walletCoreDocumentsController: WalletCoreDocumentsController,
+    walletCoreConfig: WalletCoreConfig
 ): PersonIdentificationDataInteractor {
     return PersonIdentificationDataImpl(
         resourceProvider = resourceProvider,
         walletCoreDocumentsController = walletCoreDocumentsController,
+        walletCoreConfig = walletCoreConfig
     )
 }
 

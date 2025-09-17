@@ -73,6 +73,7 @@ import kotlinx.coroutines.withContext
 import org.koin.core.component.getScopeName
 import java.util.Locale
 import eu.europa.ec.eudi.wallet.document.CreateDocumentSettings
+import eu.europa.ec.eudi.wallet.document.getDocuments
 
 enum class IssuanceMethod {
     OPENID4VCI
@@ -230,6 +231,7 @@ class WalletCoreDocumentsControllerImpl(
             clientId   = OpenId4VciModule.clientId
         )
     }
+
 
     private val genericErrorMessage
         get() = resourceProvider.genericErrorMessage()

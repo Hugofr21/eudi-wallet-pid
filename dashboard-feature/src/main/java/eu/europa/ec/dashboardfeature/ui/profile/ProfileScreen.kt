@@ -17,6 +17,7 @@
 package eu.europa.ec.dashboardfeature.ui.profile
 
 
+import android.Manifest
 import android.app.Dialog
 import android.content.Context
 import android.graphics.Bitmap
@@ -74,18 +75,20 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import android.graphics.BitmapFactory
+import android.os.Build
 import android.util.Base64
 import androidx.compose.foundation.Image
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.window.Dialog
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import eu.europa.ec.dashboardfeature.model.ClaimValue
+import eu.europa.ec.dashboardfeature.ui.home.BleAvailability
 import eu.europa.ec.uilogic.component.IconDataUi
 import eu.europa.ec.dashboardfeature.ui.profile.compoment.ActionButtons
 import eu.europa.ec.dashboardfeature.ui.profile.compoment.NoResults
+import eu.europa.ec.uilogic.extension.openAppSettings
+import eu.europa.ec.uilogic.extension.openBleSettings
 
 
 typealias DashboardEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event
@@ -141,6 +144,10 @@ fun ProfileScreen(
         }
     }
 
+    if (state.bleAvailability == BleAvailability.NO_PERMISSION) {
+        RequiredPermissionsAsk(state) { event -> viewModel.setEvent(event) }
+    }
+
     LaunchedEffect(effects) {
         effects.collect { effect ->
             when (effect) {
@@ -152,6 +159,10 @@ fun ProfileScreen(
                         popUpTo(effect.popUpToScreenRoute) { inclusive = effect.inclusive }
                     }
                 }
+
+                is Effect.Navigation.OnAppSettings -> context.openAppSettings()
+                is Effect.Navigation.OnSystemSettings -> context.openBleSettings()
+
             }
         }
     }
@@ -171,6 +182,9 @@ private fun handleNavigationEffect(
                 }
             }
         }
+
+        is Effect.Navigation.OnAppSettings -> context.openAppSettings()
+        is Effect.Navigation.OnSystemSettings -> context.openBleSettings()
     }
 }
 
@@ -435,6 +449,39 @@ private fun ClaimValueView(value: ClaimValue) {
         }
     }
 }
+
+
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+private fun RequiredPermissionsAsk(
+    state: State,
+    onEventSend: (Event) -> Unit
+) {
+    val permissions: MutableList<String> = mutableListOf()
+
+    permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+    permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+    permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+
+    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 && state.isBleCentralClientModeEnabled) {
+        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+    }
+
+    val permissionsState = rememberMultiplePermissionsState(permissions = permissions)
+
+    when {
+        permissionsState.allPermissionsGranted -> onEventSend(Event.CreateQrCode)
+        else -> {
+            onEventSend(Event.OnPermissionStateChanged(BleAvailability.UNKNOWN))
+            LaunchedEffect(Unit) {
+                permissionsState.launchMultiplePermissionRequest()
+            }
+        }
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @ThemeModePreviews

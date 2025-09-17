@@ -23,6 +23,10 @@ import eu.europa.ec.commonfeature.config.RequestUriConfig
 import eu.europa.ec.corelogic.di.getOrCreatePresentationScope
 import eu.europa.ec.dashboardfeature.interactor.PersonIdentificationDataInteractor
 import eu.europa.ec.dashboardfeature.model.ClaimsUI
+import eu.europa.ec.dashboardfeature.ui.home.BleAvailability
+import eu.europa.ec.dashboardfeature.ui.home.Effect.Navigation
+import eu.europa.ec.dashboardfeature.ui.home.HomeScreenBottomSheetContent
+import eu.europa.ec.dashboardfeature.ui.home.HomeScreenBottomSheetContent.Bluetooth
 import eu.europa.ec.uilogic.component.content.ContentErrorConfig
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
@@ -38,6 +42,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 
+enum class BleAvailability {
+    AVAILABLE, NO_PERMISSION, DISABLED, UNKNOWN
+}
+
 
 data class State(
     val firstName: String,
@@ -46,12 +54,16 @@ data class State(
     val imageBase64: String? = null,
     val claimsUi: List<ClaimsUI> = emptyList(),
     val documentsUi: List<Any> = emptyList(),
+    val bleAvailability: BleAvailability = BleAvailability.UNKNOWN,
+    val isBleCentralClientModeEnabled: Boolean = false
 ) : ViewState
 
 sealed class Event : ViewEvent {
     object GoBack : Event()
     object CreateQrCode : Event()
     object AddDocument : Event()
+
+    data class OnPermissionStateChanged(val availability: BleAvailability) : Event()
 }
 
 sealed class Effect : ViewSideEffect {
@@ -62,6 +74,10 @@ sealed class Effect : ViewSideEffect {
             val popUpToScreenRoute: String = DashboardScreens.Profile.screenRoute,
             val inclusive: Boolean = false,
         ) : Navigation()
+
+        data object OnAppSettings : Navigation()
+        data object OnSystemSettings : Navigation()
+
     }
 }
 
@@ -91,10 +107,15 @@ class ProfileViewModel(
         when (event) {
             Event.AddDocument -> navigateToNextScreenAddDocument()
             Event.CreateQrCode -> {
-                getOrCreatePresentationScope()
-                navigateToNextScreenGenerateQr()
+                handleCreateQrRequest()
             }
             Event.GoBack -> setEffect { Effect.Navigation.Pop }
+            is Event.OnPermissionStateChanged -> {
+                setState { copy(bleAvailability = event.availability) }
+                if (event.availability == BleAvailability.AVAILABLE) {
+                    proceedToGenerateQrIfReady()
+                }
+            }
         }
     }
 
@@ -138,6 +159,45 @@ class ProfileViewModel(
             Effect.Navigation.SwitchScreen(
                 screenRoute = screenRoute
             )
+        }
+    }
+
+
+    private fun handleCreateQrRequest() {
+        viewModelScope.launch {
+            if (!personIdentificationDataInteractor.hasRequiredBlePermissions()) {
+                setState { copy(bleAvailability = BleAvailability.NO_PERMISSION) }
+                return@launch
+            }
+
+            if (!personIdentificationDataInteractor.isBluetoothSupported()) {
+                setState { copy(bleAvailability = BleAvailability.UNKNOWN) }
+                return@launch
+            }
+
+            if (!personIdentificationDataInteractor.isBleAvailable()) {
+                setState { copy(bleAvailability = BleAvailability.DISABLED) }
+                setEffect { Effect.Navigation.OnSystemSettings }
+                return@launch
+            }
+
+            setState { copy(bleAvailability = BleAvailability.AVAILABLE) }
+            getOrCreatePresentationScope()
+            navigateToNextScreenGenerateQr()
+        }
+    }
+
+
+    private fun proceedToGenerateQrIfReady() {
+        viewModelScope.launch {
+            if (personIdentificationDataInteractor.hasRequiredBlePermissions()
+                && personIdentificationDataInteractor.isBluetoothSupported()
+                && personIdentificationDataInteractor.isBleAvailable()
+            ) {
+                setState { copy(bleAvailability = BleAvailability.AVAILABLE) }
+                getOrCreatePresentationScope()
+                navigateToNextScreenGenerateQr()
+            }
         }
     }
 

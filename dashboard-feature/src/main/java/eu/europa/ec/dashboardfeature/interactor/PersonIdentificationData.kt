@@ -16,7 +16,14 @@
 
 package eu.europa.ec.dashboardfeature.interactor
 
+import android.Manifest
+import android.bluetooth.BluetoothManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import eu.europa.ec.commonfeature.util.docNamespace
+import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.model.DocumentIdentifier
 import eu.europa.ec.dashboardfeature.model.ClaimValue
@@ -36,20 +43,55 @@ interface PersonIdentificationDataInteractor {
     fun getUserWithPortrait(): String
     fun getListClaims(): List<ClaimsUI>
 
+    fun isBleAvailable(): Boolean
+    fun isBleCentralClientModeEnabled(): Boolean
+
+    fun hasRequiredBlePermissions(): Boolean
+
+    fun isBluetoothSupported(): Boolean
+
 }
 
 
 class PersonIdentificationDataImpl(
     private val resourceProvider: ResourceProvider,
     private val walletCoreDocumentsController: WalletCoreDocumentsController,
+    private val walletCoreConfig: WalletCoreConfig,
 ) : PersonIdentificationDataInteractor {
+
+    private val genericErrorMsg
+        get() = resourceProvider.genericErrorMessage()
+
+    override fun isBleAvailable(): Boolean {
+        val bluetoothManager: BluetoothManager? = resourceProvider.provideContext()
+            .getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        return bluetoothManager?.adapter?.isEnabled == true
+    }
+
+    override fun isBleCentralClientModeEnabled(): Boolean =
+        walletCoreConfig.config.enableBleCentralMode
+
+    override fun hasRequiredBlePermissions(): Boolean {
+        val ctx = resourceProvider.provideContext()
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(ctx, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        } else {
+
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    override fun isBluetoothSupported(): Boolean {
+        val bluetoothManager: BluetoothManager? = resourceProvider.provideContext()
+            .getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        return bluetoothManager?.adapter != null
+    }
 
     private val pidTypes = listOf(
         DocumentIdentifier.MdocPid,
         DocumentIdentifier.SdJwtPid
     )
-
-
 
     override fun getPidDocuments(): List<String> =
         walletCoreDocumentsController
@@ -144,11 +186,7 @@ class PersonIdentificationDataImpl(
                 value = cv
             )
         }
-
-
-
         return claims
-
     }
 
 

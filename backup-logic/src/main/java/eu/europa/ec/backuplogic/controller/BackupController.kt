@@ -65,7 +65,6 @@ interface BackupController {
     suspend fun deleteBackup(identifier: String): Boolean
     suspend fun restoreBackup(file: Uri , passPhrase: List<String>): List<String>
     suspend fun getLastBackup(): BackupLog?
-
     fun existBackupMkdir(): Boolean
 
 }
