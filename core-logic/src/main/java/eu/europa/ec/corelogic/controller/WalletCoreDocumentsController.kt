@@ -211,6 +211,10 @@ interface WalletCoreDocumentsController {
     suspend fun deleteBookmark(bookmarkId: DocumentId)
 
     suspend fun isDocumentLowOnCredentials(document: IssuedDocument): Boolean
+
+    fun getWalletCoreConfig(): WalletCoreConfig
+
+    fun getEudiWallet(): EudiWallet
 }
 
 
@@ -223,6 +227,14 @@ class WalletCoreDocumentsControllerImpl(
     private val revokedDocumentDao: RevokedDocumentDao,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : WalletCoreDocumentsController {
+
+    override fun getWalletCoreConfig(): WalletCoreConfig {
+        return walletCoreConfig
+    }
+
+    override fun getEudiWallet(): EudiWallet {
+        return eudiWallet
+    }
 
     private val vciRegistry: OpenId4VciManagerRegistry by lazy {
         OpenId4VciManagerRegistry(
@@ -646,6 +658,7 @@ class WalletCoreDocumentsControllerImpl(
     override fun getAllDocumentCategories(): DocumentCategories {
         return walletCoreConfig.documentCategories
     }
+
 
     override suspend fun getTransactionLogs(): List<TransactionLogDataDomain> =
         withContext(dispatcher) {

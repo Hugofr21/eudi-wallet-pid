@@ -24,6 +24,7 @@ import androidx.core.content.FileProvider
 import com.nimbusds.jose.shaded.gson.Gson
 import eu.europa.ec.authenticationlogic.controller.authentication.PassphraseAuthenticationController
 import eu.europa.ec.backuplogic.controller.dto.DocumentDto
+import eu.europa.ec.backuplogic.controller.dto.toDocumentIdentifier
 import eu.europa.ec.backuplogic.controller.dto.toDto
 import eu.europa.ec.backuplogic.controller.model.BackupBundle
 import eu.europa.ec.backuplogic.controller.model.Credential
@@ -35,12 +36,11 @@ import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.storagelogic.model.BackupLog
 import eu.europa.ec.businesslogic.util.crypto.HashUtils
-import java.io.ByteArrayInputStream
+import eu.europa.ec.eudi.wallet.document.DocumentExtensions.getDefaultCreateDocumentSettings
+import eu.europa.ec.eudi.wallet.issue.openid4vci.Offer
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.IOException
-import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -53,12 +53,13 @@ import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
 import javax.crypto.Cipher.DECRYPT_MODE
 import javax.crypto.Cipher.ENCRYPT_MODE
-import javax.crypto.CipherInputStream
 import javax.crypto.CipherOutputStream
 import javax.crypto.Mac
-import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import kotlinx.serialization.json.Json
+import java.io.StringWriter
+import java.security.GeneralSecurityException
 
 interface BackupController {
     suspend fun exportBackup(passPhrase: List<String>, provider: String): List<Uri>
@@ -66,6 +67,8 @@ interface BackupController {
     suspend fun restoreBackup(file: Uri , passPhrase: List<String>): List<String>
     suspend fun getLastBackup(): BackupLog?
     fun existBackupMkdir(): Boolean
+
+    suspend fun finalizeRestoreOptions(options: List<String>, overwriteExisting: Boolean = false): Boolean
 
 }
 
@@ -87,7 +90,7 @@ class BackupControllerImpl(
     }
 
     @Volatile
-    private var cachedDecryptedCredentials: List<String> = emptyList()
+    private var cachedDecryptedCredentials: List<DocumentDto> = emptyList()
     private val logsDir = File(context.filesDir.absolutePath + "/backup").apply { mkdirs() }
 
 
@@ -126,10 +129,7 @@ class BackupControllerImpl(
             "${context.packageName}.provider",
             encryptedFile
         )
-
-
         return listOf(uri)
-
     }
 
 
@@ -156,7 +156,7 @@ class BackupControllerImpl(
         println(">>> Iniciando restoreBackup com arquivo: ${file.path}")
 
         val decryptedFile = decryptZipFile(file, passPhrase)
-        println(">>> Arquivo ZIP descriptografado: ${decryptedFile?.path}")
+        println(">>> Arquivo ZIP descriptografado: ${decryptedFile.path}")
 
         val zipInput = ZipInputStream(FileInputStream(decryptedFile))
         var entry: ZipEntry? = zipInput.nextEntry
@@ -195,12 +195,10 @@ class BackupControllerImpl(
         println(">>> Passphrase válida, iniciando decriptação das credenciais")
 
         val decryptedCredentials = decryptCredentials(bundle, derivedKeyBytes)
-        println(">>> Decriptação  das credenciais $decryptedCredentials")
 
-//        decryptedCredentials.forEachIndexed { index, credentialJson ->
-//            val documentDto = Gson().fromJson(credentialJson, DocumentDto::class.java)
-//            println(">>> Credential #$index: $documentDto")
-//        }
+        decryptedCredentials.forEachIndexed { index, credentialJson ->
+            println(">>> Credential #$index: $credentialJson")
+        }
 
         cachedDecryptedCredentials = decryptedCredentials.toList()
 
@@ -236,6 +234,31 @@ class BackupControllerImpl(
                 logsDir.listFiles()?.isNotEmpty() == true
     }
 
+    /** After receiving backup options, start restore from options+
+     *  delete cache data * check id in room and see documentManger
+     */
+    override suspend fun finalizeRestoreOptions(options: List<String>, overwriteExisting: Boolean): Boolean {
+        if(cachedDecryptedCredentials.isEmpty()){
+            for ((index, credential) in cachedDecryptedCredentials.withIndex()){
+                val existing = walletCoreDocumentsController.getDocumentById(credential.id)
+
+                if (existing !=null && !overwriteExisting ){
+                    continue
+                }
+
+                val json = Json { encodeDefaults = true }.encodeToString(DocumentDto.serializer(), credential)
+
+                val documentIssuanceRule = walletCoreDocumentsController.getWalletCoreConfig()
+                    .documentIssuanceConfig
+                    .getRuleForDocument(documentIdentifier = credential.toDocumentIdentifier())
+
+
+                walletCoreDocumentsController.storeBookmark(credential.id)
+            }
+        }
+        return false
+    }
+
     /**
          * Get the hash and sslr used to create the pbkdf2 derivative of EncryptedSharedPreferences
          * Get Verifiable Credentials in the wallet controller
@@ -250,22 +273,57 @@ class BackupControllerImpl(
         val documentsDto = walletCoreDocumentsController
             .getAllDocuments()
             .map { it.toDto() }
-//        println("Loaded ${documentsDto.size} documents")
+
+//        documentsDto.forEachIndexed { index, dto ->
+//            println("Document ${index + 1}:")
+//            println("  id: ${dto.id}")
+//            println("  name: ${dto.name}")
+//            println("  format: ${dto.format}")
+//            println("  documentManagerId: ${dto.documentManagerId}")
+//            println("  createdAt: ${dto.createdAt}")
+//            val im = dto.issuerMetadata
+//            if (im == null) {
+//                println("  issuerMetadata: null")
+//            } else {
+//                println("  issuerMetadata:")
+//                println("    documentConfigurationIdentifier: ${im.documentConfigurationIdentifier}")
+//                println("    credentialIssuerIdentifier: ${im.credentialIssuerIdentifier}")
+//
+//                if (im.display.isEmpty()) {
+//                    println("    display: []")
+//                } else {
+//                    println("    display:")
+//                    im.display.forEachIndexed { i, d ->
+//                        println("      - display[$i]: $d")
+//                    }
+//                }
+//
+//                if (im.claims.isNullOrEmpty()) {
+//                    println("    claims: null or empty")
+//                } else {
+//                    println("    claims:")
+//                    (im.claims as Iterable<Any?>).forEachIndexed { i, c ->
+//                        println("      - claim[$i]: $c")
+//                    }
+//                }
+//                if (im.issuerDisplay.isNullOrEmpty()) {
+//                    println("    issuerDisplay: null or empty")
+//                } else {
+//                    println("    issuerDisplay:")
+//                    (im.issuerDisplay as Iterable<Any?>).forEachIndexed { i, id ->
+//                        println("      - issuerDisplay[$i]: $id")
+//                    }
+//                }
+//            }
+//
+//            println()
+//
+//        }
 
         val keyBytes = passphraseAuthenticationController.retrieveKeyBytes()
-//        println(
-//            " keyBytes (${keyBytes.size} bytes): ${
-//                Base64.encodeToString(
-//                    keyBytes,
-//                    Base64.NO_WRAP
-//                )
-//            }"
-//        )
         val ivMaster = passphraseAuthenticationController.retrieveIv()
-//        println("Master IV (Base64): ${Base64.encodeToString(ivMaster, Base64.NO_WRAP)}")
-
         val kdf = KdfParams(alg = ALGORITHM, iters = ITERATIONS, keyLen = KEY_LENGTH)
-//        println("KDF params: $kdf")
+
         val securityParams = SecurityParams(
             requireBiometric = false,
             requirePin = false,
@@ -274,9 +332,12 @@ class BackupControllerImpl(
                 hash = Base64.encodeToString(keyBytes, Base64.NO_WRAP)
             )
         )
-//        println("Security params: $securityParams")
+
+        val json = Json { encodeDefaults = true }
 
         val credentials = documentsDto.map { doc ->
+            val plaintextBytes = json.encodeToString(doc).toByteArray(Charsets.UTF_8)
+
             val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
                 init(
                     Cipher.ENCRYPT_MODE,
@@ -284,28 +345,15 @@ class BackupControllerImpl(
                     GCMParameterSpec(128, ivMaster)
                 )
             }
-//            println("Cipher initialized: $cipher")
 
-            val plaintext = doc.toString().toByteArray(Charsets.UTF_8)
-//            println(
-//                "Plaintext (${plaintext.size} bytes): ${
-//                    String(
-//                        plaintext,
-//                        Charsets.UTF_8
-//                    )
-//                }"
-//            )
-
-            val ciphertext = cipher.doFinal(plaintext)
-            val cipherTextB64 = Base64.encodeToString(ciphertext, Base64.NO_WRAP)
-//            println("Ciphertext (Base64, ${ciphertext.size} bytes): $cipherTextB64")
+            val ciphertext = cipher.doFinal(plaintextBytes)
 
             Credential(
                 id = doc.id,
                 type = doc.format::class.simpleName ?: "unknown",
                 alg = "AES/GCM/NoPadding",
                 iv = Base64.encodeToString(ivMaster, Base64.NO_WRAP),
-                data = cipherTextB64
+                data = Base64.encodeToString(ciphertext, Base64.NO_WRAP)
             )
         }
 
@@ -318,18 +366,15 @@ class BackupControllerImpl(
 
         val gson = Gson()
         val jsonPartial = gson.toJson(bundleNoSig)
-//        println("jsonPartial: $jsonPartial")
 
         val hmac = Mac.getInstance("HmacSHA256").apply {
             init(SecretKeySpec(keyBytes, "HmacSHA256"))
         }.doFinal(jsonPartial.toByteArray(Charsets.UTF_8))
-//        println("HMAC raw: ${hmac.contentToString()}")
 
         bundleNoSig.signature = Signature(
             alg = "HmacSHA256",
             sig = Base64.encodeToString(hmac, Base64.NO_WRAP)
         )
-//        println("Attached signature: ${bundleNoSig.signature}")
 
        return  gson.toJson(bundleNoSig)
     }
@@ -362,20 +407,17 @@ class BackupControllerImpl(
         }
         jsonFile.delete()
         return encryptZipFile(zipFile, passPhrase)
-            ?: throw IllegalStateException("Failed to encrypt zip file")
 
     }
 
     private fun encryptZipFile(zipFile: File, passPhrase: List<String>): File {
-        // 1) Deriva salt, IV e chave a partir da frase mnemônica
         val saltBytes = cryptoController.generateSaltFromMnemonic(passPhrase)
         val ivBytes   = cryptoController.deriveIvFromMnemonic(passPhrase)
         val keyBytes  = cryptoController.deriveKeyFromMnemonic(passPhrase, saltBytes)
 
-        // (opcionais) logs para debug – você verá exatamente os mesmos valores no decrypt
-        println("(encryptZipFile) salt (Base64): ${Base64.encodeToString(saltBytes, NO_WRAP)}")
-        println("(encryptZipFile) iv   (Base64): ${Base64.encodeToString(ivBytes,   NO_WRAP)}")
-        println("(encryptZipFile) key  (Base64): ${Base64.encodeToString(keyBytes,  NO_WRAP)}")
+//        println("(encryptZipFile) salt (Base64): ${Base64.encodeToString(saltBytes, NO_WRAP)}")
+//        println("(encryptZipFile) iv   (Base64): ${Base64.encodeToString(ivBytes,   NO_WRAP)}")
+//        println("(encryptZipFile) key  (Base64): ${Base64.encodeToString(keyBytes,  NO_WRAP)}")
 
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
             init(ENCRYPT_MODE,
@@ -400,16 +442,16 @@ class BackupControllerImpl(
         val saltBytes = cryptoController.generateSaltFromMnemonic(passPhrase)
         val ivBytes   = cryptoController.deriveIvFromMnemonic(passPhrase)
         val keyBytes  = cryptoController.deriveKeyFromMnemonic(passPhrase, saltBytes)
-
-        println("(decryptZipFile) salt (B64): ${Base64.encodeToString(saltBytes, NO_WRAP)}")
-        println("(decryptZipFile) iv   (B64): ${Base64.encodeToString(ivBytes,   NO_WRAP)}")
-        println("(decryptZipFile) key  (B64): ${Base64.encodeToString(keyBytes,  NO_WRAP)}")
+//
+//        println("(decryptZipFile) salt (B64): ${Base64.encodeToString(saltBytes, NO_WRAP)}")
+//        println("(decryptZipFile) iv   (B64): ${Base64.encodeToString(ivBytes,   NO_WRAP)}")
+//        println("(decryptZipFile) key  (B64): ${Base64.encodeToString(keyBytes,  NO_WRAP)}")
 
         val encryptedBytes = context.contentResolver.openInputStream(encryptedStream).use { inputStream ->
             inputStream?.readBytes() ?: throw IllegalStateException("Failed to read encrypted stream")
         }
 
-        println("(decryptZipFile) encryptedBytes.size = ${encryptedBytes.size}")
+//        println("(decryptZipFile) encryptedBytes.size = ${encryptedBytes.size}")
 
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
             init(DECRYPT_MODE, SecretKeySpec(keyBytes, "AES"), GCMParameterSpec(128, ivBytes))
@@ -419,38 +461,45 @@ class BackupControllerImpl(
         val decryptedBytes = try {
             cipher.doFinal(encryptedBytes)
         } catch (badTag: AEADBadTagException) {
-            println("BackupCtl AEADBadTagException ao decrypt: ${badTag.message}")
-            throw SecurityException("Backup corrompido ou passphrase errada", badTag)
+            throw SecurityException("Corrupted backup or wrong passphrase", badTag)
         }
 
-        println("(decryptZipFile) decryptedBytes.size = ${decryptedBytes.size}")
+//        println("(decryptZipFile) decryptedBytes.size = ${decryptedBytes.size}")
 
         val out = File.createTempFile("decrypted", ".zip", context.cacheDir)
         FileOutputStream(out).use { it.write(decryptedBytes) }
-        println("(decryptZipFile) saída em: ${out.path}")
         return out
     }
 
-    fun decryptCredentials(bundle: BackupBundle, derivedKeyBytes: ByteArray): List<String> {
-        val secretKey: SecretKey = SecretKeySpec(derivedKeyBytes, "AES")
-        val decryptedCredentials = mutableListOf<String>()
+    fun decryptCredentials(bundle: BackupBundle, derivedKeyBytes: ByteArray): List<DocumentDto> {
+        val json = Json { ignoreUnknownKeys = true }
+        val secretKey = SecretKeySpec(derivedKeyBytes, "AES")
+        val decrypted = mutableListOf<DocumentDto>()
 
-        for (credential in bundle.credentials) {
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            val ivBytes = Base64.decode(credential.iv, Base64.NO_WRAP)
-            val gcmSpec = GCMParameterSpec(128, ivBytes)
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmSpec)
+        for ((index, credential) in bundle.credentials.withIndex()) {
+            try {
+                val ivBytes = Base64.decode(credential.iv, Base64.NO_WRAP)
+                val gcmSpec = GCMParameterSpec(128, ivBytes)
 
-            val cipherBytes = Base64.decode(
-                credential.data ?: throw IllegalArgumentException("Missing credential data"),
-                Base64.NO_WRAP
-            )
-            val plainBytes = cipher.doFinal(cipherBytes)
-            val plainText = String(plainBytes, Charsets.UTF_8)
-            decryptedCredentials.add(plainText)
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmSpec)
+
+                val cipherBytes = Base64.decode(credential.data, Base64.NO_WRAP)
+                val plainBytes = cipher.doFinal(cipherBytes)
+                val plainText = String(plainBytes, Charsets.UTF_8)
+
+                val documentDto = json.decodeFromString<DocumentDto>(plainText)
+                decrypted.add(documentDto)
+            } catch (e: IllegalArgumentException) {
+                throw IllegalStateException("Error decoding Base64 from credential #$index: ${e.message}", e)
+            } catch (e: GeneralSecurityException) {
+                throw IllegalStateException("Cryptographic failure when decrypting credential#$index: ${e.message}", e)
+            } catch (e: Exception) {
+                throw IllegalStateException("Error processing credential #$index: ${e.message}", e)
+            }
         }
 
-        return decryptedCredentials
+        return decrypted
     }
 
 }

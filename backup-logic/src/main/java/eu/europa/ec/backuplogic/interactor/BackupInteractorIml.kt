@@ -52,7 +52,6 @@ class BackupInteractorIml (
         private const val COUNT_TAKE = 12
         private const val WORDS_TO_GUESS = 4
         private const val WALLET_NAME = "wallet-dev"
-
         private var _cachedWords: MutableList<String>? = null
     }
 

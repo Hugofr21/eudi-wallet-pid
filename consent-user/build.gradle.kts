@@ -23,6 +23,7 @@ dependencies {
     implementation(project(LibraryModule.ResourcesLogic.path))
     implementation(project(LibraryModule.BackupLogic.path))
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.documentfile)
 
 }
 

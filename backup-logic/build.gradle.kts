@@ -19,9 +19,10 @@ dependencies {
     implementation(project(LibraryModule.BusinessLogic.path))
     implementation(project(LibraryModule.StorageLogic.path))
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.documentfile)
 }
 
-// Current Module Kover Report
+
 excludeFromKoverReport(
     excludedClasses = KoverExclusionRules.BackupLogic.classes,
     excludedPackages = KoverExclusionRules.BackupLogic.packages,

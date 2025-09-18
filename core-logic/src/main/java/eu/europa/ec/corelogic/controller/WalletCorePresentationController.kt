@@ -57,9 +57,7 @@ import java.net.URI
 sealed class PresentationControllerConfig(val initiatorRoute: String) {
     data class OpenId4VP(val uri: String, val initiator: String) :
         PresentationControllerConfig(initiator)
-
     data class Ble(val initiator: String) : PresentationControllerConfig(initiator)
-
     data class QrCodeMdoc(val initiator: String) : PresentationControllerConfig(initiator)
 }
 
@@ -295,7 +293,7 @@ class WalletCorePresentationControllerImpl(
                         uri = uri
                     )
                 )
-            }
+            },
         )
 
         addListener(eventListenerWrapper)

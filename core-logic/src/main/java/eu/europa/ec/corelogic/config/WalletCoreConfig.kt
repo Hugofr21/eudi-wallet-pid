@@ -128,9 +128,6 @@ interface WalletCoreConfig {
                     DocumentIdentifier.OTHER(
                         formatType = "org.micov.attestation.1" // Object containing the metadata of the Vaccination
                     ),
-                    DocumentIdentifier.OTHER(
-                        formatType = "org.micov.attestation.1" // Object containing the metadata of the Vaccination
-                    ),
 
                 ),
                 DocumentCategory.SocialSecurity to listOf(

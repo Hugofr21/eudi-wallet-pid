@@ -56,11 +56,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
-import eu.europa.ec.uilogic.component.ListItemLeadingContentDataUi
-import eu.europa.ec.uilogic.component.utils.SIZE_EXTRA_LARGE
 import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
-import eu.europa.ec.uilogic.component.utils.VSpacer
 
 @Composable
 fun FirstPage(

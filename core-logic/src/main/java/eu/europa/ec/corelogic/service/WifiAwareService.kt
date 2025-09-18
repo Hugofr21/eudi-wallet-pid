@@ -30,9 +30,7 @@ import android.os.Parcelable
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import eu.europa.ec.corelogic.controller.wifi.PublishCallback
 import eu.europa.ec.corelogic.controller.wifi.WifiAwareConfig
 import eu.europa.ec.resourceslogic.R
@@ -49,7 +47,6 @@ import java.net.Socket
 import kotlin.collections.orEmpty
 import kotlin.collections.plus
 import android.net.wifi.WifiManager
-import androidx.core.app.ActivityCompat
 
 
 
@@ -505,7 +502,7 @@ class WifiAwareService : Service() {
                         putExtra(EXTRA_MESSAGE, message)
                         putExtra(EXTRA_PEER, peerHandle as Parcelable)
                     }
-                    LocalBroadcastManager.getInstance(this@WifiAwareService).sendBroadcast(intent)
+                    this@WifiAwareService.sendBroadcast(intent)
                 }
                 output.write(buffer, 0, read)
             }
@@ -528,7 +525,7 @@ class WifiAwareService : Service() {
                     val intent = Intent(ACTION_RESPONSE_SENT).apply {
                         putExtra(EXTRA_PEER, peerHandle as Parcelable)
                     }
-                    LocalBroadcastManager.getInstance(this@WifiAwareService).sendBroadcast(intent)
+                    this@WifiAwareService.sendBroadcast(intent)
                 }
             } catch (e: Exception) {
                 println("[WifiAwareService] Falha ao enviar resposta: ${e.message}")
@@ -556,7 +553,7 @@ class WifiAwareService : Service() {
         val intent = Intent(ACTION_PEER_DISCOVERED).apply {
             putExtra(EXTRA_PEER, peerHandle as Parcelable)
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        this.sendBroadcast(intent)
     }
 
     private fun broadcastStatus(isSuccess: Boolean, errorCode: Int? = null, isPublish: Boolean) {
@@ -565,14 +562,14 @@ class WifiAwareService : Service() {
             putExtra(EXTRA_STATUS, isSuccess)
             errorCode?.let { putExtra(EXTRA_ERROR_CODE, it) }
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        this.sendBroadcast(intent)
     }
 
     private fun broadcastNetworkStatus(networkStatus: NetworkStatus) {
         val intent = Intent(ACTION_NETWORK_STATUS).apply {
             putExtra(EXTRA_NETWORK_STATUS, networkStatus as Parcelable)
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        this.sendBroadcast(intent)
     }
 
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)

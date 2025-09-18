@@ -7,13 +7,12 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.wifi.aware.PeerHandle
 import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import eu.europa.ec.corelogic.config.WalletConfigNetworkConfig
 import eu.europa.ec.corelogic.controller.wifi.WifiAwareServerController
 import eu.europa.ec.corelogic.service.WifiAwareService
-import eu.europa.ec.eudi.iso18013.transfer.response.RequestedDocument
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import java.net.URI
 
 
 data class NetworkStatus(
@@ -151,12 +149,17 @@ class WalletLiveDataControllerImpl(
             addAction(WifiAwareService.ACTION_PUBLISH_STATUS)
             addAction(WifiAwareService.ACTION_SUBSCRIBE_STATUS)
         }
-        LocalBroadcastManager.getInstance(context).registerReceiver(broadcastReceiver, filter)
+        ContextCompat.registerReceiver(
+            context,
+            broadcastReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
 
    override fun stopWifiAware() {
-        LocalBroadcastManager.getInstance(context).unregisterReceiver(broadcastReceiver)
+        context.unregisterReceiver(broadcastReceiver)
         scope.cancel()
     }
 }
