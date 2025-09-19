@@ -9,6 +9,7 @@ import eu.europa.ec.businesslogic.extension.toUri
 import eu.europa.ec.corelogic.controller.CheckKeyUnlockPartialState
 import eu.europa.ec.corelogic.controller.PresentationControllerConfig
 import eu.europa.ec.corelogic.controller.ResponseReceivedPartialState
+import eu.europa.ec.corelogic.controller.TransferEventPartialState
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.model.AuthenticationData
 import eu.europa.ec.corelogic.util.EudiWalletListenerWrapper
@@ -90,6 +91,8 @@ sealed class TransferEventVerifiedPartialState  {
 
     data object ResponseSent : TransferEventVerifiedPartialState ()
     data class Redirect(val uri: URI) : TransferEventVerifiedPartialState ()
+
+    data object IntentToSend : TransferEventVerifiedPartialState()
 }
 
 
@@ -478,15 +481,24 @@ class EventPresentationDocumentControllerImpl(
                     val transactionId = session.transactionId ?: return@launch
                     val expectedNonce = session.nonce ?: return@launch
 
-                    if(session.isProofAge == true) {
-                        transactionStateAgeProof(expectedNonce , apiVerifierAgeProofController.getLastNonce())
-                    }else{
-                        transactionState(expectedNonce , api.getLastNonce())
+                    if (session.isProofAge == true) {
+                        transactionStateAgeProof(
+                            expectedNonce,
+                            apiVerifierAgeProofController.getLastNonce()
+                        )
+                    } else {
+                        transactionState(expectedNonce, api.getLastNonce())
                     }
 
                     clearVerifierSession()
                 }
 
+            },
+
+            intentToSend = {
+                listenerScope.launch {
+                    _events.emit(TransferEventVerifiedPartialState.IntentToSend)
+                }
             }
         )
 

@@ -11,6 +11,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,22 +70,15 @@ import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.navigation.PopUpToBuilder
-import eu.europa.ec.dashboardfeature.ui.transactions.list.TransactionsScreen
-import eu.europa.ec.dashboardfeature.ui.wifi.info.InfoWifiAware
 import eu.europa.ec.uilogic.extension.findActivity
 import eu.europa.ec.uilogic.extension.openAppSettings
-import eu.europa.ec.uilogic.extension.openWifiSettings
-import eu.europa.ec.uilogic.navigation.WIFIScreens
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
@@ -494,7 +488,8 @@ fun InitWifiAware(viewModel: WifiAwareViewModel?, state: State?) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 if (state?.isDiscovering == true) {
                     WrapStickyBottomContent(
-                        stickyBottomModifier = Modifier.fillMaxWidth(),
+                        stickyBottomModifier = Modifier.fillMaxWidth().zIndex(99f),
+
                         stickyBottomConfig = StickyBottomConfig(
                             type = StickyBottomType.OneButton(
                                 ButtonConfig(
@@ -505,7 +500,15 @@ fun InitWifiAware(viewModel: WifiAwareViewModel?, state: State?) {
                             showDivider = false
                         )
                     ) {
-                        Text(text = "Stop Discovery")
+                        Text(
+                            text = "Stop Discovery",
+                            modifier = Modifier
+                                .clickable {
+                                    println("[UI] Inner Text clickable pressed")
+                                    viewModel?.setEvent(Event.StopDiscovery)
+                                }
+                                .padding(12.dp)
+                        )
                     }
                 } else {
                     DoubleBtn(
@@ -517,6 +520,7 @@ fun InitWifiAware(viewModel: WifiAwareViewModel?, state: State?) {
         }
     }
 }
+
 
 @Composable
 private fun DoubleBtn(

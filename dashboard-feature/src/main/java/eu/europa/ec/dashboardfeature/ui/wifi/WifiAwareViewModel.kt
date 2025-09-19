@@ -23,7 +23,8 @@ data class State(
     val discoveredPeers: List<PeerHandle>? = emptyList<PeerHandle>(),
     val isDiscovering: Boolean? = false,
     val isLoading: Boolean?  = false,
-    val networkStatus: NetworkStatus? = null
+    val networkStatus: NetworkStatus? = null,
+    val hasAutoStartedDiscovery: Boolean = false
 ) : ViewState
 
 sealed class Effect : ViewSideEffect {
@@ -83,10 +84,9 @@ class WifiAwareViewModel(
                 } else {
                     println("[WifiAwareViewModel] Todas as permissões concedidas")
                     setState { copy(hasPermissions = true) }
-                    if (interactor.isWifiAvailable()) {
+                    if (interactor.isWifiAvailable() && !viewState.value.hasAutoStartedDiscovery) {
+                        setState { copy(hasAutoStartedDiscovery = true) }
                         handleEvents(Event.StartDiscovery)
-                    } else {
-                        setEffect({ ShowPermissionDenied(listOf("Wi-Fi Aware not available")) })
                     }
                 }
             }
@@ -108,8 +108,11 @@ class WifiAwareViewModel(
             }
 
             Event.StopDiscovery ->{
+                println("EVENT: Stop Discovery!!!!!!!!!!!!!!! ")
                 interactor.stopScan()
                 setState { copy(isDiscovering = false, isLoading = false) }
+                setState { copy(discoveredPeers = emptyList()) }
+                setEffect({ UpdatePeers(emptyList()) })
             }
 
             Event.StartSubscription -> {

@@ -55,9 +55,8 @@ class WifiAwareInteractorImpl(
     private val context: Context
 ) : WifiAwareInteractor {
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private var eventsJob: Job? = null
-
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var discoveryJob: Job? = null
 
 
     override fun isWifiAvailable(): Boolean =

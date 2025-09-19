@@ -75,6 +75,7 @@ sealed class TransferEventPartialState {
 
     data object ResponseSent : TransferEventPartialState()
     data class Redirect(val uri: URI) : TransferEventPartialState()
+    data object IntentToSend : TransferEventPartialState()
 }
 
 sealed class CheckKeyUnlockPartialState {
@@ -106,6 +107,7 @@ sealed class WalletCorePartialState {
     data object Success : WalletCorePartialState()
     data class Redirect(val uri: URI) : WalletCorePartialState()
     data object RequestIsReadyToBeSent : WalletCorePartialState()
+
 }
 
 /**
@@ -292,6 +294,11 @@ class WalletCorePresentationControllerImpl(
                     TransferEventPartialState.Redirect(
                         uri = uri
                     )
+                )
+            },
+            intentToSend = {
+                trySendBlocking(
+                    TransferEventPartialState.IntentToSend
                 )
             },
         )
