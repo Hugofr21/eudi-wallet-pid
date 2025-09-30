@@ -405,7 +405,8 @@ class WalletCoreDocumentsControllerImpl(
         txCode: String?,
     ): Flow<IssueDocumentsPartialState> =
         callbackFlow {
-            println("Issuing document with offerUri: $offerUri and txCode: $txCode using manager: ${vciRegistry.allManagers()}")
+            println("Issuing document with offerUri: $offerUri and " +
+                    "txCode: $txCode using manager: ${vciRegistry.allManagers()}")
             vciRegistry.allManagers().values.map { openId4VciManager ->
                 openId4VciManager.issueDocumentByOfferUri(
                     offerUri = offerUri,

@@ -36,7 +36,6 @@ dependencies {
     implementation(project(LibraryModule.BusinessLogic.path))
     implementation(project(LibraryModule.StorageLogic.path))
     implementation(project(LibraryModule.AuthenticationLogic.path))
-
     implementation(libs.androidx.biometric)
     implementation(libs.moshi.kotlin)
     implementation(libs.retrofit.gson)
@@ -44,8 +43,8 @@ dependencies {
     implementation(libs.okhttp.mockwebserver)
     implementation(libs.timber)
     implementation(libs.transport.runtime)
-    implementation(libs.androidx.compiler)
-
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
     testImplementation(project(LibraryModule.TestLogic.path))
 }
 

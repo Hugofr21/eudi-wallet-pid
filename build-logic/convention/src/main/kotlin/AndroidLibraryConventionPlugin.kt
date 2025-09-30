@@ -82,6 +82,10 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             val rqesDocRetrievalScheme = "eudi-rqes"
             val rqesDocRetrievalHost = "*"
 
+            // Digital Credential API
+            val authWebFidoScheme = "fido"
+            val authWebFidoHost = "*"
+
             with(pluginManager) {
                 apply("com.android.library")
                 apply("project.android.library.kover")
@@ -134,6 +138,13 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
 //                        "ISSUE_AUTHORIZATION_AV_DEEPLINK",
 //                        "$avOpenid4VpScheme://$openId4VciAuthorizationHost"
 //                    )
+
+                    // Digital Credential API
+                    addConfigField("AUTH_WEB_FIDO_SCHEME", authWebFidoScheme)
+
+                    // Digital Credential API
+                    manifestPlaceholders["authWebFidoScheme"] = authWebFidoScheme
+                    manifestPlaceholders["authWebFidoHost"] = authWebFidoHost
 
                     // Manifest placeholders for Wallet deepLink
                     manifestPlaceholders["deepLinkScheme"] = walletScheme

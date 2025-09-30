@@ -54,6 +54,7 @@ data class State(
     val welcomeUserMessage: String,
     val authenticateCardConfig: ActionCardConfig,
     val signCardConfig: ActionCardConfig,
+    val webAuthFido: ActionCardConfig,
 
     val bleAvailability: BleAvailability = BleAvailability.UNKNOWN,
     val isBleCentralClientModeEnabled: Boolean = false
@@ -71,6 +72,13 @@ sealed class Event : ViewEvent {
     sealed class SignDocumentCard : Event() {
         data object SignDocumentPressed : Event()
         data object LearnMorePressed : Event()
+
+    }
+
+    sealed class SignWebFidoCard : Event() {
+        data object SignWebFidoPressed : Event()
+        data object LearnMorePressed : Event()
+
     }
 
     sealed class BottomSheet : Event() {
@@ -143,6 +151,12 @@ class HomeViewModel(
             signCardConfig = ActionCardConfig(
                 title = resourceProvider.getString(R.string.home_screen_sign_card_title),
                 icon = AppIcons.Contract,
+                primaryButtonText = resourceProvider.getString(R.string.home_screen_sign),
+                secondaryButtonText = resourceProvider.getString(R.string.home_screen_learn_more)
+            ),
+            webAuthFido = ActionCardConfig(
+                title = resourceProvider.getString(R.string.digital_credentials_screen_sign_card_title),
+                icon = AppIcons.Certified,
                 primaryButtonText = resourceProvider.getString(R.string.home_screen_sign),
                 secondaryButtonText = resourceProvider.getString(R.string.home_screen_learn_more)
             ),
@@ -232,6 +246,12 @@ class HomeViewModel(
             Event.GoToScanQR -> {
                 navigateToQrScan()
             }
+
+            is Event.SignWebFidoCard.LearnMorePressed -> showBottomSheet(
+                sheetContent = HomeScreenBottomSheetContent.LearnMoreAboutAuthenticate
+            )
+
+            Event.SignWebFidoCard.SignWebFidoPressed -> TODO()
         }
     }
 

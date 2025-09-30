@@ -49,16 +49,22 @@ internal class WalletCoreConfigImpl(
                     configureOpenId4Vp {
                         withEncryptionAlgorithms(
                             listOf(
-                                EncryptionAlgorithm.ECDH_ES,
-                            EncryptionAlgorithm.ECDH_1PU
+                                    EncryptionAlgorithm.ECDH_ES,
+                                    EncryptionAlgorithm.ECDH_ES_A256KW,
+                                    EncryptionAlgorithm.ECDH_ES_A128KW,
+                                    EncryptionAlgorithm.ECDH_ES_A192KW,
+                                )
                         )
-                        )
+
                         withEncryptionMethods(
                             listOf(
                                 EncryptionMethod.A128CBC_HS256,
                                 EncryptionMethod.A256GCM,
                                 EncryptionMethod.A256CBC_HS512,
-                                EncryptionMethod.A192CBC_HS384
+                                EncryptionMethod.A192CBC_HS384,
+                                EncryptionMethod.XC20P,
+                                EncryptionMethod.A128GCM
+
                             )
                         )
 
@@ -66,10 +72,12 @@ internal class WalletCoreConfigImpl(
                             listOf(
                                 ClientIdScheme.X509SanDns,
                                 ClientIdScheme.RedirectUri,
-                                ClientIdScheme.X509SanUri
+                                ClientIdScheme.X509Hash
                             )
                         )
+
                         // problems with the deeplink add scheme
+
                         withSchemes(
                             listOf(
                                 BuildConfig.OPENID4VP_SCHEME,
@@ -83,7 +91,7 @@ internal class WalletCoreConfigImpl(
                             )
                         )
                         withFormats(
-                            Format.MsoMdoc,
+                            Format.MsoMdoc.ES256,
                             Format.SdJwtVc.ES256,
                         )
                     }

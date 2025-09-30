@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -83,6 +84,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import eu.europa.ec.dashboardfeature.ui.home.compoment.ScanButton
+import eu.europa.ec.uilogic.component.wrap.CoralRed
+import eu.europa.ec.uilogic.component.wrap.DeepBlue
 import eu.europa.ec.uilogic.component.wrap.LightSkyBlue
 import eu.europa.ec.uilogic.component.wrap.SoftYellow
 import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
@@ -271,6 +274,20 @@ private fun Content(
             base = SoftYellow
         )
 
+        WrapActionCard(
+            config = state.webAuthFido,
+            onActionClick = {
+                onEventSent(
+                    Event.SignWebFidoCard.SignWebFidoPressed
+                )
+            },
+            onLearnMoreClick = {
+                onEventSent(
+                    Event.SignWebFidoCard.LearnMorePressed
+                )
+            },
+            base = CoralRed
+        )
     }
 
     if (state.bleAvailability == BleAvailability.NO_PERMISSION) {
@@ -306,6 +323,7 @@ private fun Content(
         }.collect()
     }
 }
+
 
 private fun handleNavigationEffect(
     navigationEffect: Effect.Navigation,
@@ -561,8 +579,13 @@ private fun HomeScreenContentPreview() {
                         icon = AppIcons.Contract,
                         primaryButtonText = stringResource(R.string.home_screen_sign),
                         secondaryButtonText = stringResource(R.string.home_screen_learn_more),
-                    )
-
+                    ),
+                    webAuthFido = ActionCardConfig(
+                        title = stringResource(R.string.digital_credentials_screen_sign_card_title),
+                        icon = AppIcons.Sign,
+                        primaryButtonText = stringResource(R.string.home_screen_sign),
+                        secondaryButtonText = stringResource(R.string.home_screen_learn_more),
+                    ),
                 ),
                 effectFlow = Channel<Effect>().receiveAsFlow(),
                 onNavigationRequested = {},

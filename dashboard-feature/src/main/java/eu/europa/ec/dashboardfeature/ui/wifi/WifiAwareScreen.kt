@@ -583,7 +583,9 @@ private fun WifiWareScreenContentPreview() {
             Content(
                 state = null,
                 effectFlow = Channel<Effect>().receiveAsFlow(),
-                onNavigationRequested = {},
+                onNavigationRequested = {
+
+                },
                 paddingValues = PaddingValues(0.dp),
                 viewModel = null
             )

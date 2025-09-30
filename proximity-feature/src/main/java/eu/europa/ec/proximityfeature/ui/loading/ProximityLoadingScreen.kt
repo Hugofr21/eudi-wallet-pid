@@ -37,6 +37,5 @@ fun ProximityLoadingScreen(
 @Composable
 private fun ProximityLoadingScreenPreview() {
     PreviewTheme {
-
     }
 }

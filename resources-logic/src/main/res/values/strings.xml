@@ -564,6 +564,7 @@
     <string name="invalid_document_name_error">Invalid file name: %1$s. Please select a PDF with a lowercase name.</string>
     <string name="error_title">Invalid file</string>
     <string name="wifi_aware_troubleshoot_title">Wifi Aware Troubleshoot</string>
+    <string name="digital_credentials_screen_sign_card_title">Securely sign and manage your digital credentials.</string>
 
     <!-- Logs Screen -->
 </resources>

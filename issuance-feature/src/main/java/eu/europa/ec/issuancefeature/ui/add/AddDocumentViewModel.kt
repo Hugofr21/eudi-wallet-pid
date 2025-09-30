@@ -28,6 +28,7 @@ import eu.europa.ec.commonfeature.config.PresentationMode
 import eu.europa.ec.commonfeature.config.QrScanFlow
 import eu.europa.ec.commonfeature.config.QrScanUiConfig
 import eu.europa.ec.commonfeature.config.RequestUriConfig
+import eu.europa.ec.corelogic.controller.DigitalCredentialsPartialState
 import eu.europa.ec.corelogic.controller.IssuanceMethod
 import eu.europa.ec.corelogic.controller.IssueDocumentPartialState
 import eu.europa.ec.corelogic.di.getOrCreatePresentationScope
@@ -348,6 +349,9 @@ class AddDocumentViewModel(
                             )
                         )
                     }
+
+                    is DigitalCredentialsPartialState.Failure -> TODO()
+                    is DigitalCredentialsPartialState.Success -> TODO()
                 }
             }
         }
