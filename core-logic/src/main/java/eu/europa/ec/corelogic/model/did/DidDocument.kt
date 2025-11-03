@@ -19,7 +19,23 @@ data class DidDocument(
     val verificationMethod: List<VerificationMethod>,
     val authentication: List<String>,
     val assertionMethod: List<String>,
-    val keyAgreement: List<String>
+    val keyAgreement: List<String>,
+    val service: List<Service>? = null,
+    val proof: Proof? = null,
+    val created: String? = null,
+    val updated: String? = null,
+    val expires: String? = null
+)
+
+data class Proof(
+    val type: String,
+    val created: String,
+    val proofPurpose: String,
+    val verificationMethod: String,
+    val jws: String? = null,
+    val proofValue: String? = null,
+    val domain: String? = null,
+    val challenge: String? = null
 )
 
 data class VerificationMethod(
@@ -34,4 +50,10 @@ data class PublicKeyJwk(
     val crv: String,
     val x: String,
     val y: String
+)
+
+data class Service(
+    val id: String,
+    val type: String,
+    val serviceEndpoint: String
 )
