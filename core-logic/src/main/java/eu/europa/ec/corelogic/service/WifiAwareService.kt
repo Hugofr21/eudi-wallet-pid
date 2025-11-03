@@ -64,12 +64,6 @@ data class WifiAwareConfig(
     val port: Int
 )
 
-interface PublishCallback {
-    fun onPublished(session: PublishDiscoverySession)
-    fun onPublishFailed(reason: Int)
-    fun onPeerDiscovered(peerHandle: PeerHandle)
-}
-
 interface SubscribeCallback {
     fun onSubscribed(session: SubscribeDiscoverySession)
     fun onSubscribeFailed(reason: Int)
@@ -85,7 +79,6 @@ class WifiAwareService : Service() {
         private const val CHANNEL_ID = "WifiAwareServiceChannel"
         private const val CHANNEL_NAME = "Wi-Fi Aware"
         private const val PERMISSION_DENIED = -5
-
 
         const val ACTION_START_PUBLISH = "eu.europa.ec.corelogic.action.START_PUBLISH"
         const val ACTION_STOP_PUBLISH = "eu.europa.ec.corelogic.action.STOP_PUBLISH"

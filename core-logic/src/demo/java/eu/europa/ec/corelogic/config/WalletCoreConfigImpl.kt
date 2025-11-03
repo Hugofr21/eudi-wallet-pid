@@ -20,20 +20,18 @@ import android.content.Context
 import androidx.compose.foundation.layout.Box
 import eu.europa.ec.corelogic.BuildConfig
 import eu.europa.ec.eudi.wallet.EudiWalletConfig
+import eu.europa.ec.eudi.wallet.issue.openid4vci.OpenId4VciManager
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.ClientIdScheme
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.EncryptionAlgorithm
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.EncryptionMethod
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.Format
 import eu.europa.ec.resourceslogic.R
+import kotlin.time.Duration.Companion.seconds
 
 
 internal class WalletCoreConfigImpl(
-    private val context: Context
+    private val context: Context,
 ) : WalletCoreConfig {
-
-    private companion object {
-        const val AUTHENTICATION_REQUIRED = false
-    }
 
     private var _config: EudiWalletConfig? = null
 
@@ -42,8 +40,8 @@ internal class WalletCoreConfigImpl(
             if (_config == null) {
                 _config = EudiWalletConfig {
                     configureDocumentKeyCreation(
-                        userAuthenticationRequired = AUTHENTICATION_REQUIRED,
-                        userAuthenticationTimeout = 30_000L, // 30s
+                        userAuthenticationRequired = false,
+                        userAuthenticationTimeout = 30.seconds, // 30s
                         useStrongBoxForKeys = true
                     )
                     configureOpenId4Vp {
@@ -71,8 +69,8 @@ internal class WalletCoreConfigImpl(
                         withClientIdSchemes(
                             listOf(
                                 ClientIdScheme.X509SanDns,
+                                ClientIdScheme.X509Hash,
                                 ClientIdScheme.RedirectUri,
-                                ClientIdScheme.X509Hash
                             )
                         )
 
@@ -86,7 +84,6 @@ internal class WalletCoreConfigImpl(
                                 BuildConfig.LISSI_SCHEME,
                                 BuildConfig.ASP_OPENID4VP_SCHEME,
                                 BuildConfig.AGE_OPENID4VP_SCHEME,
-                                "https",
                                 BuildConfig.CREDENTIAL_OFFER_SCHEME,
                             )
                         )
@@ -95,16 +92,6 @@ internal class WalletCoreConfigImpl(
                             Format.SdJwtVc.ES256,
                         )
                     }
-
-//                    configureOpenId4Vci {
-//                        withIssuerUrl(issuerUrl = issuerUrl)
-//                        withClientId(clientId = VCI_CLIENT_ID)
-//                        withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
-//                        withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-//                        withUseDPoPIfSupported(true)
-//                    }
-
-
 
                     // reader C.A
                     configureReaderTrustStore(
@@ -126,4 +113,29 @@ internal class WalletCoreConfigImpl(
             }
             return _config!!
         }
+
+    override val vciConfig: List<OpenId4VciManager.Config>
+        get() = listOf(
+            OpenId4VciManager.Config.Builder().apply {
+                withIssuerUrl(issuerUrl = "https://issuer.eudiw.dev")
+                withClientId(clientId = "wallet-dev")
+                withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
+                withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
+                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
+            }.build(),
+            OpenId4VciManager.Config.Builder().apply {
+                withIssuerUrl(issuerUrl = "https://issuer-backend.eudiw.dev")
+                withClientId(clientId = "wallet-dev")
+                withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
+                withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
+                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
+            }.build(),
+            OpenId4VciManager.Config.Builder().apply {
+                withIssuerUrl(issuerUrl = "https://issuer.ageverification.dev")
+                withClientId(clientId = "wallet-dev")
+                withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
+                withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
+                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
+            }.build()
+        )
 }

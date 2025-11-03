@@ -29,7 +29,6 @@ import net.sqlcipher.database.SupportFactory
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
-import org.koin.core.annotation.Singleton
 import com.google.inject.Provides;
 import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherStorageController
 import eu.europa.ec.storagelogic.dao.IssuerLogDao
@@ -41,7 +40,7 @@ class LogicStorageModule
 
 
 @Provides
-@Singleton
+@Single
 fun provideAppDatabase(
     ctx: Context,
     storage: SQLCipherStorageController

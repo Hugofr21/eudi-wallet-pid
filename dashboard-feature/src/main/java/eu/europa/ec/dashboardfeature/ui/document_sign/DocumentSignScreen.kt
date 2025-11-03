@@ -43,7 +43,6 @@ import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.ListItemDataUi
 import eu.europa.ec.uilogic.component.ListItemMainContentDataUi
 import eu.europa.ec.uilogic.component.ListItemTrailingContentDataUi
-import eu.europa.ec.uilogic.component.content.ContentErrorConfig
 import eu.europa.ec.uilogic.component.content.ContentScreen
 import eu.europa.ec.uilogic.component.content.ContentTitle
 import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
@@ -132,16 +131,19 @@ private fun Content(
                     onEventSend(Event.DocumentUriRetrieved(context, selectedUri))
                 } else {
                     val sanitized = sanitizeFileName(fileName)
-                        context.contentResolver.openInputStream(selectedUri)?.use { input ->
+                    val inputStream = context.contentResolver.openInputStream(selectedUri)
+                    if (inputStream != null) {
+                        inputStream.use { input ->
                             val destFile = File(context.cacheDir, sanitized)
                             destFile.outputStream().use { out ->
                                 input.copyTo(out)
                             }
                             val newUri = destFile.toUri()
                             onEventSend(Event.DocumentUriRetrieved(context, newUri))
-                        } ?: run {
-                            onEventSend(Event.InvalidDocumentName(fileName))
                         }
+                    } else {
+                        onEventSend(Event.InvalidDocumentName(fileName))
+                    }
                 }
             } else {
                 onEventSend(Event.InvalidDocumentName("Unknown"))

@@ -48,9 +48,7 @@ import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Scope
 import org.koin.core.annotation.Single
-import org.koin.core.annotation.Singleton
 import org.koin.mp.KoinPlatform
-
 
 
 const val PRESENTATION_SCOPE_ID = "presentation_scope_id"
@@ -60,6 +58,15 @@ const val PRESENTATION_SCOPE_ID = "presentation_scope_id"
 @ComponentScan("eu.europa.ec.corelogic")
 class LogicCoreModule
 
+
+
+
+@Single
+fun provideWalletCoreConfig(
+    context: Context,
+): WalletCoreConfig = WalletCoreConfigImpl(
+    context = context,
+)
 
 
 @Single
@@ -73,15 +80,16 @@ fun provideEudiWallet(
     withTransactionLogger(walletCoreTransactionLogController)
 }
 
+
 @Provides
-@Singleton
+@Single
 fun provideWalletConfigNetworkConfig(
     context: Context
 ): WalletConfigNetworkConfig {
     return WalletConfigNetworkConfigImpl(context)
 }
 
-@Singleton
+@Single
 fun provideWalletLotlController(
     client: OkHttpClient,
     configLogic: ConfigLogic,
@@ -92,10 +100,7 @@ fun provideWalletLotlController(
     configLogic
 )
 
-@Single
-fun provideWalletCoreConfig(
-    context: Context,
-): WalletCoreConfig = WalletCoreConfigImpl(context)
+
 
 
 @Single
@@ -134,8 +139,7 @@ fun provideWalletCoreDocumentsController(
     )
 
 
-
-@Singleton
+@Single
 fun providerWifiAwareServerController(
     context: Context
 ): WifiAwareServerController = WifiAwareServerControllerImpl(context)

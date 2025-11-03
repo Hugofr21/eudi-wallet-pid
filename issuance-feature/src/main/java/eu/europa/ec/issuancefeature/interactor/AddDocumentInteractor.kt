@@ -50,7 +50,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 sealed class AddDocumentInteractorPartialState {
-    data class Success(val options: List<AddDocumentUi>) : AddDocumentInteractorPartialState()
+    data class Success(val options: List<Pair<String, List<AddDocumentUi>>>) :
+        AddDocumentInteractorPartialState()
     data class NoOptions(val errorMsg: String) : AddDocumentInteractorPartialState()
     data class Failure(val error: String) : AddDocumentInteractorPartialState()
 }
@@ -61,7 +62,8 @@ interface AddDocumentInteractor {
 
     fun issueDocument(
         issuanceMethod: IssuanceMethod,
-        configId: String
+        configId: String,
+        issuerId: String
     ): Flow<IssueDocumentPartialState>
 
     fun handleUserAuth(
@@ -105,30 +107,34 @@ class AddDocumentInteractorImpl(
                         (flowType as? IssuanceFlowType.ExtraDocument)?.formatType
 
                     println("[getAddDocumentOption] FetchScopedDocumentsPartialState.Success: documents count = ${state.documents.size}")
-                    val options = state.documents
-                        .sortedBy { it.name.lowercase() }
-                        .mapNotNull { document ->
-                            val isFormatMatching = customFormatType == null
-                                    || document.formatType == customFormatType
-                            val isDocumentAllowed = flowType !is IssuanceFlowType.NoDocument
-                                    || document.isPid || document.ageProof
-
-                            if (isFormatMatching && isDocumentAllowed) {
+                    val options: List<Pair<String, List<AddDocumentUi>>> =
+                        state.documents
+                            .asSequence()
+                            .filter { doc ->
+                                (customFormatType == null || doc.formatType == customFormatType) &&
+                                        (flowType !is IssuanceFlowType.NoDocument || doc.isPid)
+                            }
+                            .sortedWith(
+                                compareBy(
+                                    { it.credentialIssuerId },
+                                    { it.name.lowercase() }
+                                ))
+                            .map { doc ->
                                 AddDocumentUi(
+                                    credentialIssuerId = doc.credentialIssuerId,
                                     itemData = ListItemDataUi(
-                                        itemId = document.configurationId,
-                                        mainContentData = ListItemMainContentDataUi.Text(
-                                            text = document.name
-                                        ),
+                                        itemId = doc.configurationId,
+                                        mainContentData = ListItemMainContentDataUi.Text(text = doc.name),
                                         trailingContentData = ListItemTrailingContentDataUi.Icon(
                                             iconData = AppIcons.Add
                                         )
                                     )
                                 )
-                            } else {
-                                null
                             }
-                        }
+                            .groupBy { it.credentialIssuerId }
+                            .entries
+                            .map { (issuer, items) -> issuer to items }
+
                     if (options.isEmpty()) {
                         emit(
                             AddDocumentInteractorPartialState.NoOptions(
@@ -153,12 +159,15 @@ class AddDocumentInteractorImpl(
 
     override fun issueDocument(
         issuanceMethod: IssuanceMethod,
-        configId: String
+        configId: String,
+        issuerId: String
     ): Flow<IssueDocumentPartialState> =
         walletCoreDocumentsController.issueDocument(
             issuanceMethod = issuanceMethod,
-            configId = configId
+            configId = configId,
+            issuerId = issuerId
         )
+
 
     override fun handleUserAuth(
         context: Context,

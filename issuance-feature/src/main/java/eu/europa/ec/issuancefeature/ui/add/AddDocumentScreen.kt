@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -217,7 +218,6 @@ private fun Content(
         }.collect()
     }
 }
-
 @Composable
 private fun MainContent(
     modifier: Modifier = Modifier,
@@ -226,34 +226,45 @@ private fun MainContent(
     paddingValues: PaddingValues,
     context: Context,
 ) {
-    Column(
-        modifier = modifier
-    ) {
+    Column(modifier = modifier) {
         ContentTitle(
             modifier = Modifier.fillMaxWidth(),
             title = state.title,
             subtitle = state.subtitle
         )
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(
-                top = 16.dp,
-                bottom = paddingValues.calculateBottomPadding(),
-                start = 16.dp,
-                end = 16.dp
-            ),
-        ) {
-            state.options.forEach { option ->
-                item {
 
+        val groupedOptions = state.options
+
+
+        groupedOptions.forEach { (issuerId, documents) ->
+            Text(
+                text = issuerId,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier
+                    .padding(top = 8.dp, start = 8.dp, end = 8.dp)
+            )
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(
+                    top = 8.dp,
+                    bottom = paddingValues.calculateBottomPadding(),
+                    start = 16.dp,
+                    end = 16.dp
+                )
+            ) {
+                items(
+                    items = documents,
+                    key = { addDoc -> "${issuerId}_${addDoc.itemData.itemId}" }
+                ) { addDoc ->
                     WrapListItem(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(2f),
-                        item = option.itemData,
+                        item = addDoc.itemData,
                         mainContentVerticalPadding = SPACING_LARGE.dp,
                         mainContentTextStyle = MaterialTheme.typography.titleMedium,
                         onItemClick = { optionListItemDataUi ->
@@ -261,7 +272,8 @@ private fun MainContent(
                                 Event.IssueDocument(
                                     issuanceMethod = IssuanceMethod.OPENID4VCI,
                                     configId = optionListItemDataUi.itemId,
-                                    context = context
+                                    context = context,
+                                    issuerId = issuerId
                                 )
                             )
                         }
@@ -271,6 +283,7 @@ private fun MainContent(
         }
     }
 }
+
 
 @Composable
 private fun Footer(
@@ -311,6 +324,8 @@ private fun Footer(
         }
     }
 }
+
+
 @ThemeModePreviews
 @Composable
 private fun IssuanceAddDocumentScreenPreview() {
@@ -322,18 +337,32 @@ private fun IssuanceAddDocumentScreenPreview() {
                 title = "Add Document",
                 subtitle = "Select a document to add",
                 options = listOf(
-                    AddDocumentUi(
-                        itemData = ListItemDataUi(
-                            itemId = "configId1",
-                            mainContentData = ListItemMainContentDataUi.Text(text = "National ID"),
-                            trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
+                    "Issuer 1" to listOf(
+                        AddDocumentUi(
+                            itemData = ListItemDataUi(
+                                itemId = "configId1",
+                                mainContentData = ListItemMainContentDataUi.Text(text = "National ID"),
+                                trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
+                            ),
+                            credentialIssuerId = "Issuer 1"
+                        ),
+                        AddDocumentUi(
+                            itemData = ListItemDataUi(
+                                itemId = "configId2",
+                                mainContentData = ListItemMainContentDataUi.Text(text = "Driving Licence"),
+                                trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
+                            ),
+                            credentialIssuerId = "Issuer 1"
                         )
                     ),
-                    AddDocumentUi(
-                        itemData = ListItemDataUi(
-                            itemId = "configId2",
-                            mainContentData = ListItemMainContentDataUi.Text(text = "Driving Licence"),
-                            trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
+                    "Issuer 2" to listOf(
+                        AddDocumentUi(
+                            itemData = ListItemDataUi(
+                                itemId = "configId3",
+                                mainContentData = ListItemMainContentDataUi.Text(text = "Residence Permit"),
+                                trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
+                            ),
+                            credentialIssuerId = "Issuer 2"
                         )
                     )
                 ),
@@ -365,18 +394,24 @@ private fun DashboardAddDocumentScreenPreview() {
                 title = "Add Document",
                 subtitle = "Select a document to add",
                 options = listOf(
-                    AddDocumentUi(
-                        itemData = ListItemDataUi(
-                            itemId = "configId1",
-                            mainContentData = ListItemMainContentDataUi.Text(text = "National ID"),
-                            trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
+                    "Issuer 3" to listOf(
+                        AddDocumentUi(
+                            itemData = ListItemDataUi(
+                                itemId = "configId1",
+                                mainContentData = ListItemMainContentDataUi.Text(text = "National ID"),
+                                trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
+                            ),
+                            credentialIssuerId = "Issuer 3"
                         )
                     ),
-                    AddDocumentUi(
-                        itemData = ListItemDataUi(
-                            itemId = "configId2",
-                            mainContentData = ListItemMainContentDataUi.Text(text = "Driving Licence"),
-                            trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
+                    "Issuer 4" to listOf(
+                        AddDocumentUi(
+                            itemData = ListItemDataUi(
+                                itemId = "configId2",
+                                mainContentData = ListItemMainContentDataUi.Text(text = "Driving Licence"),
+                                trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
+                            ),
+                            credentialIssuerId = "Issuer 4"
                         )
                     )
                 ),

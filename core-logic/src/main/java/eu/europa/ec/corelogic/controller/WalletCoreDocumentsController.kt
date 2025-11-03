@@ -16,11 +16,12 @@
 
 package eu.europa.ec.corelogic.controller
 
+import androidx.core.net.toUri
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationResult
 import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
+import eu.europa.ec.businesslogic.extension.getLocalizedString
+import eu.europa.ec.businesslogic.extension.ifEmptyOrNull
 import eu.europa.ec.businesslogic.extension.safeAsync
-import eu.europa.ec.corelogic.config.OpenId4VciManagerRegistry
-import eu.europa.ec.corelogic.config.OpenId4VciModule
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.extension.documentIdentifier
 import eu.europa.ec.corelogic.extension.getLocalizedDisplayName
@@ -34,6 +35,8 @@ import eu.europa.ec.corelogic.model.FormatType
 import eu.europa.ec.corelogic.model.ScopedDocumentDomain
 import eu.europa.ec.corelogic.model.TransactionLogDataDomain
 import eu.europa.ec.corelogic.model.toDocumentIdentifier
+import eu.europa.ec.eudi.openid4vci.CredentialIssuerMetadata
+import eu.europa.ec.eudi.openid4vci.CredentialMetadata
 import eu.europa.ec.eudi.openid4vci.MsoMdocCredential
 import eu.europa.ec.eudi.openid4vci.SdJwtVcCredential
 import eu.europa.ec.eudi.statium.Status
@@ -59,21 +62,18 @@ import eu.europa.ec.storagelogic.dao.TransactionLogDao
 import eu.europa.ec.storagelogic.model.Bookmark
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.koin.core.component.getScopeName
 import java.util.Locale
 import eu.europa.ec.eudi.wallet.document.CreateDocumentSettings
-import eu.europa.ec.eudi.wallet.document.getDocuments
+import org.json.JSONObject
+import java.net.URLDecoder
 
 enum class IssuanceMethod {
     OPENID4VCI
@@ -171,6 +171,7 @@ interface WalletCoreDocumentsController {
     fun issueDocument(
         issuanceMethod: IssuanceMethod,
         configId: String,
+        issuerId: String
     ): Flow<IssueDocumentPartialState>
 
     fun issueDocumentsByOfferUri(
@@ -236,14 +237,11 @@ class WalletCoreDocumentsControllerImpl(
         return eudiWallet
     }
 
-    private val vciRegistry: OpenId4VciManagerRegistry by lazy {
-        OpenId4VciManagerRegistry(
-            eudiWallet = eudiWallet,
-            issuers    = OpenId4VciModule.issuersList,
-            clientId   = OpenId4VciModule.clientId
-        )
+    private val openId4VciManagers by lazy {
+        walletCoreConfig.vciConfig.associate { config ->
+            config.issuerUrl to eudiWallet.createOpenId4VciManager(config = config)
+        }
     }
-
 
     private val genericErrorMessage
         get() = resourceProvider.genericErrorMessage()
@@ -258,73 +256,84 @@ class WalletCoreDocumentsControllerImpl(
     override fun getAllIssuedDocuments(): List<IssuedDocument> =
         eudiWallet.getDocuments().filterIsInstance<IssuedDocument>()
 
+
+
     override suspend fun getScopedDocuments(locale: Locale): FetchScopedDocumentsPartialState {
         return withContext(dispatcher) {
             runCatching {
-                coroutineScope {
-                    vciRegistry.allManagers().values.map { mgr ->
-                        async {
-                            val scope = mgr.getScopeName()
-                            println("Issuer metadata scope: $scope")
-                            val metadataResult = mgr.getIssuerMetadata()
-                            val metadata = metadataResult.getOrThrow()
-                            metadata.credentialConfigurationsSupported.mapNotNull { (id, config) ->
-                                val name = config.display.getLocalizedDisplayName(
-                                    userLocale = locale,
-                                    fallback = id.toString()
-                                )
-                                val isPid = when (config) {
-                                    is MsoMdocCredential -> config.docType.toDocumentIdentifier() == DocumentIdentifier.MdocPid
-                                    is SdJwtVcCredential -> config.type.toDocumentIdentifier() == DocumentIdentifier.SdJwtPid
-                                    else -> false
-                                }
 
-                                val isAgeVerification = when (config) {
-                                    is MsoMdocCredential -> config.docType.toDocumentIdentifier() in listOf(
-                                        DocumentIdentifier.MdocEUDIAgeOver18,
-                                        DocumentIdentifier.AgeOver18Pid
-                                    )
-                                    is SdJwtVcCredential -> config.type.toDocumentIdentifier() == DocumentIdentifier.AgeOver18Pid
-                                    else -> false
-                                }
-
-                                val formatType = when (config) {
-                                    is MsoMdocCredential -> config.docType
-                                    is SdJwtVcCredential -> config.type
-                                    else -> null
-                                }
-
-                                ScopedDocumentDomain(
-                                    name = name,
-                                    configurationId = id.toString(),
-                                    isPid = isPid,
-                                    ageProof = isAgeVerification,
-                                    formatType = formatType,
-                                )
-
-                            }
-                        }
-                    }.awaitAll()
-                }
-            }.fold(
-                onSuccess = { lists ->
-                    val all = lists.flatten()
-//
-                    if (all.isNotEmpty()) {
-                        FetchScopedDocumentsPartialState.Success(all)
-                    } else {
-                        FetchScopedDocumentsPartialState.Failure(errorMessage = genericErrorMessage)
+                val metadata: Map<String, CredentialIssuerMetadata> =
+                    openId4VciManagers.mapValues { (_, manager) ->
+                        manager.getIssuerMetadata().getOrThrow()
                     }
-                },
-                onFailure = { ex ->
-                    ex.printStackTrace()
-                    FetchScopedDocumentsPartialState.Failure(
-                        errorMessage = ex.localizedMessage ?: genericErrorMessage
-                    )
+
+                val documents: List<ScopedDocumentDomain> =
+                    metadata.flatMap { (issuer, meta) ->
+                        meta.credentialConfigurationsSupported.map { (id, config) ->
+
+                            val name: String = config.credentialMetadata.getLocalizedDisplayName(
+                                userLocale = locale,
+                                fallback = id.value
+                            )
+
+                            val isPid = when (config) {
+                                is MsoMdocCredential -> config.docType.toDocumentIdentifier() == DocumentIdentifier.MdocPid
+                                is SdJwtVcCredential -> config.type.toDocumentIdentifier() == DocumentIdentifier.SdJwtPid
+                                else -> false
+                            }
+
+                            val isAgeVerification = when (config) {
+                                is MsoMdocCredential -> config.docType.toDocumentIdentifier() in listOf(
+                                    DocumentIdentifier.MdocEUDIAgeOver18,
+                                    DocumentIdentifier.AgeOver18Pid
+                                )
+                                is SdJwtVcCredential -> config.type.toDocumentIdentifier() == DocumentIdentifier.AgeOver18Pid
+                                else -> false
+                            }
+
+
+                            val formatType = when (config) {
+                                is MsoMdocCredential -> config.docType
+                                is SdJwtVcCredential -> config.type
+                                else -> null
+                            }
+
+                            ScopedDocumentDomain(
+                                name = name,
+                                configurationId = id.value,
+                                credentialIssuerId = issuer,
+                                ageProof = isAgeVerification,
+                                formatType = formatType,
+                                isPid = isPid
+                            )
+                        }
+                    }
+
+                if (documents.isNotEmpty()) {
+                    FetchScopedDocumentsPartialState.Success(documents = documents)
+                } else {
+                    FetchScopedDocumentsPartialState.Failure(errorMessage = genericErrorMessage)
                 }
+            }
+        }.getOrElse {
+            FetchScopedDocumentsPartialState.Failure(
+                errorMessage = it.localizedMessage ?: genericErrorMessage
             )
         }
     }
+
+    private fun CredentialMetadata?.getLocalizedDisplayName(
+        userLocale: Locale,
+        fallback: String
+    ): String {
+        return this?.display.getLocalizedString(
+            userLocale = userLocale,
+            localeExtractor = { it.locale },
+            stringExtractor = { it.name },
+            fallback = fallback,
+        )
+    }
+
 
     override fun getAllDocumentsByType(documentIdentifiers: List<DocumentIdentifier>): List<IssuedDocument> =
         getAllDocuments()
@@ -356,11 +365,11 @@ class WalletCoreDocumentsControllerImpl(
     override fun issueDocument(
         issuanceMethod: IssuanceMethod,
         configId: String,
+        issuerId: String
     ): Flow<IssueDocumentPartialState> = flow {
         when (issuanceMethod) {
-
             IssuanceMethod.OPENID4VCI -> {
-                issueDocumentWithOpenId4VCI(configId).collect { response ->
+                issueDocumentWithOpenId4VCI(configId, issuerId).collect { response ->
                     when (response) {
                         is IssueDocumentsPartialState.Failure -> emit(
                             IssueDocumentPartialState.Failure(
@@ -405,14 +414,36 @@ class WalletCoreDocumentsControllerImpl(
         txCode: String?,
     ): Flow<IssueDocumentsPartialState> =
         callbackFlow {
-            println("Issuing document with offerUri: $offerUri and " +
-                    "txCode: $txCode using manager: ${vciRegistry.allManagers()}")
-            vciRegistry.allManagers().values.map { openId4VciManager ->
-                openId4VciManager.issueDocumentByOfferUri(
-                    offerUri = offerUri,
-                    onIssueEvent = issuanceCallback(),
-                    txCode = txCode,
-                )
+            resolveDocumentOffer(offerUri).collect {
+                when (it) {
+                    is ResolveDocumentOfferPartialState.Failure -> {
+                        trySendBlocking(
+                            IssueDocumentsPartialState.Failure(
+                                errorMessage = it.errorMessage
+                            )
+                        )
+                    }
+
+                    is ResolveDocumentOfferPartialState.Success -> {
+
+                        val issuerId = it
+                            .offer
+                            .credentialOffer
+                            .credentialIssuerIdentifier
+                            .toString()
+
+                        val manager = openId4VciManagers[issuerId]
+                            ?: openId4VciManagers.values.firstOrNull()
+
+                        require(manager != null) { documentErrorMessage }
+
+                        manager.issueDocumentByOffer(
+                            offer = it.offer,
+                            onIssueEvent = issuanceCallback(),
+                            txCode = txCode,
+                        )
+                    }
+                }
             }
             awaitClose()
         }.safeAsync {
@@ -420,6 +451,7 @@ class WalletCoreDocumentsControllerImpl(
                 errorMessage = documentErrorMessage
             )
         }
+
 
     override fun deleteDocument(documentId: String): Flow<DeleteDocumentPartialState> = flow {
         eudiWallet.deleteDocumentById(documentId = documentId)
@@ -506,37 +538,36 @@ class WalletCoreDocumentsControllerImpl(
 
     override fun resolveDocumentOffer(offerUri: String): Flow<ResolveDocumentOfferPartialState> =
         callbackFlow {
-            vciRegistry.allManagers().values.forEach { openId4VciManager ->
-                println("[resolveDocumentOffer] Calling resolveDocumentOffer with offerUri: $offerUri using manager: $openId4VciManager")
 
-                openId4VciManager.resolveDocumentOffer(
-                    offerUri = offerUri,
-                    onResolvedOffer = { offerResult ->
-                        when (offerResult) {
-                            is OfferResult.Failure -> {
-                                println("[resolveDocumentOffer] OfferResult.Failure: ${offerResult.cause}")
-                                trySendBlocking(
-                                    ResolveDocumentOfferPartialState.Failure(
-                                        errorMessage = offerResult.cause.localizedMessage
-                                            ?: genericErrorMessage
-                                    )
-                                )
-                            }
-                            is OfferResult.Success -> {
-                                println("[resolveDocumentOffer] OfferResult.Success: ${offerResult.offer}")
-                                trySendBlocking(
-                                    ResolveDocumentOfferPartialState.Success(
-                                        offer = offerResult.offer
-                                    )
-                                )
-                            }
-                        }
+            val issuerId = extractCredentialIssuerFromOfferUri(offerUri).getOrNull()
+
+            val manager = issuerId?.let { id -> openId4VciManagers[id] }
+                ?: openId4VciManagers.values.firstOrNull()
+
+            require(manager != null) { genericErrorMessage }
+
+            manager.resolveDocumentOffer(offerUri) { result ->
+                when (result) {
+
+                    is OfferResult.Failure -> {
+                        trySendBlocking(
+                            ResolveDocumentOfferPartialState.Failure(
+                                result.cause.localizedMessage ?: genericErrorMessage
+                            )
+                        )
                     }
-                )
+
+                    is OfferResult.Success -> {
+                        trySendBlocking(
+                            ResolveDocumentOfferPartialState.Success(
+                                offer = result.offer
+                            )
+                        )
+                    }
+                }
             }
             awaitClose()
         }.safeAsync {
-            println("[resolveDocumentOffer] Exception in safeAsync: ${it.localizedMessage}")
             ResolveDocumentOfferPartialState.Failure(
                 errorMessage = it.localizedMessage ?: genericErrorMessage
             )
@@ -546,58 +577,62 @@ class WalletCoreDocumentsControllerImpl(
     override fun issueDeferredDocument(docId: DocumentId): Flow<IssueDeferredDocumentPartialState> =
         callbackFlow {
             (getDocumentById(docId) as? DeferredDocument)?.let { deferredDoc ->
-                vciRegistry.allManagers().values.forEach { openId4VciManager ->
 
-                    openId4VciManager.issueDeferredDocument(
-                        deferredDocument = deferredDoc,
-                        executor = null,
-                        onIssueResult = { deferredIssuanceResult ->
-                            when (deferredIssuanceResult) {
-                                is DeferredIssueResult.DocumentFailed -> {
-                                    trySendBlocking(
-                                        IssueDeferredDocumentPartialState.Failed(
+                val manager = deferredDoc.issuerMetadata?.credentialIssuerIdentifier
+                    ?.let(openId4VciManagers::get)
+                    ?: openId4VciManagers.values.firstOrNull()
+
+                require(manager != null) { documentErrorMessage }
+
+                manager.issueDeferredDocument(
+                    deferredDocument = deferredDoc,
+                    executor = null,
+                    onIssueResult = { deferredIssuanceResult ->
+                        when (deferredIssuanceResult) {
+                            is DeferredIssueResult.DocumentFailed -> {
+                                trySendBlocking(
+                                    IssueDeferredDocumentPartialState.Failed(
+                                        documentId = deferredIssuanceResult.documentId,
+                                        errorMessage = deferredIssuanceResult.cause.localizedMessage
+                                            ?: documentErrorMessage
+                                    )
+                                )
+                            }
+
+                            is DeferredIssueResult.DocumentIssued -> {
+                                trySendBlocking(
+                                    IssueDeferredDocumentPartialState.Issued(
+                                        DeferredDocumentDataDomain(
                                             documentId = deferredIssuanceResult.documentId,
-                                            errorMessage = deferredIssuanceResult.cause.localizedMessage
-                                                ?: documentErrorMessage
+                                            formatType = deferredIssuanceResult.docType,
+                                            docName = deferredIssuanceResult.name
                                         )
                                     )
-                                }
+                                )
+                            }
 
-                                is DeferredIssueResult.DocumentIssued -> {
-                                    trySendBlocking(
-                                        IssueDeferredDocumentPartialState.Issued(
-                                            DeferredDocumentDataDomain(
-                                                documentId = deferredIssuanceResult.documentId,
-                                                formatType = deferredIssuanceResult.docType,
-                                                docName = deferredIssuanceResult.name
-                                            )
+                            is DeferredIssueResult.DocumentNotReady -> {
+                                trySendBlocking(
+                                    IssueDeferredDocumentPartialState.NotReady(
+                                        DeferredDocumentDataDomain(
+                                            documentId = deferredIssuanceResult.documentId,
+                                            formatType = deferredIssuanceResult.docType,
+                                            docName = deferredIssuanceResult.name
                                         )
                                     )
-                                }
+                                )
+                            }
 
-                                is DeferredIssueResult.DocumentNotReady -> {
-                                    trySendBlocking(
-                                        IssueDeferredDocumentPartialState.NotReady(
-                                            DeferredDocumentDataDomain(
-                                                documentId = deferredIssuanceResult.documentId,
-                                                formatType = deferredIssuanceResult.docType,
-                                                docName = deferredIssuanceResult.name
-                                            )
-                                        )
+                            is DeferredIssueResult.DocumentExpired -> {
+                                trySendBlocking(
+                                    IssueDeferredDocumentPartialState.Expired(
+                                        documentId = deferredIssuanceResult.documentId
                                     )
-                                }
-
-                                is DeferredIssueResult.DocumentExpired -> {
-                                    trySendBlocking(
-                                        IssueDeferredDocumentPartialState.Expired(
-                                            documentId = deferredIssuanceResult.documentId
-                                        )
-                                    )
-                                }
+                                )
                             }
                         }
-                    )
-                }
+                    }
+                )
             } ?: trySendBlocking(
                 IssueDeferredDocumentPartialState.Failed(
                     documentId = docId,
@@ -612,46 +647,15 @@ class WalletCoreDocumentsControllerImpl(
                 errorMessage = it.localizedMessage ?: genericErrorMessage
             )
         }
-    /**
-     * Attempts to resume OpenID4VCI authorization for the received URI.
-     *
-     * This method loops through all registered managers and calls `resumeWithAuthorization(uri)` on each one until someone successfully resumes authorization.
-     * If a manager successfully resumes, the search is stopped.
-     *
-     * Todo()
-     * * - Implement a way to select and save the 'issuer' or 'scope' associated with the authorization to facilitate future resumptions.
-     * * - When resuming authorization, filter the managers by the saved 'scope' to directly call the correct manager, for example:
-     *
-     *     openId4VciManager
-     *         .find { it.getScopeName() == savedScopeName }
-     *         ?.resumeWithAuthorization(uri)
-     */
+
+
     override fun resumeOpenId4VciWithAuthorization(uri: String) {
-//        println(">> Resume OpenID4VCI with authorization: $uri")
-        val containsIssuer = uri.contains("issuer.ageverification.dev")
-//        println("Contains issuer.ageverification.dev? $containsIssuer")
-        val containsIssuer2 = uri.contains("issuer.eudiw.dev")
-//        println("Contains issuer.eudiw.dev? $containsIssuer2")
-
-        var resumed = false
-
-        vciRegistry.allManagers().values.forEach { manager ->
-//            println(">> Trying OpenID4VCI Manager: ${manager.getScopeName()}")
-
+        for (manager in openId4VciManagers.values) {
             try {
                 manager.resumeWithAuthorization(uri)
-//                println(">> Successfully resumed with: ${manager.getScopeName()}")
-                resumed = true
-                return
-            } catch (e: IllegalStateException) {
-                println(">> Manager ${manager.getScopeName()} could not resume: ${e.message}")
-            } catch (e: Exception) {
-                println(">> Unexpected error in ${manager.getScopeName()}: ${e.message}")
+                break
+            } catch (_: Exception) {
             }
-        }
-
-        if (!resumed) {
-            println(">> No manager could resume this authorization. Show error to user.")
         }
     }
 
@@ -705,15 +709,19 @@ class WalletCoreDocumentsControllerImpl(
     override suspend fun resolveDocumentStatus(document: IssuedDocument): Result<Status> =
         eudiWallet.resolveStatus(document)
 
-    private fun issueDocumentWithOpenId4VCI(configId: String): Flow<IssueDocumentsPartialState> =
+    private fun issueDocumentWithOpenId4VCI(
+        configId: String,
+        issuerId: String
+    ): Flow<IssueDocumentsPartialState> =
         callbackFlow {
 
-            vciRegistry.allManagers().values.map { openId4VciManager ->
-                openId4VciManager.issueDocumentByConfigurationIdentifier(
-                    credentialConfigurationId = configId,
-                    onIssueEvent = issuanceCallback()
-                )
-            }
+            val manager = openId4VciManagers[issuerId]
+            require(manager != null) { documentErrorMessage }
+
+            manager.issueDocumentByConfigurationIdentifier(
+                credentialConfigurationId = configId,
+                onIssueEvent = issuanceCallback()
+            )
 
             awaitClose()
 
@@ -836,5 +844,12 @@ class WalletCoreDocumentsControllerImpl(
         }
 
         return listener
+    }
+
+    private fun extractCredentialIssuerFromOfferUri(offerUri: String): Result<String> = runCatching {
+        val credentialOffer = offerUri.toUri().getQueryParameter("credential_offer")
+        val decoded = URLDecoder.decode(credentialOffer, "UTF-8")
+        val json = JSONObject(decoded)
+        json.getString("credential_issuer")
     }
 }
