@@ -116,6 +116,7 @@ internal class WalletCoreConfigImpl(
 
     override val vciConfig: List<OpenId4VciManager.Config>
         get() = listOf(
+
             OpenId4VciManager.Config.Builder().apply {
                 withIssuerUrl(issuerUrl = "https://issuer.eudiw.dev")
                 withClientId(clientId = "wallet-dev")
@@ -123,6 +124,7 @@ internal class WalletCoreConfigImpl(
                 withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
                 withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
             }.build(),
+
             OpenId4VciManager.Config.Builder().apply {
                 withIssuerUrl(issuerUrl = "https://issuer-backend.eudiw.dev")
                 withClientId(clientId = "wallet-dev")
@@ -130,6 +132,7 @@ internal class WalletCoreConfigImpl(
                 withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
                 withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
             }.build(),
+
             OpenId4VciManager.Config.Builder().apply {
                 withIssuerUrl(issuerUrl = "https://issuer.ageverification.dev")
                 withClientId(clientId = "wallet-dev")
