@@ -10,8 +10,6 @@ import com.google.gson.annotations.SerializedName
  * Algorithm EC -> P-256
  * */
 
-
-
 data class DidDocument(
     @SerializedName("@context")
     val context: List<String>,

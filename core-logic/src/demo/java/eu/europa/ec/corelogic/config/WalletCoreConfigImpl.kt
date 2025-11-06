@@ -26,6 +26,7 @@ import eu.europa.ec.eudi.wallet.transfer.openId4vp.EncryptionAlgorithm
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.EncryptionMethod
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.Format
 import eu.europa.ec.resourceslogic.R
+import org.multipaz.crypto.Algorithm
 import kotlin.time.Duration.Companion.seconds
 
 
@@ -118,11 +119,13 @@ internal class WalletCoreConfigImpl(
         get() = listOf(
 
             OpenId4VciManager.Config.Builder().apply {
-                withIssuerUrl(issuerUrl = "https://issuer.eudiw.dev")
+                withIssuerUrl(issuerUrl = "https://ec.dev.issuer.eudiw.dev/")
                 withClientId(clientId = "wallet-dev")
                 withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
                 withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
+                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported(
+                    algorithm = Algorithm.ESP256
+                ))
             }.build(),
 
             OpenId4VciManager.Config.Builder().apply {
@@ -130,7 +133,9 @@ internal class WalletCoreConfigImpl(
                 withClientId(clientId = "wallet-dev")
                 withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
                 withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
+                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported(
+                    algorithm =   Algorithm.ESP256
+                ))
             }.build(),
 
             OpenId4VciManager.Config.Builder().apply {
@@ -138,7 +143,9 @@ internal class WalletCoreConfigImpl(
                 withClientId(clientId = "wallet-dev")
                 withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
                 withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
-                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
+                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported(
+                    algorithm = Algorithm.ESP256
+                ))
             }.build()
         )
 }

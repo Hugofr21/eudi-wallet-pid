@@ -22,17 +22,31 @@ import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import com.google.crypto.tink.hybrid.internal.X25519
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.controller.storage.PrefKeys
+import java.security.KeyPair
+import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.security.PrivateKey
+import java.security.PublicKey
 import java.security.SecureRandom
+import java.security.spec.ECGenParameterSpec
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
 interface KeystoreController {
+
+    // biometric, pin vc
     fun retrieveOrGenerateSecretKey( userAuthenticationRequired:Boolean): SecretKey?
     fun deleteKey(alias: String)
     fun rotateKey(oldAlias: String, userAuthenticationRequired: Boolean): String?
+
+    // did
+    fun retrieveOrGenerateECKeyPair(userAuthenticationRequired: Boolean): KeyPair?
+    fun getPublicKey(alias: String): PublicKey?
+
+    fun rotateECKey(oldAlias: String, userAuthenticationRequired: Boolean): String?
 }
 
 class KeystoreControllerImpl(
@@ -47,6 +61,16 @@ class KeystoreControllerImpl(
         private const val BLOCK_MODE = KeyProperties.BLOCK_MODE_GCM
         private const val PADDING = KeyProperties.ENCRYPTION_PADDING_NONE
         private const val KEY_SIZE = 256
+
+
+        // EC constants (new)
+        private const val EC_ALGORITHM = KeyProperties.KEY_ALGORITHM_EC
+        private const val EC_CURVE = "secp256r1"
+        private const val SIGNATURE_ALGORITHM = "SHA256withECDSA"
+
+        // Alias suffixes
+        private const val EC_ALIAS_SUFFIX = "_ec"
+
     }
 
     private var androidKeyStore: KeyStore? = null
@@ -86,6 +110,28 @@ class KeystoreControllerImpl(
         }
     }
 
+
+    /**
+     * Retrieves or generates EC P-256 KeyPair for DID operations
+     * This is the key used for signing (DID authentication, VC signatures)
+     */
+
+    override fun retrieveOrGenerateECKeyPair(userAuthenticationRequired: Boolean): KeyPair? {
+        return androidKeyStore?.let { keyStore ->
+            val ecAlias = prefKeys.getECAlias()
+
+            if (ecAlias.isEmpty() || !keyStore.containsAlias(ecAlias)) {
+                val newAlias = createPublicKey() + EC_ALIAS_SUFFIX
+                generateECKeyPair(newAlias, userAuthenticationRequired)
+                prefKeys.setECAlias(newAlias)
+                getECKeyPair(keyStore, newAlias)
+            } else {
+                getECKeyPair(keyStore, ecAlias)
+            }
+        }
+    }
+
+
     @Suppress("DEPRECATION")
     private fun generateBiometricSecretKey(alias: String, userAuthenticationRequired: Boolean) {
         val keyGenerator = KeyGenerator.getInstance(
@@ -95,6 +141,74 @@ class KeystoreControllerImpl(
 
         keyGenerator.init(createdKeyGenParameterSpec(alias, userAuthenticationRequired))
         keyGenerator.generateKey()
+    }
+
+
+    /**
+     * Generate EC P-256 KeyPair in Android KeyStore (StrongBox if available)
+     * Follows EIDAS ARF and W3C DID specifications
+     */
+    private fun generateECKeyPair(alias: String, userAuthenticationRequired: Boolean) {
+        try {
+            val keyPairGenerator = KeyPairGenerator.getInstance(
+                EC_ALGORITHM,
+                STORE_TYPE
+            )
+
+            val spec = createECKeyGenParameterSpec(alias, userAuthenticationRequired)
+            keyPairGenerator.initialize(spec)
+            keyPairGenerator.generateKeyPair()
+
+            println("EC KeyPair generated successfully: $alias")
+        } catch (e: Exception) {
+            logController.e(this.javaClass.simpleName, e)
+            throw e
+        }
+    }
+
+
+    /**
+     * Create KeyGenParameterSpec for EC P-256 keys
+     * Enforces hardware-backed storage (StrongBox) when available
+     */
+    private fun createECKeyGenParameterSpec(
+        alias: String,
+        userAuthenticationRequired: Boolean
+    ): KeyGenParameterSpec {
+        val builder = KeyGenParameterSpec.Builder(
+            alias,
+            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+        )
+            .setAlgorithmParameterSpec(ECGenParameterSpec(EC_CURVE))
+            .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+
+        if (userAuthenticationRequired) {
+            builder.setUserAuthenticationRequired(true)
+            builder.setInvalidatedByBiometricEnrollment(true)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                builder.setUserAuthenticationParameters(
+                    0,
+                    KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                builder.setUserAuthenticationValidityDurationSeconds(-1)
+            }
+        }
+
+        // Try to use StrongBox (Secure Element)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val pm = context.packageManager
+            val hasStrongBox = pm.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+            if (hasStrongBox) {
+                builder.setIsStrongBoxBacked(true)
+                println("EC Key using StrongBox (Secure Element)")
+            } else {
+                println("StrongBox not available, using TEE for EC Key")
+            }
+        }
+
+        return builder.build()
     }
 
 
@@ -172,6 +286,47 @@ class KeystoreControllerImpl(
         generateBiometricSecretKey(newAlias, userAuthenticationRequired)
         prefKeys.setAlias(newAlias)
         return  newAlias
+    }
+
+    /**
+     * Get only the public key (for exporting to DID Document)
+     */
+    override fun getPublicKey(alias: String): PublicKey? {
+        return try {
+            androidKeyStore?.load(null)
+            androidKeyStore?.getCertificate(alias)?.publicKey
+        } catch (e: Exception) {
+            logController.e(this.javaClass.simpleName, e)
+            null
+        }
+    }
+
+    /**
+     * Retrieve EC KeyPair from KeyStore
+     */
+    private fun getECKeyPair(keyStore: KeyStore, alias: String): KeyPair? {
+        return try {
+            keyStore.load(null)
+            val privateKey = keyStore.getKey(alias, null) as? PrivateKey
+            val publicKey = keyStore.getCertificate(alias)?.publicKey
+
+            if (privateKey != null && publicKey != null) {
+                KeyPair(publicKey, privateKey)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            logController.e(this.javaClass.simpleName, e)
+            null
+        }
+    }
+
+    override fun rotateECKey(oldAlias: String, userAuthenticationRequired: Boolean): String? {
+        val newAlias = createPublicKey() + EC_ALIAS_SUFFIX
+        androidKeyStore?.deleteEntry(oldAlias)
+        generateECKeyPair(newAlias, userAuthenticationRequired)
+        prefKeys.setECAlias(newAlias)
+        return newAlias
     }
 
 

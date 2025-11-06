@@ -387,6 +387,11 @@ class PrefsControllerImpl(
 interface PrefKeys {
     fun getAlias(): String
     fun setAlias(value: String)
+
+    fun getECAlias(): String
+
+    fun setECAlias(value: String)
+
     fun getShowBatchIssuanceCounter(): Boolean
     fun setShowBatchIssuanceCounter(value: Boolean)
 }
@@ -410,6 +415,22 @@ class PrefKeysImpl(
      */
     override fun setAlias(value: String) {
         prefsController.setString("Alias", value)
+    }
+
+    /**
+     * Returns the did alias in order to find the biometric secret key in android keystore.
+     */
+    override fun getECAlias(): String {
+        return prefsController.getString("ECAlias", "")
+    }
+
+    /**
+     * Stores the did alias used for the secret key in android keystore.
+     *
+     * @param value the did alias value.
+     */
+    override fun setECAlias(value: String) {
+        prefsController.setString("ECAlias", value)
     }
 
     /**
