@@ -20,6 +20,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import eu.europa.ec.storagelogic.dao.BackupLogDao
 import eu.europa.ec.storagelogic.dao.BookmarkDao
+import eu.europa.ec.storagelogic.dao.ConnectionDao
 import eu.europa.ec.storagelogic.dao.IssuerLogDao
 import eu.europa.ec.storagelogic.dao.RevokedDocumentDao
 import eu.europa.ec.storagelogic.dao.TransactionLogDao
@@ -46,5 +47,7 @@ abstract class DatabaseService : RoomDatabase() {
     abstract fun backupLogDao(): BackupLogDao
 
     abstract fun issuerLogDao(): IssuerLogDao
+
+    abstract fun connectionDao(): ConnectionDao
 
 }

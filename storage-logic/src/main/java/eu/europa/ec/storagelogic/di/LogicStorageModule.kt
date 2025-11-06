@@ -31,6 +31,7 @@ import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import com.google.inject.Provides;
 import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherStorageController
+import eu.europa.ec.storagelogic.dao.ConnectionDao
 import eu.europa.ec.storagelogic.dao.IssuerLogDao
 import java.security.SecureRandom
 
@@ -82,3 +83,7 @@ fun provideBackupLogDao(service: DatabaseService): BackupLogDao =
 @Single
 fun provideIssuerLogDao(service: DatabaseService): IssuerLogDao =
     service.issuerLogDao()
+
+@Single
+fun provideConnectionsDao(service: DatabaseService): ConnectionDao =
+    service.connectionDao()
