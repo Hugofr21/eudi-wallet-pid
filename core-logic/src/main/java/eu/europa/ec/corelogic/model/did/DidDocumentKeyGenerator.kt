@@ -1,7 +1,7 @@
 package eu.europa.ec.corelogic.model.did
 
 
-import org.bitcoinj.base.Base58
+import io.github.novacrypto.base58.Base58
 import java.math.BigInteger
 import java.security.PublicKey
 import java.security.interfaces.ECPublicKey
@@ -13,12 +13,13 @@ import java.security.interfaces.ECPublicKey
  * mb-value       := (z[a-km-zA-HJ-NP-Z1-9]+|u[A-Za-z0-9_-]+)
  */
 object DidDocumentKeyGenerator{
-    // --- Constantes Criptográficas (P-256) ---
-    // Multicodec prefixo para secp256r1 (P-256) public key.
-    // O código é 0x1200.
+    // --- Cryptographic Constants (P-256) ---
+    // Multicodec prefix for public key secp256r1 (P-256).
+    // The code is 0x1200.
     private val P256_MULTICODEC_PREFIX = byteArrayOf(0x12.toByte(), 0x00.toByte())
-    // Prefixo para uma chave EC não comprimida, conforme P1363.
-    // 0x04 indica que se seguem as coordenadas X e Y.
+
+    // Prefix for an uncompressed EC key, as per P1363.
+    // 0x04 indicates that the X and Y coordinates follow.
     private const val UNCOMPRESSED_KEY_PREFIX = 0x04.toByte()
 
     private fun createDidDocumentKey(
@@ -38,17 +39,16 @@ object DidDocumentKeyGenerator{
 
         val multicodecPayload = P256_MULTICODEC_PREFIX + rawPublicKey
 
-        val encoded = Base58.encode(multicodecPayload)
+        val encoded = Base58.base58Encode(multicodecPayload)
 
         return "did:key:z$encoded"
     }
 
     /**
-     * Gera o Documento DID (como objeto data class) seguindo
-     * a especificação do link (type: Multikey).
-     *
-     * @param publicKey A chave pública P-256.
-     * @return O objeto DidDocument.
+     * Generates the DID Document (as a data class object) following
+     * the link specification (type: Multikey).
+     * @param publicKey The P-256 public key.
+     * @return The DidDocument object.
      */
     fun createDidDocument(publicKey: PublicKey): DidDocument {
 
@@ -69,10 +69,10 @@ object DidDocumentKeyGenerator{
             publicKeyJwk = null
         )
 
-        // 5. Montar o Documento DID
-        // A especificação e os exemplos indicam que, para chaves de assinatura
-        // (como P-256 e Ed25519), a chave é usada para todas as
-        // relações de verificação, exceto keyAgreement.
+        // 5. Assembling the DID Document
+        // The specification and examples indicate that, for signing keys
+        // (such as P-256 and Ed25519), the key is used for all
+        // verification relationships, except keyAgreement.
         return DidDocument(
             context = listOf("https://www.w3.org/ns/did/v1"),
             id = didId,
@@ -82,17 +82,17 @@ object DidDocumentKeyGenerator{
             capabilityDelegation = listOf(vmId),
             capabilityInvocation = listOf(vmId),
 
-            // KeyAgreement é para cifragem (X25519, P-256-ECDH).
-            // A chave de assinatura P-256 *não* deve ser usada para isto.
+            // KeyAgreement is for encryption (X25519, P-256-ECDH).
+            // The P-256 signing key should *not* be used for this.
             keyAgreement = emptyList(),
-            // did:key não requer serviços por defeito
+            // did:key does not require standard services
             service = null
         )
     }
 
     /**
-     * Converte um BigInteger (coordenada) para um array de bytes de tamanho fixo,
-     * lidando com o byte de sinal (0x00) e padding.
+     * Converts a BigInteger (coordinate) into a fixed-size byte array,
+     * handling sign byte (0x00) and padding.
      */
     private fun bigIntegerToFixedBytes(bi: BigInteger, size: Int): ByteArray {
         val bytes = bi.toByteArray()
@@ -111,7 +111,7 @@ object DidDocumentKeyGenerator{
             return padded
         }
 
-        throw IllegalArgumentException("Tamanho inesperado do BigInteger (${bytes.size} bytes) para o esperado $size")
+        throw IllegalArgumentException("Size unexpected of BigInteger (${bytes.size} bytes) for the expected $size")
     }
 
     private fun validate(publicKey: PublicKey): ECPublicKey {
