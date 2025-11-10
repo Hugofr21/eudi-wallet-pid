@@ -28,6 +28,7 @@ import eu.europa.ec.storagelogic.model.Bookmark
 import eu.europa.ec.storagelogic.model.RevokedDocument
 import eu.europa.ec.storagelogic.model.TransactionLog
 import eu.europa.ec.storagelogic.model.BackupLog
+import eu.europa.ec.storagelogic.model.Connection
 import eu.europa.ec.storagelogic.model.IssuerLog
 
 @Database(
@@ -36,7 +37,8 @@ import eu.europa.ec.storagelogic.model.IssuerLog
         RevokedDocument::class,
         TransactionLog::class,
         BackupLog::class,
-        IssuerLog::class
+        IssuerLog::class,
+        Connection::class
     ],
     version = 1
 )

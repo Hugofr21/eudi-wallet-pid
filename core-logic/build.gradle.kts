@@ -45,7 +45,10 @@ dependencies {
     implementation(libs.transport.runtime)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
+    implementation("org.bitcoinj:bitcoinj-core:0.17")
+
     testImplementation(project(LibraryModule.TestLogic.path))
+
 }
 
 excludeFromKoverReport(

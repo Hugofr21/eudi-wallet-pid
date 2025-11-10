@@ -20,11 +20,9 @@ import androidx.core.net.toUri
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationResult
 import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
 import eu.europa.ec.businesslogic.extension.getLocalizedString
-import eu.europa.ec.businesslogic.extension.ifEmptyOrNull
 import eu.europa.ec.businesslogic.extension.safeAsync
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.extension.documentIdentifier
-import eu.europa.ec.corelogic.extension.getLocalizedDisplayName
 import eu.europa.ec.corelogic.extension.parseTransactionLog
 import eu.europa.ec.corelogic.extension.toCoreTransactionLog
 import eu.europa.ec.corelogic.extension.toTransactionLogData
@@ -215,7 +213,7 @@ interface WalletCoreDocumentsController {
 
     fun getWalletCoreConfig(): WalletCoreConfig
 
-    fun getEudiWallet(): EudiWallet
+    fun getEdiWallet(): EudiWallet
 }
 
 
@@ -233,7 +231,7 @@ class WalletCoreDocumentsControllerImpl(
         return walletCoreConfig
     }
 
-    override fun getEudiWallet(): EudiWallet {
+    override fun getEdiWallet(): EudiWallet {
         return eudiWallet
     }
 

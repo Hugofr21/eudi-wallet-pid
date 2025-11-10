@@ -38,6 +38,7 @@ import eu.europa.ec.authenticationlogic.controller.storage.PinStorageControllerI
 import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherControllerImpl
 import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherStorageController
 import eu.europa.ec.authenticationlogic.storage.PrefsBiometryStorageProvider
+import eu.europa.ec.authenticationlogic.storage.PrefsDidDocumentStorageProvider
 import eu.europa.ec.authenticationlogic.storage.PrefsLogStorageProvider
 import eu.europa.ec.authenticationlogic.storage.PrefsPassphraseStorageProvider
 import eu.europa.ec.authenticationlogic.storage.PrefsPinStorageProvider
@@ -64,6 +65,7 @@ fun provideStorageConfig(
     sqlCipherImpl = PrefsSQLCipherStorageProvider(prefsController, cryptoController),
     passphraseImpl = PrefsPassphraseStorageProvider(prefsController, cryptoController),
     logImpl = PrefsLogStorageProvider(prefsController, cryptoController),
+    didDocumentImpl = PrefsDidDocumentStorageProvider(prefsController)
 )
 
 @Factory

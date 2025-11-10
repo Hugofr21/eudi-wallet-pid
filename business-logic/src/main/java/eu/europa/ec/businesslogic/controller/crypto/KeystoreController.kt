@@ -43,7 +43,8 @@ interface KeystoreController {
     fun rotateKey(oldAlias: String, userAuthenticationRequired: Boolean): String?
 
     // did
-    fun retrieveOrGenerateECKeyPair(userAuthenticationRequired: Boolean): KeyPair?
+    fun retrieveOrGenerateECKeyPair(alias: String, userAuthenticationRequired: Boolean): KeyPair?
+
     fun getPublicKey(alias: String): PublicKey?
 
     fun rotateECKey(oldAlias: String, userAuthenticationRequired: Boolean): String?
@@ -66,9 +67,6 @@ class KeystoreControllerImpl(
         // EC constants (new)
         private const val EC_ALGORITHM = KeyProperties.KEY_ALGORITHM_EC
         private const val EC_CURVE = "secp256r1"
-        private const val SIGNATURE_ALGORITHM = "SHA256withECDSA"
-
-        // Alias suffixes
         private const val EC_ALIAS_SUFFIX = "_ec"
 
     }
@@ -116,21 +114,19 @@ class KeystoreControllerImpl(
      * This is the key used for signing (DID authentication, VC signatures)
      */
 
-    override fun retrieveOrGenerateECKeyPair(userAuthenticationRequired: Boolean): KeyPair? {
+    override fun retrieveOrGenerateECKeyPair(alias: String, userAuthenticationRequired: Boolean): KeyPair? {
         return androidKeyStore?.let { keyStore ->
-            val ecAlias = prefKeys.getECAlias()
-
-            if (ecAlias.isEmpty() || !keyStore.containsAlias(ecAlias)) {
-                val newAlias = createPublicKey() + EC_ALIAS_SUFFIX
-                generateECKeyPair(newAlias, userAuthenticationRequired)
-                prefKeys.setECAlias(newAlias)
-                getECKeyPair(keyStore, newAlias)
-            } else {
-                getECKeyPair(keyStore, ecAlias)
+            if (!keyStore.containsAlias(alias)) {
+                try {
+                    generateECKeyPair(alias, userAuthenticationRequired)
+                } catch (e: Exception) {
+                    logController.e(this.javaClass.simpleName, e)
+                    return null
+                }
             }
+            getECKeyPair(keyStore, alias)
         }
     }
-
 
     @Suppress("DEPRECATION")
     private fun generateBiometricSecretKey(alias: String, userAuthenticationRequired: Boolean) {
@@ -239,9 +235,9 @@ class KeystoreControllerImpl(
             val hasStrongBox = pm.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
             if (hasStrongBox) {
                 keyGenParameterSpec.setIsStrongBoxBacked(true)
+                println("EC Key using StrongBox (Secure Element)")
             } else {
-                println("Device does NOT have StrongBox: using standard TEE")
-
+                println("StrongBox not available, using TEE for EC Key")
             }
         }
         return keyGenParameterSpec.build()

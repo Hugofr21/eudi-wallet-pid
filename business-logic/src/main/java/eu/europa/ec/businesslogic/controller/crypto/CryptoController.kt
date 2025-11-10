@@ -95,11 +95,11 @@ class CryptoControllerImpl(
         return try {
             val cipher = Cipher.getInstance(AES_EXTERNAL_TRANSFORMATION)
             if (encrypt) {
-                println("getCipher → init ENCRYPT_MODE with ivBytes")
+//                println("getCipher → init ENCRYPT_MODE with ivBytes")
                 val key = keystoreController.retrieveOrGenerateSecretKey(userAuthenticationRequired)
                 cipher.init(Cipher.ENCRYPT_MODE, key)
             } else {
-                println("getCipher → init DECRYPT_MODE with ivBytes")
+//                println("getCipher → init DECRYPT_MODE with ivBytes")
                 val key = keystoreController.retrieveOrGenerateSecretKey(userAuthenticationRequired)
                 cipher.init(
                     Cipher.DECRYPT_MODE,

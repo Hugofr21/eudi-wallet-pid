@@ -11,10 +11,10 @@ import eu.europa.ec.storagelogic.model.Connection
 @Dao
 interface ConnectionDao : StorageDao<Connection> {
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     override suspend fun store(value: Connection)
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     override suspend fun storeAll(values: List<Connection>)
 
     @Query("SELECT * FROM connections WHERE peerDid = :identifier")
