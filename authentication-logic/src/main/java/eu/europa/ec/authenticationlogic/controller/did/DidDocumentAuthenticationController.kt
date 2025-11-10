@@ -2,10 +2,14 @@ package eu.europa.ec.authenticationlogic.controller.did
 
 import android.content.Context
 import eu.europa.ec.authenticationlogic.controller.storage.DidDocumentStorageController
+import eu.europa.ec.authenticationlogic.model.did.DidDocumentIdentity
+import eu.europa.ec.businesslogic.controller.crypto.KeyPairController
 import eu.europa.ec.resourceslogic.R
+import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.Boolean
 
 interface DidDocumentAuthenticationController {
     suspend fun createIdentity(
@@ -29,7 +33,8 @@ interface DidDocumentAuthenticationController {
 
 
 class DidDocumentAuthenticationControllerImpl(
-    private val context: Context,
+    private val resourceProvider: ResourceProvider,
+    private val keyPairController : KeyPairController,
     private val didDocumentStorageController: DidDocumentStorageController,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : DidDocumentAuthenticationController {
@@ -37,7 +42,15 @@ class DidDocumentAuthenticationControllerImpl(
         displayName: String,
         serviceEndpoint: String
     ): DidDocumentAuthenticate {
-        TODO("Not yet implemented")
+       val newDid = DidDocumentIdentity(
+           didIdentifier = "",
+           alias = "",
+           displayName="",
+           didDocumentJson = "",
+           isDefault = false
+       )
+        didDocumentStorageController.saveIdentity(newDid)
+
     }
 
     override suspend fun authenticate(

@@ -21,6 +21,8 @@ import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.config.ConfigLogicImpl
 import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import eu.europa.ec.businesslogic.controller.crypto.CryptoControllerImpl
+import eu.europa.ec.businesslogic.controller.crypto.KeyPairController
+import eu.europa.ec.businesslogic.controller.crypto.KeyPairControllerImpl
 import eu.europa.ec.businesslogic.controller.crypto.KeystoreController
 import eu.europa.ec.businesslogic.controller.crypto.KeystoreControllerImpl
 import eu.europa.ec.businesslogic.controller.log.LogController
@@ -60,6 +62,8 @@ fun providePrefsController(resourceProvider: ResourceProvider): PrefsController 
 fun providePrefKeys(prefsController: PrefsController): PrefKeys =
     PrefKeysImpl(prefsController)
 
+
+
 @Single
 fun provideKeystoreController(
     prefKeys: PrefKeys,
@@ -67,6 +71,13 @@ fun provideKeystoreController(
     context: Context
 ): KeystoreController =
     KeystoreControllerImpl(prefKeys, logController,context)
+
+
+@Single
+fun provideKeysPairStoreController(
+    keystoreController: KeystoreController,
+): KeyPairController =
+    KeyPairControllerImpl(keystoreController)
 
 @Factory
 fun provideCryptoController(keystoreController: KeystoreController): CryptoController =

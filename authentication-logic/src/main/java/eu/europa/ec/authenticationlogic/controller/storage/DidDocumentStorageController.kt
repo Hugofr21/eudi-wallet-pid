@@ -1,23 +1,23 @@
 package eu.europa.ec.authenticationlogic.controller.storage
 
 import eu.europa.ec.authenticationlogic.config.StorageConfig
-import eu.europa.ec.authenticationlogic.model.did.DidIdentity
+import eu.europa.ec.authenticationlogic.model.did.DidDocumentIdentity
 
 interface DidDocumentStorageController {
 
-    suspend fun saveIdentity(identity: DidIdentity)
+    suspend fun saveIdentity(identity: DidDocumentIdentity)
 
 
-    suspend fun getIdentityByDid(did: String): DidIdentity?
+    suspend fun getIdentityByDid(did: String): DidDocumentIdentity?
 
 
-    suspend fun getIdentityByAlias(alias: String): DidIdentity?
+    suspend fun getIdentityByAlias(alias: String): DidDocumentIdentity?
 
 
-    suspend fun getDefaultIdentity(): DidIdentity?
+    suspend fun getDefaultIdentity(): DidDocumentIdentity?
 
 
-    suspend fun getAllIdentities(): List<DidIdentity>
+    suspend fun getAllIdentities(): List<DidDocumentIdentity>
 
     suspend fun deleteIdentity(did: String)
 
@@ -33,18 +33,18 @@ interface DidDocumentStorageController {
 }
 
 class DidDocumentStorageControllerImpl(private val storageConfig: StorageConfig) : DidDocumentStorageController {
-    override suspend fun saveIdentity(identity: DidIdentity) =  storageConfig.didDocumentStorageProvider.saveIdentity(identity)
+    override suspend fun saveIdentity(identity: DidDocumentIdentity) =  storageConfig.didDocumentStorageProvider.saveIdentity(identity)
 
-    override suspend fun getIdentityByDid(did: String): DidIdentity?
+    override suspend fun getIdentityByDid(did: String): DidDocumentIdentity?
     = storageConfig.didDocumentStorageProvider.getIdentityByDid(did)
 
-    override suspend fun getIdentityByAlias(alias: String): DidIdentity? =
+    override suspend fun getIdentityByAlias(alias: String): DidDocumentIdentity? =
         storageConfig.didDocumentStorageProvider.getIdentityByDid(alias)
 
-    override suspend fun getDefaultIdentity(): DidIdentity? =
+    override suspend fun getDefaultIdentity(): DidDocumentIdentity? =
         storageConfig.didDocumentStorageProvider.getDefaultIdentity()
 
-    override suspend fun getAllIdentities(): List<DidIdentity> =
+    override suspend fun getAllIdentities(): List<DidDocumentIdentity> =
         storageConfig.didDocumentStorageProvider.getAllIdentities()
 
     override suspend fun deleteIdentity(did: String) =

@@ -1,32 +1,32 @@
 package eu.europa.ec.authenticationlogic.provider
 
-import eu.europa.ec.authenticationlogic.model.did.DidIdentity
+import eu.europa.ec.authenticationlogic.model.did.DidDocumentIdentity
 
 interface DidDocumentStorageProvider {
     /**
      * Salva uma identidade DID
      */
-    suspend fun saveIdentity(identity: DidIdentity)
+    suspend fun saveIdentity(identity: DidDocumentIdentity)
 
     /**
      * Obtém identidade por DID
      */
-    suspend fun getIdentityByDid(did: String): DidIdentity?
+    suspend fun getIdentityByDid(did: String): DidDocumentIdentity?
 
     /**
      * Obtém identidade por alias do KeyStore
      */
-    suspend fun getIdentityByAlias(alias: String): DidIdentity?
+    suspend fun getIdentityByAlias(alias: String): DidDocumentIdentity?
 
     /**
      * Obtém a identidade padrão
      */
-    suspend fun getDefaultIdentity(): DidIdentity?
+    suspend fun getDefaultIdentity(): DidDocumentIdentity?
 
     /**
      * Lista todas as identidades
      */
-    suspend fun getAllIdentities(): List<DidIdentity>
+    suspend fun getAllIdentities(): List<DidDocumentIdentity>
 
     /**
      * Remove uma identidade

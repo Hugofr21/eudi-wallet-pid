@@ -1,6 +1,5 @@
 package eu.europa.ec.businesslogic.controller.crypto
 
-import eu.europa.ec.businesslogic.controller.log.LogController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.security.KeyPair
@@ -22,7 +21,6 @@ interface KeyPairController{
 
 class KeyPairControllerImpl(
     private val keystoreController: KeystoreController,
-    private val logController: LogController,
 ) : KeyPairController {
 
     companion object {
@@ -36,14 +34,20 @@ class KeyPairControllerImpl(
                 ?: throw SecurityException("Public key not found for alias: $alias")
         }
 
-    override suspend fun retrieveOrGenerateECKeyPair(alias: String, userAuthenticationRequired: Boolean): KeyPair =
+    override suspend fun retrieveOrGenerateECKeyPair(
+        alias: String,
+        userAuthenticationRequired: Boolean
+    ): KeyPair =
         withContext(Dispatchers.IO) {
-
-
-            getKeyPair(alias)
-                ?: throw SecurityException("Failed to retrieve KeyPair for alias: $alias")
+            if (hasECKey(alias)) {
+                return@withContext getKeyPair(alias)
+                    ?: throw SecurityException("The key exists but failed to recover.: $alias")
+            } else {
+                val newKeyPair = keystoreController.retrieveOrGenerateECKeyPair(alias, userAuthenticationRequired)
+                    ?: throw SecurityException("Fail of in generate new KeyPair for the alias: $alias")
+                return@withContext newKeyPair
+            }
         }
-
 
     override fun hasECKey(alias: String): Boolean {
         return try {

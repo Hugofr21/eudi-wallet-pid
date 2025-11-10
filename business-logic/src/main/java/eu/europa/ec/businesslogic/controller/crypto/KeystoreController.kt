@@ -98,7 +98,7 @@ class KeystoreControllerImpl(
         return androidKeyStore?.let {
             val alias = prefKeys.getAlias()
             if (alias.isEmpty()) {
-                val newAlias = createPublicKey()
+                val newAlias = createAliasForKey()
                 generateBiometricSecretKey(newAlias, userAuthenticationRequired)
                 prefKeys.setAlias(newAlias)
                 getBiometricSecretKey(it, newAlias)
@@ -251,14 +251,14 @@ class KeystoreControllerImpl(
 
     /**
      * Get random string
-     *
      * @return a string containing 64 characters
      */
-    private fun createPublicKey(): String {
+    private fun createAliasForKey(): String {
         val randomBytes = ByteArray(32);
         randomSecret.nextBytes(randomBytes)
-        val stringBase64 = Base64.encodeToString(randomBytes, Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP)
-        return stringBase64.substring(0, 32)
+        val stringBase64 = Base64.encodeToString(randomBytes,
+            Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP)
+        return stringBase64.take(32)
     }
 
 
@@ -277,7 +277,7 @@ class KeystoreControllerImpl(
     }
 
     override fun rotateKey(oldAlias: String, userAuthenticationRequired: Boolean): String? {
-        val newAlias = createPublicKey()
+        val newAlias = createAliasForKey()
         androidKeyStore?.deleteEntry(oldAlias)
         generateBiometricSecretKey(newAlias, userAuthenticationRequired)
         prefKeys.setAlias(newAlias)
@@ -318,7 +318,7 @@ class KeystoreControllerImpl(
     }
 
     override fun rotateECKey(oldAlias: String, userAuthenticationRequired: Boolean): String? {
-        val newAlias = createPublicKey() + EC_ALIAS_SUFFIX
+        val newAlias = createAliasForKey() + EC_ALIAS_SUFFIX
         androidKeyStore?.deleteEntry(oldAlias)
         generateECKeyPair(newAlias, userAuthenticationRequired)
         prefKeys.setECAlias(newAlias)

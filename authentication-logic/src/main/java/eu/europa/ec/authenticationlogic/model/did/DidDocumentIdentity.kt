@@ -1,6 +1,6 @@
 package eu.europa.ec.authenticationlogic.model.did
 
-data class DidIdentity(
+data class DidDocumentIdentity(
     val didIdentifier: String,
     val alias: String,
     val displayName: String,
