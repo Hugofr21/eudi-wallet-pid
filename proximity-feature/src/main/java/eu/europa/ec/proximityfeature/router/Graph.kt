@@ -60,8 +60,6 @@ fun NavGraphBuilder.featureProximityGraph(navController: NavController) {
                     uriPattern =
                         BuildConfig.EUDI_OPENID4VP_SCHEME_QR + ProximityScreens.QR.screenRoute
                 },
-
-
             ),
             arguments = listOf(
                 navArgument(RequestUriConfig.serializedKeyName) {

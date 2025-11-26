@@ -1,6 +1,8 @@
 package eu.europa.ec.authenticationlogic.controller.did
 
 import android.content.Context
+import android.util.Base64
+import com.google.gson.Gson
 import eu.europa.ec.authenticationlogic.controller.storage.DidDocumentStorageController
 import eu.europa.ec.authenticationlogic.model.did.DidDocumentIdentity
 import eu.europa.ec.businesslogic.controller.crypto.KeyPairController
@@ -8,7 +10,6 @@ import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlin.Boolean
 
 interface DidDocumentAuthenticationController {
@@ -38,19 +39,12 @@ class DidDocumentAuthenticationControllerImpl(
     private val didDocumentStorageController: DidDocumentStorageController,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : DidDocumentAuthenticationController {
+
     override suspend fun createIdentity(
         displayName: String,
         serviceEndpoint: String
     ): DidDocumentAuthenticate {
-       val newDid = DidDocumentIdentity(
-           didIdentifier = "",
-           alias = "",
-           displayName="",
-           didDocumentJson = "",
-           isDefault = false
-       )
-        didDocumentStorageController.saveIdentity(newDid)
-
+        TODO("Not yet implemented")
     }
 
     override suspend fun authenticate(
@@ -71,8 +65,6 @@ class DidDocumentAuthenticationControllerImpl(
     override fun hasIdentities(): Boolean {
         TODO("Not yet implemented")
     }
-
-
 }
 
 sealed class DidDocumentAvailability {

@@ -86,7 +86,7 @@ internal class WalletCoreConfigImpl(
                                 BuildConfig.ASP_OPENID4VP_SCHEME,
                                 BuildConfig.AGE_OPENID4VP_SCHEME,
                                 BuildConfig.CREDENTIAL_OFFER_SCHEME,
-                            )
+                            ) 
                         )
                         withFormats(
                             Format.MsoMdoc.ES256,
@@ -119,7 +119,7 @@ internal class WalletCoreConfigImpl(
         get() = listOf(
 
             OpenId4VciManager.Config.Builder().apply {
-                withIssuerUrl(issuerUrl = "https://ec.dev.issuer.eudiw.dev/")
+                withIssuerUrl(issuerUrl = "https://ec.issuer.eudiw.dev")
                 withClientId(clientId = "wallet-dev")
                 withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
                 withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
@@ -138,14 +138,12 @@ internal class WalletCoreConfigImpl(
                 ))
             }.build(),
 
-            OpenId4VciManager.Config.Builder().apply {
-                withIssuerUrl(issuerUrl = "https://issuer.ageverification.dev")
-                withClientId(clientId = "wallet-dev")
-                withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-                withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
-                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported(
-                    algorithm = Algorithm.ESP256
-                ))
-            }.build()
+//            OpenId4VciManager.Config.Builder().apply {
+//                withIssuerUrl(issuerUrl = "https://issuer.dev.ageverification.dev")
+//                withClientId(clientId = "wallet-dev")
+//                withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
+//                withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
+//                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
+//            }.build()
         )
 }
