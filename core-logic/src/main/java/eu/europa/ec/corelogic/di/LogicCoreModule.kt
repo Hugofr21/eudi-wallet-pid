@@ -31,6 +31,8 @@ import eu.europa.ec.corelogic.controller.WalletCoreLogController
 import eu.europa.ec.corelogic.controller.WalletCoreLogControllerImpl
 import eu.europa.ec.corelogic.controller.WalletCoreTransactionLogController
 import eu.europa.ec.corelogic.controller.WalletCoreTransactionLogControllerImpl
+import eu.europa.ec.corelogic.controller.WalletDidDocumentController
+import eu.europa.ec.corelogic.controller.WalletDidDocumentControllerImpl
 import eu.europa.ec.corelogic.controller.WalletLiveDataController
 import eu.europa.ec.corelogic.controller.WalletLiveDataControllerImpl
 import eu.europa.ec.corelogic.controller.WalletLotlController
@@ -137,6 +139,16 @@ fun provideWalletCoreDocumentsController(
         transactionLogDao,
         revokedDocumentDao,
     )
+
+
+@Factory
+fun provideWalletCoreDidDocumentController(
+
+    ): WalletDidDocumentControllerImpl =
+    WalletDidDocumentControllerImpl(
+
+    )
+
 
 
 @Single

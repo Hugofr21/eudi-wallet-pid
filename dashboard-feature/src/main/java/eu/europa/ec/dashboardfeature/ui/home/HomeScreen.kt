@@ -88,6 +88,7 @@ import eu.europa.ec.dashboardfeature.ui.home.compoment.ScanButton
 import eu.europa.ec.uilogic.component.wrap.CoralRed
 import eu.europa.ec.uilogic.component.wrap.DeepBlue
 import eu.europa.ec.uilogic.component.wrap.LightSkyBlue
+import eu.europa.ec.uilogic.component.wrap.LightTeal
 import eu.europa.ec.uilogic.component.wrap.SoftYellow
 import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
 import eu.europa.ec.uilogic.component.wrap.StickyBottomType
@@ -302,7 +303,7 @@ private fun Content(
                     Event.SignWebFidoCard.LearnMorePressed
                 )
             },
-            base = DeepBlue
+            base = LightTeal
         )
     }
 

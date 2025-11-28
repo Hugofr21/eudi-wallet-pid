@@ -77,6 +77,8 @@ sealed class DashboardScreens {
 
     data object Logs : Screen(name = "LISTOFLOGS")
 
+    data object SharingData : Screen(name = "SHARING_DATA")
+
 
 }
 

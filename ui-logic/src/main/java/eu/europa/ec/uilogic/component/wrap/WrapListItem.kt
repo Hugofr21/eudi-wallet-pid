@@ -45,6 +45,7 @@ val OceanBlue      = Color(0xFF2A5ED9)
 val DeepBlue       = Color(0xFF0048D2)
 val SoftYellow     = Color(0xFFFFF1BA)
 val CoralRed       = Color(0xFFFF6E70)
+val LightTeal      = Color(0xFFE0F2F1)
 
 @Composable
 fun WrapListItem(

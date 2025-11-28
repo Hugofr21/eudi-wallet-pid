@@ -28,6 +28,7 @@ import androidx.navigation.navDeepLink
 import eu.europa.ec.backuplogic.ui.backup.BackupScreen
 import eu.europa.ec.dashboardfeature.BuildConfig
 import eu.europa.ec.dashboardfeature.ui.dashboard.DashboardScreen
+import eu.europa.ec.dashboardfeature.ui.did.qrcode.SharingVcScreen
 import eu.europa.ec.dashboardfeature.ui.document_sign.DocumentSignScreen
 import eu.europa.ec.dashboardfeature.ui.documents.detail.DocumentDetailsScreen
 import eu.europa.ec.dashboardfeature.ui.profile.ProfileScreen
@@ -194,6 +195,10 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
 
         composable(WIFIScreens.Info.screenRoute) {
                 InfoWifiAware (navController, koinViewModel())
+        }
+
+        composable(DashboardScreens.SharingData.screenRoute) {
+            SharingVcScreen(navController, koinViewModel())
         }
 
 
