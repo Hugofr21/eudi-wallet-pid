@@ -50,12 +50,11 @@ data class State(
     val isLoading: Boolean = false,
     val isBottomSheetOpen: Boolean = false,
     val sheetContent: HomeScreenBottomSheetContent = HomeScreenBottomSheetContent.Authenticate,
-
     val welcomeUserMessage: String,
     val authenticateCardConfig: ActionCardConfig,
     val signCardConfig: ActionCardConfig,
-    val webAuthFido: ActionCardConfig,
-
+    val DidComm: ActionCardConfig,
+    val ShraringVc: ActionCardConfig,
     val bleAvailability: BleAvailability = BleAvailability.UNKNOWN,
     val isBleCentralClientModeEnabled: Boolean = false
 ) : ViewState
@@ -154,11 +153,17 @@ class HomeViewModel(
                 primaryButtonText = resourceProvider.getString(R.string.home_screen_sign),
                 secondaryButtonText = resourceProvider.getString(R.string.home_screen_learn_more)
             ),
-            webAuthFido = ActionCardConfig(
+            DidComm = ActionCardConfig(
                 title = resourceProvider.getString(R.string.digital_credentials_screen_sign_card_title),
-                icon = AppIcons.Certified,
+                icon = AppIcons.DidComm,
                 primaryButtonText = resourceProvider.getString(R.string.home_screen_sign),
                 secondaryButtonText = resourceProvider.getString(R.string.home_screen_learn_more)
+            ),
+            ShraringVc = ActionCardConfig(
+                title = resourceProvider.getString(R.string.digital_credentials_screen_sign_card_title),
+                icon = AppIcons.ScanPassport,
+                primaryButtonText = resourceProvider.getString(R.string.home_screen_sign),
+                secondaryButtonText = resourceProvider.getString(R.string.home_screen_learn_more),
             ),
             isBleCentralClientModeEnabled = homeInteractor.isBleCentralClientModeEnabled(),
         )

@@ -453,4 +453,16 @@ object AppIcons {
         contentDescriptionId = R.string.shield_eid_description,
         imageVector = null
     )
+
+    val ScanPassport: IconDataUi = IconDataUi(
+        resourceId = R.drawable.ic_scan_mrz,
+        contentDescriptionId = R.string.content_description_scan_passport_icon,
+        imageVector = null
+    )
+
+    val DidComm: IconDataUi = IconDataUi(
+        resourceId = R.drawable.ic_vc_share_file,
+        contentDescriptionId = R.string.content_description_sharing_vc_icon,
+        imageVector = null
+    )
 }

@@ -29,7 +29,6 @@ class PrefsPassphraseStorageProvider(
     companion object {
         private const val KEY_HASH = "DevicePassphraseHash"
         private const val KEY_IV   = "DevicePassphraseIv"
-
         private const val KEY_SALT   = "DevicePassphraseSalt"
     }
 

@@ -120,6 +120,8 @@
     <string name="content_description_backup_icon">Backup</string>
     <string name="icon_eid_description">Electronic Identification</string>
     <string name="logs_eid_description">Logs</string>
+    <string name="content_description_scan_passport_icon">Scan Passport</string>
+    <string name="content_description_sharing_vc_icon">Sharing Verifiable Credentials</string>
 
 
     <!-- Biometric prompt -->

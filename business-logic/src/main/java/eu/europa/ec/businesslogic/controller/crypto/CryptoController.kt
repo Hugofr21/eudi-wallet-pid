@@ -182,7 +182,6 @@ class CryptoControllerImpl(
      * Derivation function (KDF) based on the HMAC
      * Normalize sentence because of unicode characters
      * HMAC-based Extract-and-Expand Key Derivation Function (HKDF) rfc5869
-     *
      */
 
     override fun generateSaltFromMnemonic(mnemonic: List<String>):ByteArray{

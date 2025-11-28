@@ -19,6 +19,7 @@ package eu.europa.ec.dashboardfeature.ui.home
 import android.Manifest
 import android.content.Context
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -275,7 +276,7 @@ private fun Content(
         )
 
         WrapActionCard(
-            config = state.webAuthFido,
+            config = state.DidComm,
             onActionClick = {
                 onEventSent(
                     Event.SignWebFidoCard.SignWebFidoPressed
@@ -287,6 +288,21 @@ private fun Content(
                 )
             },
             base = CoralRed
+        )
+
+        WrapActionCard(
+            config = state.ShraringVc,
+            onActionClick = {
+                onEventSent(
+                    Event.SignWebFidoCard.SignWebFidoPressed
+                )
+            },
+            onLearnMoreClick = {
+                onEventSent(
+                    Event.SignWebFidoCard.LearnMorePressed
+                )
+            },
+            base = DeepBlue
         )
     }
 
@@ -580,9 +596,15 @@ private fun HomeScreenContentPreview() {
                         primaryButtonText = stringResource(R.string.home_screen_sign),
                         secondaryButtonText = stringResource(R.string.home_screen_learn_more),
                     ),
-                    webAuthFido = ActionCardConfig(
+                    DidComm = ActionCardConfig(
                         title = stringResource(R.string.digital_credentials_screen_sign_card_title),
-                        icon = AppIcons.Sign,
+                        icon = AppIcons.DidComm,
+                        primaryButtonText = stringResource(R.string.home_screen_sign),
+                        secondaryButtonText = stringResource(R.string.home_screen_learn_more),
+                    ),
+                    ShraringVc = ActionCardConfig(
+                        title = stringResource(R.string.digital_credentials_screen_sign_card_title),
+                        icon = AppIcons.ScanPassport,
                         primaryButtonText = stringResource(R.string.home_screen_sign),
                         secondaryButtonText = stringResource(R.string.home_screen_learn_more),
                     ),
