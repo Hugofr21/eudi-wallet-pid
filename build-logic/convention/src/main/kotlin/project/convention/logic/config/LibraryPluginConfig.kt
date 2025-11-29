@@ -40,7 +40,10 @@ enum class LibraryModule(val path: String) {
     IssuanceFeature(":issuance-feature"),
     UserConsentFeature(":consent-user"),
     BackupLogic(":backup-logic"),
-    VerifierFeature(":verifier-feature");
+    VerifierFeature(":verifier-feature"),
+
+    MrzScannerLogic(":mrz-scanner-logic");
+
 
     val isLogicModule: Boolean
         get() {
