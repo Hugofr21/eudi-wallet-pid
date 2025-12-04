@@ -28,6 +28,10 @@ androidxWindowManager = "1.5.0"
 androidxWork = "2.11.0"
 androidxBiometric = "1.2.0-alpha05"
 androidxAppAuth = "1.0.0"
+base58 = "2022.01.17"
+cameraCamera2 = "1.3.0"
+cameraLifecycle = "1.3.0"
+cameraView = "1.3.0"
 coil = "3.3.0"
 constraintlayoutVersion = "1.1.1"
 credentials = "1.5.0"
@@ -59,6 +63,7 @@ retrofitVersion = "3.0.0"
 robolectric = "4.16"
 secrets = "2.0.1"
 securityCrypto = "1.1.0"
+textRecognition = "16.0.1"
 tinkAndroid = "1.19.0"
 turbine = "1.2.1"
 koin = "4.1.1"
@@ -94,6 +99,9 @@ androidx-activity-compose = { group = "androidx.activity", name = "activity-comp
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "androidxAppCompat" }
 androidx-benchmark-macro = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "androidxMacroBenchmark" }
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "androidxBrowser" }
+androidx-camera-camera2-v130 = { module = "androidx.camera:camera-camera2", version.ref = "cameraCamera2" }
+androidx-camera-lifecycle-v130 = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraLifecycle" }
+androidx-camera-view-v130 = { module = "androidx.camera:camera-view", version.ref = "cameraView" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout" }
@@ -136,6 +144,7 @@ androidx-tracing-ktx = { group = "androidx.tracing", name = "tracing-ktx", versi
 androidx-window-manager = { module = "androidx.window:window", version.ref = "androidxWindowManager" }
 androidx-work-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "androidxWork" }
 androidx-work-testing = { group = "androidx.work", name = "work-testing", version.ref = "androidxWork" }
+base58 = { module = "io.github.novacrypto:Base58", version.ref = "base58" }
 coil-kt = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil" }
 coil-kt-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-kt-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
@@ -165,6 +174,7 @@ retrofit-v290 = { module = "com.squareup.retrofit2:retrofit", version.ref = "ret
 retrofit2-kotlinx-serialization-converter = { module = "com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter", version.ref = "retrofit2KotlinxSerializationConverter" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 robolectric-shadows = { group = "org.robolectric", name = "shadows-framework", version.ref = "robolectric" }
+text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "textRecognition" }
 tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tinkAndroid" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }

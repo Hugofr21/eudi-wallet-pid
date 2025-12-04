@@ -45,7 +45,7 @@ dependencies {
     implementation(libs.transport.runtime)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
-    implementation("io.github.novacrypto:Base58:2022.01.17")
+    implementation(libs.base58)
 
     testImplementation(project(LibraryModule.TestLogic.path))
 
