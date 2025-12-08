@@ -295,12 +295,12 @@ private fun Content(
             config = state.ShraringVc,
             onActionClick = {
                 onEventSent(
-                    Event.SignWebFidoCard.SignWebFidoPressed
+                    Event.ScannerCameraCard.ScannerCameraCardPressed
                 )
             },
             onLearnMoreClick = {
                 onEventSent(
-                    Event.SignWebFidoCard.LearnMorePressed
+                    Event.ScannerCameraCard.LearnMorePressed
                 )
             },
             base = LightTeal

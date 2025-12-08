@@ -11,6 +11,8 @@ sealed class MrzDocument {
     abstract val isValid: Boolean
     abstract val rawLines: List<String>
 
+    abstract val expiryDate: String?
+
     /**
      * Passport - TD3 (2 linhas × 44 chars)
      */
@@ -20,6 +22,7 @@ sealed class MrzDocument {
         override val dateOfExpiry: String,
         override val nationality: String,
         override val sex: String,
+        override val expiryDate: String? = null,
         val issuingCountry: String,
         val surname: String,
         val givenNames: String,
@@ -45,6 +48,7 @@ sealed class MrzDocument {
         override val dateOfExpiry: String,
         override val nationality: String,
         override val sex: String,
+        override val expiryDate: String? = null,
         val issuingCountry: String,
         val surname: String,
         val givenNames: String,
@@ -69,6 +73,7 @@ sealed class MrzDocument {
         override val dateOfExpiry: String,
         override val nationality: String,
         override val sex: String,
+        override val expiryDate: String? = null,
         val issuingCountry: String,
         val surname: String,
         val givenNames: String,

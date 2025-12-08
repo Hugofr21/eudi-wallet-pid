@@ -24,6 +24,7 @@ import eu.europa.ec.commonfeature.config.RequestUriConfig
 import eu.europa.ec.corelogic.di.getOrCreatePresentationScope
 import eu.europa.ec.dashboardfeature.interactor.HomeInteractor
 import eu.europa.ec.dashboardfeature.interactor.HomeInteractorGetUserNameViaMainPidDocumentPartialState
+import eu.europa.ec.dashboardfeature.ui.dashboard.DashboardScreen
 import eu.europa.ec.dashboardfeature.ui.home.HomeScreenBottomSheetContent.Bluetooth
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
@@ -79,6 +80,14 @@ sealed class Event : ViewEvent {
         data object LearnMorePressed : Event()
 
     }
+
+    sealed class ScannerCameraCard : Event() {
+        data object ScannerCameraCardPressed : Event()
+        data object LearnMorePressed : Event()
+
+    }
+
+
 
     sealed class BottomSheet : Event() {
         data class UpdateBottomSheetState(val isOpen: Boolean) : BottomSheet()
@@ -257,6 +266,22 @@ class HomeViewModel(
             )
 
             Event.SignWebFidoCard.SignWebFidoPressed -> TODO()
+
+            Event.ScannerCameraCard.ScannerCameraCardPressed -> {
+                navigateScreenScanner()
+            }
+
+            else -> {
+
+            }
+        }
+    }
+
+    private fun navigateScreenScanner(){
+        setEffect {
+            Effect.Navigation.SwitchScreen(
+                screenRoute = DashboardScreens.ScannerCamera.screenName
+            )
         }
     }
 

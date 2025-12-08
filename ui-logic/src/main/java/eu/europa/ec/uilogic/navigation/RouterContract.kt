@@ -79,6 +79,8 @@ sealed class DashboardScreens {
 
     data object SharingData : Screen(name = "SHARING_DATA")
 
+    data object ScannerCamera : Screen(name = "SCANNER_CAMERA")
+
 
 }
 

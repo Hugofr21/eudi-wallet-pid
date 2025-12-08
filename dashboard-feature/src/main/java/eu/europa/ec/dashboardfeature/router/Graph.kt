@@ -25,20 +25,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
-import eu.europa.ec.backuplogic.ui.backup.BackupScreen
 import eu.europa.ec.dashboardfeature.BuildConfig
 import eu.europa.ec.dashboardfeature.ui.dashboard.DashboardScreen
 import eu.europa.ec.dashboardfeature.ui.did.qrcode.SharingVcScreen
 import eu.europa.ec.dashboardfeature.ui.document_sign.DocumentSignScreen
 import eu.europa.ec.dashboardfeature.ui.documents.detail.DocumentDetailsScreen
 import eu.europa.ec.dashboardfeature.ui.profile.ProfileScreen
+import eu.europa.ec.dashboardfeature.ui.scanner.ScannerScreen
 import eu.europa.ec.dashboardfeature.ui.settings.SettingsScreen
 import eu.europa.ec.dashboardfeature.ui.transactions.detail.TransactionDetailsScreen
 import eu.europa.ec.dashboardfeature.ui.wifi.info.InfoWifiAware
-import eu.europa.ec.uilogic.navigation.BackupScreens
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.ModuleRoute
 import eu.europa.ec.uilogic.navigation.WIFIScreens
+import org.koin.android.annotation.KoinViewModel
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -199,6 +199,10 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
 
         composable(DashboardScreens.SharingData.screenRoute) {
             SharingVcScreen(navController, koinViewModel())
+        }
+
+        composable(DashboardScreens.ScannerCamera.screenRoute) {
+            ScannerScreen(navController, koinViewModel())
         }
 
 

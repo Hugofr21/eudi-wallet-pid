@@ -36,8 +36,10 @@ moduleConfig {
 
 dependencies {
     implementation(project(LibraryModule.BackupLogic.path))
+    implementation(project(LibraryModule.MrzScannerLogic.path))
     implementation(libs.zxing)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.camera.view)
 }
 
 excludeFromKoverReport(
