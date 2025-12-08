@@ -26,6 +26,12 @@ import java.time.Duration
 
 interface WalletCoreConfig {
 
+    /**
+     * Host for the Wallet Provider.
+     */
+    val walletProviderHost: String
+
+
     val vciConfig: List<OpenId4VciManager.Config>
 
     /**

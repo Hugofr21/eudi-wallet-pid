@@ -39,12 +39,15 @@ import eu.europa.ec.corelogic.controller.WalletLotlController
 import eu.europa.ec.corelogic.controller.WalletLotlControllerImpl
 import eu.europa.ec.corelogic.controller.wifi.WifiAwareServerController
 import eu.europa.ec.corelogic.controller.wifi.WifiAwareServerControllerImpl
+import eu.europa.ec.corelogic.provider.WalletCoreAttestationProvider
+import eu.europa.ec.corelogic.provider.WalletCoreAttestationProviderImpl
 import eu.europa.ec.eudi.wallet.EudiWallet
+import eu.europa.ec.networklogic.repository.WalletAttestationRepository
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.storagelogic.dao.BookmarkDao
 import eu.europa.ec.storagelogic.dao.RevokedDocumentDao
 import eu.europa.ec.storagelogic.dao.TransactionLogDao
-import okhttp3.OkHttpClient
+import io.ktor.client.HttpClient
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
@@ -62,6 +65,23 @@ class LogicCoreModule
 
 
 
+@Single
+fun provideEudiWallet(
+    context: Context,
+    walletCoreConfig: WalletCoreConfig,
+    walletCoreLogController: WalletCoreLogController,
+    walletCoreTransactionLogController: WalletCoreTransactionLogController,
+    walletCoreAttestationProvider: WalletCoreAttestationProvider,
+    httpClient: HttpClient
+): EudiWallet = EudiWallet(
+    context = context,
+    config = walletCoreConfig.config,
+    walletProvider = walletCoreAttestationProvider
+) {
+    withLogger(walletCoreLogController)
+    withTransactionLogger(walletCoreTransactionLogController)
+    withKtorHttpClientFactory { httpClient }
+}
 
 @Single
 fun provideWalletCoreConfig(
@@ -70,17 +90,6 @@ fun provideWalletCoreConfig(
     context = context,
 )
 
-
-@Single
-fun provideEudiWallet(
-    context: Context,
-    walletCoreConfig: WalletCoreConfig,
-    walletCoreLogController: WalletCoreLogController,
-    walletCoreTransactionLogController: WalletCoreTransactionLogController
-): EudiWallet = EudiWallet(context, walletCoreConfig.config) {
-    withLogger(walletCoreLogController)
-    withTransactionLogger(walletCoreTransactionLogController)
-}
 
 
 @Provides
@@ -93,16 +102,23 @@ fun provideWalletConfigNetworkConfig(
 
 @Single
 fun provideWalletLotlController(
-    client: OkHttpClient,
-    configLogic: ConfigLogic,
-     context: Context,
+    client: HttpClient,
+    resourceProvider: ResourceProvider,
 ): WalletLotlController = WalletLotlControllerImpl(
     client,
-    context,
-    configLogic
+    resourceProvider,
 )
 
 
+@Single
+fun provideWalletCoreAttestationProvider(
+    walletAttestationRepository: WalletAttestationRepository,
+    walletCoreConfig: WalletCoreConfig
+): WalletCoreAttestationProvider =
+    WalletCoreAttestationProviderImpl(
+        walletCoreConfig = walletCoreConfig,
+        walletAttestationRepository = walletAttestationRepository
+    )
 
 
 @Single
@@ -166,6 +182,7 @@ fun provideWalletLiveDataControllerImpl(
     wifiAwareServerController,
     context  = context
     )
+
 
 
 /**

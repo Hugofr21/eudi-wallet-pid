@@ -3,11 +3,11 @@ accompanist = "0.37.3"
 androidDatabaseSqlcipher = "4.5.4"
 androidDesugarJdkLibs = "2.1.5"
 androidGradlePlugin = "8.13.0"
-androidxActivity = "1.11.0"
+androidxActivity = "1.12.1"
 androidxAppCompat = "1.7.1"
 androidxBrowser = "1.9.0"
-androidxComposeBom = "2025.11.00"
-androidxComposeRuntimeTracing = "1.9.4"
+androidxComposeBom = "2025.12.00"
+androidxComposeRuntimeTracing = "1.10.0"
 androidxCore = "1.17.0"
 androidxCoreSplashscreen = "1.2.0"
 androidxDataStore = "1.1.7"
@@ -76,12 +76,12 @@ slf4j = "2.0.17"
 gson = "2.13.2"
 googlePhoneNumber = "9.0.17"
 zxing = "3.5.3"
-eudiWalletCore = "0.21.0"
+eudiWalletCore = "0.22.0"
 cameraCore = "1.5.1"
 owaspDependencyCheck = "12.1.8"
 material3 = "1.4.0"
 kover = "0.9.3"
-sonar = "7.0.1.6134"
+sonar = "7.2.0.6526"
 baselineprofile = "1.4.1"
 timber = "5.0.1"
 treessence = "1.1.2"
@@ -161,12 +161,15 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 kotlinx-coroutines-guava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 kotlinx-serialization-json-v151 = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJsonVersion" }
 lint-api = { group = "com.android.tools.lint", name = "lint-api", version.ref = "lint" }
 moshi = { module = "com.squareup.moshi:moshi", version.ref = "moshi" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshiKotlin" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobuf" }
 protobuf-protoc = { group = "com.google.protobuf", name = "protoc", version.ref = "protobuf" }
 retrofit-core = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }

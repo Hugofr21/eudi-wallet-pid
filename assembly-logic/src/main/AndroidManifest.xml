@@ -260,6 +260,17 @@
                     android:scheme="${authWebFidoScheme}" />
 
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="${haipOpenid4vpHost}"
+                    android:scheme="${haipOpenid4vpScheme}" />
+
+            </intent-filter>
         </activity>
 
     </application>

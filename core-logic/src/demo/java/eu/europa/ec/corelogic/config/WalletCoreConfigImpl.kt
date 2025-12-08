@@ -86,6 +86,7 @@ internal class WalletCoreConfigImpl(
                                 BuildConfig.ASP_OPENID4VP_SCHEME,
                                 BuildConfig.AGE_OPENID4VP_SCHEME,
                                 BuildConfig.CREDENTIAL_OFFER_SCHEME,
+                                BuildConfig.HAIP_OPENID4VP_SCHEME
                             ) 
                         )
                         withFormats(
@@ -118,32 +119,30 @@ internal class WalletCoreConfigImpl(
     override val vciConfig: List<OpenId4VciManager.Config>
         get() = listOf(
 
-            OpenId4VciManager.Config.Builder().apply {
-                withIssuerUrl(issuerUrl = "https://ec.issuer.eudiw.dev")
-                withClientId(clientId = "wallet-dev")
-                withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
-                withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported(
-                    algorithm = Algorithm.ESP256
-                ))
-            }.build(),
-
-            OpenId4VciManager.Config.Builder().apply {
-                withIssuerUrl(issuerUrl = "https://issuer-backend.eudiw.dev")
-                withClientId(clientId = "wallet-dev")
-                withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
-                withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported(
-                    algorithm =   Algorithm.ESP256
-                ))
-            }.build(),
+            OpenId4VciManager.Config.Builder()
+                .withIssuerUrl(issuerUrl = "https://issuer.eudiw.dev")
+                .withClientAuthenticationType(OpenId4VciManager.ClientAuthenticationType.AttestationBased)
+                .withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
+                .withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
+                .withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
+                .build(),
+            OpenId4VciManager.Config.Builder()
+                .withIssuerUrl(issuerUrl = "https://issuer-backend.eudiw.dev")
+                .withClientAuthenticationType(OpenId4VciManager.ClientAuthenticationType.AttestationBased)
+                .withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
+                .withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
+                .withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
+                .build()
 
 //            OpenId4VciManager.Config.Builder().apply {
 //                withIssuerUrl(issuerUrl = "https://issuer.dev.ageverification.dev")
-//                withClientId(clientId = "wallet-dev")
+//                withClientAuthenticationType(OpenId4VciManager.ClientAuthenticationType.None("wallet-dev"))
 //                withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
 //                withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
 //                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
 //            }.build()
         )
+
+        override val walletProviderHost: String
+            get() = "https://wallet-provider.eudiw.dev"
 }

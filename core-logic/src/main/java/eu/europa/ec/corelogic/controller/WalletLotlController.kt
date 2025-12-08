@@ -4,12 +4,15 @@ package eu.europa.ec.corelogic.controller
 import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.corelogic.model.ProviderCategory
 import eu.europa.ec.corelogic.model.TslLocationInfo
+import eu.europa.ec.resourceslogic.provider.ResourceProvider
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsBytes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
@@ -42,9 +45,8 @@ interface WalletLotlController{
  */
 
 class WalletLotlControllerImpl(
-    private val client: OkHttpClient,
-    private val context: android.content.Context,
-    private val configLogic: ConfigLogic
+    private val client: HttpClient,
+    private val resourceProvider: ResourceProvider,
 ):WalletLotlController  {
     companion object {
         private const val LOG_FILE_PATTERN = "eudi-android-wallet-trust-list%g.json"
@@ -52,7 +54,7 @@ class WalletLotlControllerImpl(
         private const val FILE_COUNT_LIMIT = 10
     }
 
-    private val logsDir = File(context.filesDir.absolutePath + "/trust_list")
+    private val logsDir = File(resourceProvider.provideContext().filesDir.absolutePath + "/trust_list")
     private val trustListJsonFile = File(logsDir, LOG_FILE_PATTERN)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -105,31 +107,20 @@ class WalletLotlControllerImpl(
         return File(logsDir, LOG_FILE_PATTERN.replace("%g", nextIndex.toString()))
     }
 
-    suspend fun fetchAllQtsp(): List<TslLocationInfo> = withContext(Dispatchers.IO) {
+    suspend fun fetchAllQtsp(): List<TslLocationInfo> {
         val lotlUrl = "https://ec.europa.eu/tools/lotl/eu-lotl.xml"
         val lotlStream = httpGetAsStream(lotlUrl)
-        val tslList = parseLotlLocationsWithCategory(lotlStream)
-
-//        println("Trust List Providers:")
-//        tslList.forEach {
-//            println("${it.country} - ${it.tslUrl} - ${it.category}")
-//        }
-
-        tslList
+        return parseLotlLocationsWithCategory(lotlStream)
     }
 
-
-    private fun httpGetAsStream(url: String): InputStream {
-        val req = Request.Builder().url(url).get().build()
-        client.newCall(req).execute().use { resp ->
-            if (!resp.isSuccessful) {
-                throw IOException("HTTP ${resp.code} when loading $url")
-            }
-            val bytes = resp.body!!.bytes()
+    private suspend fun httpGetAsStream(url: String): InputStream {
+        try {
+            val bytes: ByteArray = client.get(url).bodyAsBytes()
             return ByteArrayInputStream(bytes)
+        } catch (e: Exception) {
+            throw IOException("HTTP error when loading $url", e)
         }
     }
-
 
     private fun parseLotlLocationsWithCategory(stream: InputStream): List<TslLocationInfo> {
         val parser = XmlPullParserFactory.newInstance().newPullParser().apply {

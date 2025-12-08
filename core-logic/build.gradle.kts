@@ -36,6 +36,8 @@ dependencies {
     implementation(project(LibraryModule.BusinessLogic.path))
     implementation(project(LibraryModule.StorageLogic.path))
     implementation(project(LibraryModule.AuthenticationLogic.path))
+    implementation(project(LibraryModule.NetworkLogic.path))
+
     implementation(libs.androidx.biometric)
     implementation(libs.moshi.kotlin)
     implementation(libs.retrofit.gson)

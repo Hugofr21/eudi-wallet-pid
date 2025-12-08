@@ -16,9 +16,9 @@
 
 package eu.europa.ec.networklogic.model.response
 
-import com.google.gson.annotations.SerializedName
-
-data class DummyResponse(
-    @SerializedName("id")
-    val clientId: String?
-)
+//import com.google.gson.annotations.SerializedName
+//
+//data class DummyResponse(
+//    @SerializedName("id")
+//    val clientId: String?
+//)

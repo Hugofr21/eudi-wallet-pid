@@ -16,10 +16,7 @@ import kotlinx.serialization.json.putJsonObject
 import retrofit2.Response
 import com.nimbusds.openid.connect.sdk.Nonce
 import eu.europa.ec.businesslogic.provider.UuidProvider
-import eu.europa.ec.eudi.openid4vp.JwkSetSource
-import eu.europa.ec.eudi.openid4vp.PreregisteredClient
 import eu.europa.ec.resourceslogic.R
-import eu.europa.ec.verifierfeature.controller.verifier.VerifierApiSwaggerController
 import eu.europa.ec.verifierfeature.model.WalletResponse
 import kotlinx.serialization.json.Json
 
@@ -31,7 +28,7 @@ interface VerifierAgeProofController {
     suspend fun validateSdJwtVc(sdJwtVc: String, nonce: String, issuerChain: String?): JsonObject
     fun getLastNonce(): String
 
-    suspend fun asPreregisteredClient(): PreregisteredClient
+//    suspend fun asPreregisteredClient(): PreregisteredClient
 
     suspend fun getWalletResponse(
         presentationId: String,
@@ -58,24 +55,24 @@ class VerifierAgeProofControllerImpl(
     }
 
 
-    override suspend fun asPreregisteredClient(): PreregisteredClient {
-        val resp = api.getPublicKeysJson()
-        if (!resp.isSuccessful) {
-            throw RuntimeException("Failed to get public JWKs: HTTP ${resp.code()}")
-        }
-        val jwksJson = resp.body()!!
-
-        val jwkSource = JwkSetSource.ByValue(jwksJson)
-
-        val jwsAlg = JWSAlgorithm.ES256
-
-        return PreregisteredClient(
-            clientId = "verifier-backend.eudiw.dev",
-            legalName = "verifier age proof age",
-            jarConfig = jwsAlg to jwkSource
-        )
-
-    }
+//    override suspend fun asPreregisteredClient(): PreregisteredClient {
+//        val resp = api.getPublicKeysJson()
+//        if (!resp.isSuccessful) {
+//            throw RuntimeException("Failed to get public JWKs: HTTP ${resp.code()}")
+//        }
+//        val jwksJson = resp.body()!!
+//
+//        val jwkSource = JwkSetSource.ByValue(jwksJson)
+//
+//        val jwsAlg = JWSAlgorithm.ES256
+//
+//        return PreregisteredClient(
+//            clientId = "verifier-backend.eudiw.dev",
+//            legalName = "verifier age proof age",
+//            jarConfig = jwsAlg to jwkSource
+//        )
+//
+//    }
 
     override suspend fun getWalletResponse(
         presentationId: String,

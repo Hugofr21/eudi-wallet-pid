@@ -16,27 +16,27 @@
 
 package eu.europa.ec.networklogic.api
 
-import eu.europa.ec.networklogic.model.request.DummyRequest
-import eu.europa.ec.networklogic.model.response.DummyResponse
-import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.POST
-
-interface Api {
-    @POST("test/path")
-    suspend fun test(
-        @Body body: DummyRequest
-    ): Response<DummyResponse>
-}
-
-interface ApiClient {
-    suspend fun test(
-        body: DummyRequest
-    ): Response<DummyResponse>
-}
-
-class ApiClientImpl(private val apiService: Api) : ApiClient {
-    override suspend fun test(body: DummyRequest): Response<DummyResponse> {
-        return apiService.test(body)
-    }
-}
+//import eu.europa.ec.networklogic.model.request.DummyRequest
+//import eu.europa.ec.networklogic.model.response.DummyResponse
+//import retrofit2.Response
+//import retrofit2.http.Body
+//import retrofit2.http.POST
+//
+//interface Api {
+//    @POST("test/path")
+//    suspend fun test(
+//        @Body body: DummyRequest
+//    ): Response<DummyResponse>
+//}
+//
+//interface ApiClient {
+//    suspend fun test(
+//        body: DummyRequest
+//    ): Response<DummyResponse>
+//}
+//
+//class ApiClientImpl(private val apiService: Api) : ApiClient {
+//    override suspend fun test(body: DummyRequest): Response<DummyResponse> {
+//        return apiService.test(body)
+//    }
+//}

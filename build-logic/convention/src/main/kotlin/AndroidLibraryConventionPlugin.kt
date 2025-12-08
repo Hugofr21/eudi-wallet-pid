@@ -64,8 +64,11 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             val aspScheme= "avsp" // age proof
             val avspHost = "*"
 
-            val lissiScheme = "haip" // lissi
+            val lissiScheme = "haip"
             val lissiHost = "*"
+
+            val haipOpenId4VpScheme = "haip-vp"
+            val haipOpenid4VpHost = "*"
 
             val lissiScheme2 = "https://oob.lissi.io"
 
@@ -116,6 +119,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     addConfigField("CREDENTIAL_OFFER_SCHEME", credentialOfferScheme)
                     addConfigField("ISSUE_AUTHORIZATION_SCHEME", openId4VciAuthorizationScheme)
                     addConfigField("ISSUE_AUTHORIZATION_HOST", openId4VciAuthorizationHost)
+                    addConfigField("HAIP_OPENID4VP_SCHEME", haipOpenId4VpScheme)
                     addConfigField(
                         "ISSUE_AUTHORIZATION_DEEPLINK",
                         "$openId4VciAuthorizationScheme://$openId4VciAuthorizationHost"
@@ -157,6 +161,9 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     manifestPlaceholders["mdocOpenid4vpHost"] = mdocOpenid4VpHost
                     manifestPlaceholders["openid4vpScheme"] = openId4VpScheme
                     manifestPlaceholders["openid4vpHost"] = openid4VpHost
+
+                    manifestPlaceholders["haipOpenid4vpScheme"] = haipOpenId4VpScheme
+                    manifestPlaceholders["haipOpenid4vpHost"] = haipOpenid4VpHost
 
                     // Manifest placeholders used for OpenId4VCI
                     manifestPlaceholders["credentialOfferHost"] = credentialOfferHost
