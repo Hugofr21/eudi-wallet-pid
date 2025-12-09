@@ -4,8 +4,7 @@ import project.convention.logic.kover.excludeFromKoverReport
 
 
 plugins {
-    id("project.android.library")
-    id("project.wallet.core")
+    id("project.android.feature")
 }
 
 android {
@@ -25,6 +24,7 @@ dependencies {
     implementation(libs.androidx.camera.camera2.v130)
     implementation(libs.androidx.camera.lifecycle.v130)
     implementation(libs.androidx.camera.view.v130)
+    implementation(libs.androidx.monitor)
 }
 
 excludeFromKoverReport(

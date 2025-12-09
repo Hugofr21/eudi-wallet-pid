@@ -18,7 +18,6 @@ package eu.europa.ec.corelogic.di
 
 import android.content.Context
 import com.google.android.datatransport.runtime.dagger.Provides
-import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.corelogic.config.WalletConfigNetworkConfig
@@ -31,7 +30,6 @@ import eu.europa.ec.corelogic.controller.WalletCoreLogController
 import eu.europa.ec.corelogic.controller.WalletCoreLogControllerImpl
 import eu.europa.ec.corelogic.controller.WalletCoreTransactionLogController
 import eu.europa.ec.corelogic.controller.WalletCoreTransactionLogControllerImpl
-import eu.europa.ec.corelogic.controller.WalletDidDocumentController
 import eu.europa.ec.corelogic.controller.WalletDidDocumentControllerImpl
 import eu.europa.ec.corelogic.controller.WalletLiveDataController
 import eu.europa.ec.corelogic.controller.WalletLiveDataControllerImpl

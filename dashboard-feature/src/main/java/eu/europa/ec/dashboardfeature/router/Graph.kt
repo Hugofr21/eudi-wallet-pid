@@ -38,11 +38,9 @@ import eu.europa.ec.dashboardfeature.ui.wifi.info.InfoWifiAware
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.ModuleRoute
 import eu.europa.ec.uilogic.navigation.WIFIScreens
-import org.koin.android.annotation.KoinViewModel
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
     navigation(
         startDestination = DashboardScreens.Dashboard.screenRoute,

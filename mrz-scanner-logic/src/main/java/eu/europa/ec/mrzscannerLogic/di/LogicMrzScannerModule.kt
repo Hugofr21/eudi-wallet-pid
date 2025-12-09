@@ -23,41 +23,37 @@ import org.koin.core.annotation.Single
 class LogicMrzScannerModule
 
 @Single
-fun provideOcrCorrectionService(): OcrCorrectionService = OcrCorrectionServiceImpl()
+fun provideOcrCorrectionService(): OcrCorrectionService =
+    OcrCorrectionServiceImpl()
 
 @Single
-fun provideChecksumValidationService(): ChecksumValidationService = ChecksumValidationServiceImpl()
+fun provideChecksumValidationService(): ChecksumValidationService =
+    ChecksumValidationServiceImpl()
 
 @Single
 fun provideMrzParserService(
-     checksumService: ChecksumValidationService,
-     correctionService: OcrCorrectionService
-): MrzParserService = MrzParserServiceImpl(
-    checksumService = checksumService,
-    correctionService = correctionService
-)
-
-
+    checksumService: ChecksumValidationService,
+    correctionService: OcrCorrectionService
+): MrzParserService =
+    MrzParserServiceImpl(
+        checksumService = checksumService,
+        correctionService = correctionService
+    )
 
 @Single
-fun provideTextRecognitionService(): TextRecognitionService = TextRecognitionServiceImpl()
-
+fun provideTextRecognitionService(): TextRecognitionService =
+    TextRecognitionServiceImpl()
 
 
 @Single
 fun provideMrzScanController(
     resourceProvider: ResourceProvider,
-    lifecycleOwner: LifecycleOwner,
-    previewView: PreviewView,
     parserService: MrzParserService,
-    textRecognitionService: TextRecognitionService
+    textRecognitionService: TextRecognitionService,
 ): MrzScanController =
     MrzScanControllerImpl(
         resourceProvider = resourceProvider,
-        lifecycleOwner =lifecycleOwner,
-        previewView = previewView,
         parserService = parserService,
         textRecognitionService = textRecognitionService
-
     )
 

@@ -27,7 +27,8 @@ data class State(
     val isCameraAvailability: CameraAvailability? = null,
     val scanState: MrzScanState = MrzScanState.Idle,
     val scannedDocument: MrzDocument? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isPermissionChecked: Boolean = false
 ) : ViewState
 
 sealed class Event : ViewEvent {
@@ -57,6 +58,7 @@ sealed class Event : ViewEvent {
     object ShowHelp : Event()
     object ConfirmDocument : Event()
     object OpenAppSettings : Event()
+    object CheckPermissions : Event()
 }
 
 sealed class Effect : ViewSideEffect {
@@ -73,6 +75,7 @@ sealed class Effect : ViewSideEffect {
 
     }
 
+
     sealed class ShowDialog : Effect() {
         object Help : ShowDialog()
     }
@@ -84,13 +87,21 @@ class ScannerViewModel(
     private val scannerInteractor: ScannerInteractor,
 ) : MviViewModel<Event, State, Effect>() {
 
+    private var lifecycleOwner: LifecycleOwner? = null
+    private var previewView: PreviewView? = null
 
     override fun setInitialState(): State {
         return State(
             isLoading = false,
             isCameraAvailability = null,
-            scanState = MrzScanState.Idle
+            scanState = MrzScanState.Idle,
+            isPermissionChecked = false
         )
+    }
+
+    init {
+        // Verificar permissões ao inicializar
+        checkInitialPermissions()
     }
 
     override fun handleEvents(event: Event) {
@@ -102,6 +113,8 @@ class ScannerViewModel(
             Event.GoBack -> setEffect { Effect.Navigation.Pop }
 
             is Event.OnPermissionStateChanged -> handlePermissionChanged(event)
+            Event.CheckPermissions -> checkInitialPermissions()
+
             is Event.OnScanResult -> handleScanResult(event)
             is Event.OnScanError -> handleScanError(event)
 
@@ -109,295 +122,327 @@ class ScannerViewModel(
             is Event.OnImageSelected -> handleImageSelected(event)
             Event.ShowHelp -> showHelpDialog()
             Event.ConfirmDocument -> confirmDocument()
-            Event.OpenAppSettings -> setEffect {
-                Effect.Navigation.OnAppSettings
-            }
+            Event.OpenAppSettings -> setEffect { Effect.Navigation.OnAppSettings }
         }
-
     }
 
-        private fun checkInitialPermissions() {
-            viewModelScope.launch {
+    // ============================================
+    // Verificação de Permissões
+    // ============================================
+
+    private fun checkInitialPermissions() {
+        viewModelScope.launch {
+            // Marcar que já verificou
+            setState { copy(isPermissionChecked = true) }
+
+            when {
+                !scannerInteractor.hasCameraPermission() -> {
+                    setState { copy(isCameraAvailability = CameraAvailability.NO_PERMISSION) }
+                }
+                !scannerInteractor.isCameraAvailable() -> {
+                    setState { copy(isCameraAvailability = CameraAvailability.DISABLED) }
+                }
+                else -> {
+                    // MUDANÇA: Se tem permissão, marcar como AVAILABLE imediatamente
+                    setState { copy(isCameraAvailability = CameraAvailability.AVAILABLE) }
+                }
+            }
+        }
+    }
+
+    // ============================================
+    // Inicialização do Scanner
+    // ============================================
+
+    private fun handleInitializeScanner(event: Event.InitializeScanner) {
+        viewModelScope.launch {
+            setState { copy(isLoading = true) }
+
+            try {
+                // Armazenar referências
+                lifecycleOwner = event.lifecycleOwner
+                previewView = event.previewView
+
+                // Verificar disponibilidade
                 when {
                     !scannerInteractor.hasCameraPermission() -> {
-                        setState { copy(isCameraAvailability = CameraAvailability.NO_PERMISSION) }
+                        setState {
+                            copy(
+                                isCameraAvailability = CameraAvailability.NO_PERMISSION,
+                                isLoading = false
+                            )
+                        }
                     }
                     !scannerInteractor.isCameraAvailable() -> {
-                        setState { copy(isCameraAvailability = CameraAvailability.DISABLED) }
+                        setState {
+                            copy(
+                                isCameraAvailability = CameraAvailability.DISABLED,
+                                isLoading = false
+                            )
+                        }
                     }
                     else -> {
-                        setState { copy(isCameraAvailability = CameraAvailability.UNKNOWN) }
-                    }
-                }
-            }
-        }
-
-        private fun handleInitializeScanner(event: Event.InitializeScanner) {
-            viewModelScope.launch {
-                setState { copy(isLoading = true) }
-
-                try {
-                    // Inicializa o controller com os componentes da UI
-//                    scannerInteractor.initializeController(
-//                        lifecycleOwner = event.lifecycleOwner,
-//                        previewView = event.previewView
-//                    )
-
-                    // Verifica disponibilidade final
-                    when {
-                        !scannerInteractor.isCameraAvailable() -> {
-                            setState {
-                                copy(
-                                    isCameraAvailability = CameraAvailability.DISABLED,
-                                    isLoading = false
-                                )
-                            }
+                        setState {
+                            copy(
+                                isCameraAvailability = CameraAvailability.AVAILABLE,
+                                isLoading = false
+                            )
                         }
-                        else -> {
-                            setState {
-                                copy(
-                                    isCameraAvailability = CameraAvailability.AVAILABLE,
-                                    isLoading = false
-                                )
-                            }
-                            // Inicia o scanning automaticamente
-                            startScanning()
-                        }
-                    }
-                } catch (e: Exception) {
-                    setState {
-                        copy(
-                            isLoading = false,
-                            errorMessage = "Erro ao inicializar câmera: ${e.message}",
-                            scanState = MrzScanState.Error("Falha na inicialização")
-                        )
+                        // IMPORTANTE: Iniciar scanning automático
+                        startScanning()
                     }
                 }
-            }
-        }
-
-        private fun handlePermissionChanged(event: Event.OnPermissionStateChanged) {
-            setState { copy(isCameraAvailability = event.availability) }
-
-            if (event.availability == CameraAvailability.AVAILABLE) {
-                // Permissão concedida, mas ainda precisa inicializar o controller
-                // Será feito quando a PreviewView estiver pronta
-            }
-        }
-
-        // ============================================
-        // Controle de Scanning
-        // ============================================
-
-        private fun startScanning() {
-            viewModelScope.launch {
-                try {
-                    scannerInteractor.startScanning().collect { scanState ->
-                        setState { copy(scanState = scanState) }
-
-                        when (scanState) {
-                            is MrzScanState.Success -> {
-                                setEvent(Event.OnScanResult(scanState.document))
-                            }
-                            is MrzScanState.Error -> {
-                                setEvent(Event.OnScanError(scanState.message))
-                            }
-                            else -> { /* Atualizar UI state apenas */ }
-                        }
-                    }
-                } catch (e: Exception) {
-                    setState {
-                        copy(
-                            scanState = MrzScanState.Error("Erro ao iniciar scanning"),
-                            errorMessage = e.message
-                        )
-                    }
-                }
-            }
-        }
-
-        private fun stopScanning() {
-            scannerInteractor.stopScanning()
-            setState { copy(scanState = MrzScanState.Idle) }
-        }
-
-        private fun retryScanning() {
-            setState {
-                copy(
-                    scannedDocument = null,
-                    scanState = MrzScanState.Idle,
-                    errorMessage = null
-                )
-            }
-            startScanning()
-        }
-
-        // ============================================
-        // Tratamento de Resultados
-        // ============================================
-
-        private fun handleScanResult(event: Event.OnScanResult) {
-            setState {
-                copy(
-                    scannedDocument = event.document,
-                    scanState = MrzScanState.Success(event.document)
-                )
-            }
-
-            // Para o scanning quando obtém resultado
-            stopScanning()
-
-            // Processa o documento baseado no tipo
-            handleDocumentByType(event.document)
-        }
-
-        private fun handleScanError(event: Event.OnScanError) {
-            setState {
-                copy(
-                    errorMessage = event.message,
-                    scanState = MrzScanState.Error(event.message)
-                )
-            }
-
-            // Pode tentar reiniciar automaticamente após um erro
-            viewModelScope.launch {
-                kotlinx.coroutines.delay(2000)
-                if (viewState.value.scanState is MrzScanState.Error) {
-                    retryScanning()
-                }
-            }
-        }
-
-        private fun handleDocumentByType(document: MrzDocument) {
-            when (document) {
-                is MrzDocument.Passport -> handlePassport(document)
-                is MrzDocument.IdCard -> handleIdCard(document)
-                is MrzDocument.DrivingLicense -> handleDrivingLicense(document)
-            }
-        }
-
-        // ============================================
-        // Processamento por Tipo de Documento
-        // ============================================
-
-        private fun handlePassport(passport: MrzDocument.Passport) {
-            // Validações específicas de passaporte
-            viewModelScope.launch {
-                // Aqui você pode:
-                // - Validar dados do passaporte
-                // - Salvar no banco de dados
-                // - Fazer chamadas à API
-                // - Navegar para próxima tela
-
-                // Exemplo: validar checksum
-                val isValid = validatePassportChecksum(passport)
-                if (!isValid) {
-                    setState {
-                        copy(
-                            scanState = MrzScanState.Error("Passaporte inválido"),
-                            errorMessage = "Checksum inválido"
-                        )
-                    }
-                }
-            }
-        }
-
-        private fun handleIdCard(idCard: MrzDocument.IdCard) {
-            // Validações específicas de cartão de cidadão
-            viewModelScope.launch {
-                // Validar número de documento português
-                val isValid = validatePortugueseIdNumber(idCard.documentNumber)
-                if (!isValid) {
-                    setState {
-                        copy(
-                            scanState = MrzScanState.Error("Cartão inválido"),
-                            errorMessage = "Número de documento inválido"
-                        )
-                    }
-                }
-            }
-        }
-
-        private fun handleDrivingLicense(license: MrzDocument.DrivingLicense) {
-            // Validações específicas de carta de condução
-            viewModelScope.launch {
-                // Processar categorias de habilitação
-            }
-        }
-
-        // ============================================
-        // Ações do Usuário
-        // ============================================
-
-        private fun triggerManualCapture() {
-            // Pode pausar o scanning contínuo e capturar um frame específico
-            viewModelScope.launch {
-                setState { copy(scanState = MrzScanState.Processing()) }
-                // Implementar lógica de captura manual
-            }
-        }
-
-        private fun handleImageSelected(event: Event.OnImageSelected) {
-            // Processar imagem da galeria
-            viewModelScope.launch {
-                setState { copy(scanState = MrzScanState.Processing()) }
-
-                try {
-                    // Aqui você processaria a imagem do URI
-                    // scannerInteractor.processImage(event.uri)
-                } catch (e: Exception) {
-                    setState {
-                        copy(
-                            scanState = MrzScanState.Error("Erro ao processar imagem"),
-                            errorMessage = e.message
-                        )
-                    }
-                }
-            }
-        }
-
-        private fun showHelpDialog() {
-            setEffect { Effect.ShowDialog.Help }
-        }
-
-        private fun confirmDocument() {
-            val document = viewState.value.scannedDocument
-            if (document != null) {
-                // Navegar para próxima tela com o documento
-                setEffect {
-                    Effect.Navigation.SwitchScreen(
-                        screenRoute = "document_details/${document.documentNumber}",
-                        popUpToScreenRoute = "scanner",
-                        inclusive = true
+            } catch (e: Exception) {
+                setState {
+                    copy(
+                        isLoading = false,
+                        errorMessage = "Erro ao inicializar câmera: ${e.message}",
+                        scanState = MrzScanState.Error("Falha na inicialização")
                     )
                 }
             }
         }
+    }
 
-        // ============================================
-        // Validações
-        // ============================================
-
-        private fun validatePassportChecksum(passport: MrzDocument.Passport): Boolean {
-            // Implementar validação de checksum do passaporte
-            return true // Placeholder
+    private fun handlePermissionChanged(event: Event.OnPermissionStateChanged) {
+        setState {
+            copy(
+                isCameraAvailability = event.availability,
+                isPermissionChecked = true
+            )
         }
 
-        private fun validatePortugueseIdNumber(documentNumber: String): Boolean {
-            // Validar formato do número de cartão de cidadão português
-            // Formato: 00000000 0 ZZ0 (8 dígitos + dígito de controlo + 3 caracteres)
-            val regex = Regex("^[0-9]{8}\\s?[0-9]\\s?[A-Z0-9]{3}$")
-            return documentNumber.matches(regex)
+        // Se permissão foi concedida e ainda não inicializou, esperar pela PreviewView
+        // O InitializeScanner vai ser chamado pelo LaunchedEffect da UI
+    }
+
+    // ============================================
+    // Controle de Scanning CONTÍNUO
+    // ============================================
+
+    private fun startScanning() {
+        val owner = lifecycleOwner
+        val preview = previewView
+
+        if (owner == null || preview == null) {
+            setState {
+                copy(
+                    scanState = MrzScanState.Error("Câmera não inicializada"),
+                    errorMessage = "LifecycleOwner ou PreviewView não disponível"
+                )
+            }
+            return
         }
 
-        // ============================================
-        // Limpeza
-        // ============================================
+        viewModelScope.launch {
+            try {
+                // SCANNING CONTÍNUO: Vai continuar lendo documentos indefinidamente
+                scannerInteractor.startScanning(owner, preview).collect { scanState ->
+                    setState { copy(scanState = scanState) }
 
-        override fun onCleared() {
-            super.onCleared()
-            scannerInteractor.stopScanning()
+                    when (scanState) {
+                        is MrzScanState.Success -> {
+                            // Documento detectado com sucesso
+                            setEvent(Event.OnScanResult(scanState.document))
+
+                            // MUDANÇA: NÃO para o scanning automaticamente
+                            // Apenas mostra o resultado e continua escaneando
+                            // O usuário decide se quer parar ou continuar
+                        }
+                        is MrzScanState.Error -> {
+                            setEvent(Event.OnScanError(scanState.message))
+                            // Em caso de erro, continua tentando
+                        }
+                        else -> {
+                            // Estados intermediários: Idle, Initializing, Scanning, Processing
+                            // Apenas atualiza a UI
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                setState {
+                    copy(
+                        scanState = MrzScanState.Error("Erro ao iniciar scanning"),
+                        errorMessage = e.message
+                    )
+                }
+            }
+        }
+    }
+
+    private fun stopScanning() {
+        scannerInteractor.stopScanning()
+        setState {
+            copy(
+                scanState = MrzScanState.Idle,
+                scannedDocument = null // Limpar documento ao parar
+            )
+        }
+    }
+
+    private fun retryScanning() {
+        setState {
+            copy(
+                scannedDocument = null,
+                scanState = MrzScanState.Idle,
+                errorMessage = null
+            )
+        }
+        // Reiniciar o scanning
+        startScanning()
+    }
+
+    // ============================================
+    // Tratamento de Resultados
+    // ============================================
+
+    private fun handleScanResult(event: Event.OnScanResult) {
+        setState {
+            copy(
+                scannedDocument = event.document,
+                scanState = MrzScanState.Success(event.document)
+            )
         }
 
+        // MUDANÇA: NÃO para o scanning
+        // Agora o scanner continua rodando em background
+        // O usuário pode confirmar ou reler outro documento
 
+        // Validar documento automaticamente
+        handleDocumentByType(event.document)
+    }
+
+    private fun handleScanError(event: Event.OnScanError) {
+        setState {
+            copy(
+                errorMessage = event.message,
+                scanState = MrzScanState.Error(event.message)
+            )
+        }
+
+        // MUDANÇA: NÃO tenta reiniciar automaticamente
+        // O scanner já está em loop contínuo
+        // Apenas mostra o erro e continua escaneando
+    }
+
+    private fun handleDocumentByType(document: MrzDocument) {
+        println("Document type: ${document.javaClass.simpleName}")
+        when (document) {
+            is MrzDocument.Passport -> handlePassport(document)
+            is MrzDocument.IdCard -> handleIdCard(document)
+            is MrzDocument.DrivingLicense -> handleDrivingLicense(document)
+        }
+    }
+
+    // ============================================
+    // Processamento por Tipo de Documento
+    // ============================================
+
+    private fun handlePassport(passport: MrzDocument.Passport) {
+        viewModelScope.launch {
+            val isValid = validatePassportChecksum(passport)
+            if (!isValid) {
+                setState {
+                    copy(
+                        errorMessage = "Passaporte com checksum inválido"
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handleIdCard(idCard: MrzDocument.IdCard) {
+        viewModelScope.launch {
+            val isValid = validatePortugueseIdNumber(idCard.documentNumber)
+            if (!isValid) {
+                setState {
+                    copy(
+                        errorMessage = "Número de cartão de cidadão inválido"
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handleDrivingLicense(license: MrzDocument.DrivingLicense) {
+        viewModelScope.launch {
+            // Validações de carta de condução
+        }
+    }
+
+    // ============================================
+    // Ações do Usuário
+    // ============================================
+
+    private fun triggerManualCapture() {
+        viewModelScope.launch {
+            setState { copy(scanState = MrzScanState.Processing()) }
+            // Implementar captura manual se necessário
+        }
+    }
+
+    private fun handleImageSelected(event: Event.OnImageSelected) {
+        viewModelScope.launch {
+            setState { copy(scanState = MrzScanState.Processing()) }
+
+            try {
+                // Processar imagem da galeria
+                // scannerInteractor.processImage(event.uri)
+            } catch (e: Exception) {
+                setState {
+                    copy(
+                        scanState = MrzScanState.Error("Erro ao processar imagem"),
+                        errorMessage = e.message
+                    )
+                }
+            }
+        }
+    }
+
+    private fun showHelpDialog() {
+        setEffect { Effect.ShowDialog.Help }
+    }
+
+    private fun confirmDocument() {
+        val document = viewState.value.scannedDocument
+        if (document != null) {
+            // Parar scanning ao confirmar
+            stopScanning()
+
+            // Navegar para próxima tela
+            setEffect {
+                Effect.Navigation.SwitchScreen(
+                    screenRoute = "document_details/${document.documentNumber}",
+                    popUpToScreenRoute = "scanner",
+                    inclusive = true
+                )
+            }
+        }
+    }
+
+    // ============================================
+    // Validações
+    // ============================================
+
+    private fun validatePassportChecksum(passport: MrzDocument.Passport): Boolean {
+        // TODO: Implementar validação real
+        return true
+    }
+
+    private fun validatePortugueseIdNumber(documentNumber: String): Boolean {
+        // Formato: 00000000 0 ZZ0
+        val regex = Regex("^[0-9]{8}\\s?[0-9]\\s?[A-Z0-9]{3}$")
+        return documentNumber.matches(regex)
+    }
+
+    // ============================================
+    // Limpeza
+    // ============================================
+
+    override fun onCleared() {
+        super.onCleared()
+        stopScanning()
+        lifecycleOwner = null
+        previewView = null
+    }
 }

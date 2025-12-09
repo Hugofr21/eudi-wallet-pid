@@ -1,5 +1,6 @@
 package eu.europa.ec.mrzscannerLogic.controller
 
+import MrzImageAnalyzer
 import android.content.pm.PackageManager
 import android.view.MotionEvent
 import androidx.camera.core.Camera
@@ -12,7 +13,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import eu.europa.ec.mrzscannerLogic.config.MrzImageAnalyzer
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
 import eu.europa.ec.mrzscannerLogic.service.MrzParserService
 import eu.europa.ec.mrzscannerLogic.service.TextRecognitionService
@@ -42,7 +42,7 @@ interface MrzScanController {
      * Inicia o processo de scanning
      * @return Flow de estados do processo
      */
-    fun startScanning(): Flow<MrzScanState>
+    fun startScanning(lifecycleOwner: LifecycleOwner, previewView: PreviewView): Flow<MrzScanState>
 
     /**
      * Para o processo de scanning e libera recursos
@@ -67,8 +67,6 @@ interface MrzScanController {
 
 class MrzScanControllerImpl(
     private val resourceProvider: ResourceProvider,
-    private val lifecycleOwner: LifecycleOwner,
-    private val previewView: PreviewView,
     private val parserService: MrzParserService,
     private val textRecognitionService: TextRecognitionService
 ) : MrzScanController {
@@ -78,13 +76,20 @@ class MrzScanControllerImpl(
     private val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val throttleMs = 150L  // Parâmetro passado para analyzer
     private val roiBottomFraction = 0.3f  // Novo parâmetro passado para analyzer para ROI
-
     private var tapToFocusEnabled = false
+    private var lifecycleOwnerRef: LifecycleOwner? = null
+    private var previewViewRef: PreviewView? = null
 
-    override fun startScanning(): Flow<MrzScanState> = callbackFlow {
+    override fun startScanning(lifecycleOwner: LifecycleOwner, previewView: PreviewView): Flow<MrzScanState> = callbackFlow {
+        // atribuição explícita — será limpa em awaitClose
+        lifecycleOwnerRef = lifecycleOwner
+        previewViewRef = previewView
+
         trySend(MrzScanState.Initializing)
 
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(resourceProvider.provideContext())
+        val context = resourceProvider.provideContext()
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+
         cameraProviderFuture.addListener({
             try {
                 cameraProvider = cameraProviderFuture.get()
@@ -93,20 +98,25 @@ class MrzScanControllerImpl(
             } catch (e: Exception) {
                 trySend(MrzScanState.Error("Erro ao inicializar câmera", e))
             }
-        }, ContextCompat.getMainExecutor(resourceProvider.provideContext()))
+        }, ContextCompat.getMainExecutor(context))
 
+        // cleanup seguro quando o Flow for cancelado/fechado
         awaitClose {
             stopScanning()
+            lifecycleOwnerRef = null
+            previewViewRef = null
         }
     }
 
     private fun bindCamera(resultFlow: ProducerScope<MrzScanState>) {
         val cameraProvider = cameraProvider ?: return
+        val previewView = previewViewRef ?: return
+        val lifecycleOwner = lifecycleOwnerRef ?: return
 
         cameraProvider.unbindAll()
 
         val preview = Preview.Builder().build().also {
-            it.setSurfaceProvider(previewView.surfaceProvider)
+            it.surfaceProvider = previewView.surfaceProvider
         }
 
         val imageAnalysis = ImageAnalysis.Builder()
@@ -164,6 +174,7 @@ class MrzScanControllerImpl(
     }
 
     private fun setupTapToFocus() {
+        val previewView = previewViewRef ?: return
         if (!tapToFocusEnabled) {
             previewView.setOnTouchListener(null)
             return

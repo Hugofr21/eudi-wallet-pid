@@ -32,6 +32,7 @@ import project.convention.logic.config.LibraryModule.UiLogic
 import project.convention.logic.config.LibraryModule.UserConsentFeature
 import project.convention.logic.config.LibraryModule.BackupLogic
 import project.convention.logic.config.LibraryModule.VerifierFeature
+import project.convention.logic.config.LibraryModule.MrzScannerLogic
 import project.convention.logic.kover.KoverExclusionRules
 import project.convention.logic.kover.excludeFromKoverReport
 import project.convention.logic.kover.koverModules
@@ -67,6 +68,7 @@ dependencies {
     api(project(CoreLogic.path))
     api(project(StorageLogic.path))
     api(project(BackupLogic.path))
+    api(project(MrzScannerLogic.path))
 
     // Feature Modules
     api(project(CommonFeature.path))

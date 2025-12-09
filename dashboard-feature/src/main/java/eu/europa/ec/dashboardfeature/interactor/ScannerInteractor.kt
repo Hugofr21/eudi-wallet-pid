@@ -2,14 +2,16 @@ package eu.europa.ec.dashboardfeature.interactor
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanController
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.flow.Flow
 
 interface ScannerInteractor{
-    fun startScanning(): Flow<MrzScanState>
+    fun startScanning(lifecycleOwner: LifecycleOwner, previewView: PreviewView): Flow<MrzScanState>
     fun stopScanning()
     fun isCameraAvailable(): Boolean
     fun isScanning(): Boolean
@@ -23,8 +25,8 @@ class ScannerInteractorImpl(
 ) : ScannerInteractor {
 
 
-    override fun startScanning(): Flow<MrzScanState> {
-        return mrzScanController.startScanning()
+    override fun startScanning(lifecycleOwner: LifecycleOwner, previewView: PreviewView): Flow<MrzScanState> {
+        return mrzScanController.startScanning(lifecycleOwner, previewView)
     }
 
 

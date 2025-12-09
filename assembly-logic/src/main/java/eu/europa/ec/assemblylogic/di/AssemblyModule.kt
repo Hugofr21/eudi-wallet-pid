@@ -39,9 +39,9 @@ import org.koin.android.ext.koin.androidLogger
 import org.koin.core.KoinApplication
 import org.koin.core.context.GlobalContext.startKoin
 import org.koin.ksp.generated.module
+import eu.europa.ec.mrzscannerLogic.di.LogicMrzScannerModule
 
 private val assembledModules = listOf(
-
     // Logic Modules
     LogicNetworkModule().module,
     LogicUiModule().module,
@@ -52,7 +52,7 @@ private val assembledModules = listOf(
     LogicCoreModule().module,
     LogicStorageModule().module,
     LogicBackupModule().module,
-
+    LogicMrzScannerModule().module,
 
     // Feature Modules
     FeatureCommonModule().module,

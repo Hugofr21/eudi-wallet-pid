@@ -39,7 +39,7 @@ dependencies {
     implementation(project(LibraryModule.MrzScannerLogic.path))
     implementation(libs.zxing)
     implementation(libs.androidx.material.icons.extended)
-    implementation(libs.camera.view)
+    implementation(libs.androidx.camera.view.v130)
 }
 
 excludeFromKoverReport(
