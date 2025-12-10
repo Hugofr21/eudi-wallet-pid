@@ -1,4 +1,4 @@
-package eu.europa.ec.dashboardfeature.ui.scanner
+package eu.europa.ec.dashboardfeature.ui.scanner.identificationDocument
 
 import android.Manifest
 import androidx.camera.view.PreviewView
@@ -76,9 +76,9 @@ import androidx.lifecycle.LifecycleEventObserver
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScannerScreen(
+fun IdentificationDocumentScreen(
     navHostController: NavController,
-    viewModel: ScannerViewModel,
+    viewModel: IdentificationDocumentViewModel,
 ) {
     val context = LocalContext.current
     val state by viewModel.viewState.collectAsStateWithLifecycle()
@@ -131,7 +131,7 @@ fun ScannerScreen(
 private fun Content(
     state: State,
     paddingValues: PaddingValues,
-    viewModel: ScannerViewModel? = null
+    viewModel: IdentificationDocumentViewModel? = null
 ) {
     when (state.isCameraAvailability) {
         CameraAvailability.DISABLED -> {
@@ -195,7 +195,7 @@ private fun RequiredPermissionsAsk(
 @Composable
 private fun AutomaticScannerContent(
     state: State,
-    viewModel: ScannerViewModel?,
+    viewModel: IdentificationDocumentViewModel?,
     paddingValues: PaddingValues
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -750,10 +750,11 @@ private fun CameraDisabledMessage(paddingValues: PaddingValues) {
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @ThemeModePreviews
 @Composable
-private fun ScannScreenContentPreview() {
+private fun IdentificationDocumentScreenContentPreview() {
     PreviewTheme {
         ContentScreen(
             isLoading = false,

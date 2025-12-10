@@ -16,8 +16,6 @@
 
 package eu.europa.ec.dashboardfeature.router
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -31,7 +29,9 @@ import eu.europa.ec.dashboardfeature.ui.did.qrcode.SharingVcScreen
 import eu.europa.ec.dashboardfeature.ui.document_sign.DocumentSignScreen
 import eu.europa.ec.dashboardfeature.ui.documents.detail.DocumentDetailsScreen
 import eu.europa.ec.dashboardfeature.ui.profile.ProfileScreen
-import eu.europa.ec.dashboardfeature.ui.scanner.ScannerScreen
+import eu.europa.ec.dashboardfeature.ui.scanner.documentSelection.DocumentSelectionScreen
+import eu.europa.ec.dashboardfeature.ui.scanner.driverLicense.DriverLicenseScreen
+import eu.europa.ec.dashboardfeature.ui.scanner.identificationDocument.IdentificationDocumentScreen
 import eu.europa.ec.dashboardfeature.ui.settings.SettingsScreen
 import eu.europa.ec.dashboardfeature.ui.transactions.detail.TransactionDetailsScreen
 import eu.europa.ec.dashboardfeature.ui.wifi.info.InfoWifiAware
@@ -199,10 +199,17 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
             SharingVcScreen(navController, koinViewModel())
         }
 
-        composable(DashboardScreens.ScannerCamera.screenRoute) {
-            ScannerScreen(navController, koinViewModel())
+        // Scanner mrz UI
+        composable(DashboardScreens.IdentificationDocument.screenRoute) {
+            IdentificationDocumentScreen(navController, koinViewModel())
         }
 
+        composable(DashboardScreens.SelectDocumentCamera.screenRoute) {
+            DocumentSelectionScreen(navController, koinViewModel())
+        }
 
+        composable(DashboardScreens.DrivingLicense.screenRoute) {
+            DriverLicenseScreen(navController, koinViewModel())
+        }
     }
 }

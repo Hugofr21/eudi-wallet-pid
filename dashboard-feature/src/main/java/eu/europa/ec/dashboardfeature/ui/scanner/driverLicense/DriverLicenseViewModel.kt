@@ -1,4 +1,4 @@
-package eu.europa.ec.dashboardfeature.ui.scanner
+package eu.europa.ec.dashboardfeature.ui.scanner.driverLicense
 
 import android.net.Uri
 import androidx.camera.view.PreviewView
@@ -82,7 +82,7 @@ sealed class Effect : ViewSideEffect {
 }
 
 @KoinViewModel
-class ScannerViewModel(
+class DriverLicenseScreenViewModel(
     private val uiSerializer: UiSerializer,
     private val scannerInteractor: ScannerInteractor,
 ) : MviViewModel<Event, State, Effect>() {
@@ -328,41 +328,16 @@ class ScannerViewModel(
     private fun handleDocumentByType(document: MrzDocument) {
         println("Document type: ${document.javaClass.simpleName}")
         when (document) {
-            is MrzDocument.Passport -> handlePassport(document)
-            is MrzDocument.IdCard -> handleIdCard(document)
             is MrzDocument.DrivingLicense -> handleDrivingLicense(document)
+            else -> {
+                println("Tipo de documento não suportado")
+            }
         }
     }
 
     // ============================================
     // Processamento por Tipo de Documento
     // ============================================
-
-    private fun handlePassport(passport: MrzDocument.Passport) {
-        viewModelScope.launch {
-            val isValid = validatePassportChecksum(passport)
-            if (!isValid) {
-                setState {
-                    copy(
-                        errorMessage = "Passaporte com checksum inválido"
-                    )
-                }
-            }
-        }
-    }
-
-    private fun handleIdCard(idCard: MrzDocument.IdCard) {
-        viewModelScope.launch {
-            val isValid = validatePortugueseIdNumber(idCard.documentNumber)
-            if (!isValid) {
-                setState {
-                    copy(
-                        errorMessage = "Número de cartão de cidadão inválido"
-                    )
-                }
-            }
-        }
-    }
 
     private fun handleDrivingLicense(license: MrzDocument.DrivingLicense) {
         viewModelScope.launch {
@@ -420,24 +395,6 @@ class ScannerViewModel(
         }
     }
 
-    // ============================================
-    // Validações
-    // ============================================
-
-    private fun validatePassportChecksum(passport: MrzDocument.Passport): Boolean {
-        // TODO: Implementar validação real
-        return true
-    }
-
-    private fun validatePortugueseIdNumber(documentNumber: String): Boolean {
-        // Formato: 00000000 0 ZZ0
-        val regex = Regex("^[0-9]{8}\\s?[0-9]\\s?[A-Z0-9]{3}$")
-        return documentNumber.matches(regex)
-    }
-
-    // ============================================
-    // Limpeza
-    // ============================================
 
     override fun onCleared() {
         super.onCleared()

@@ -280,7 +280,7 @@ class HomeViewModel(
     private fun navigateScreenScanner(){
         setEffect {
             Effect.Navigation.SwitchScreen(
-                screenRoute = DashboardScreens.ScannerCamera.screenName
+                screenRoute = DashboardScreens.SelectDocumentCamera.screenName
             )
         }
     }
