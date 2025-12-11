@@ -77,10 +77,12 @@ sealed class MrzDocument {
         val issuingCountry: String,
         val surname: String,
         val givenNames: String,
-        val documentNumberCheck: Char,
-        val dobCheck: Char,
-        val expiryCheck: Char,
         val licenseCategories: String,
+        val placeOfBirth: String? = null,   // Parte do Campo 3
+        val dateOfIssue: String? = null,     // Campo 4a
+        val issuingAuthority: String? = null, // Campo 4c
+        val auditNumber: String? = null,      // Campo 4d
+        val address: String? = null,          // Campo 8
         override val isValid: Boolean,
         override val rawLines: List<String>
     ) : MrzDocument() {

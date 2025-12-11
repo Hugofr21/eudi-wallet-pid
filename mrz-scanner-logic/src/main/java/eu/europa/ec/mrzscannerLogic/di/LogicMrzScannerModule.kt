@@ -6,6 +6,8 @@ import eu.europa.ec.mrzscannerLogic.controller.MrzScanController
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanControllerImpl
 import eu.europa.ec.mrzscannerLogic.service.ChecksumValidationService
 import eu.europa.ec.mrzscannerLogic.service.ChecksumValidationServiceImpl
+import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseService
+import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.MrzParserService
 import eu.europa.ec.mrzscannerLogic.service.MrzParserServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.OcrCorrectionService
@@ -46,14 +48,21 @@ fun provideTextRecognitionService(): TextRecognitionService =
 
 
 @Single
+fun provideDriverLicenseParseService(): DriverLicenseParseService =
+    DriverLicenseParseServiceImpl()
+
+
+@Single
 fun provideMrzScanController(
     resourceProvider: ResourceProvider,
     parserService: MrzParserService,
+    driverLicenseParseService : DriverLicenseParseService,
     textRecognitionService: TextRecognitionService,
 ): MrzScanController =
     MrzScanControllerImpl(
         resourceProvider = resourceProvider,
         parserService = parserService,
+        driverLicenseParseService = driverLicenseParseService,
         textRecognitionService = textRecognitionService
     )
 

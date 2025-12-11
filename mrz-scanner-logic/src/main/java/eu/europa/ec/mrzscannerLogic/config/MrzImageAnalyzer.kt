@@ -4,6 +4,7 @@ import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.common.InputImage
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
+import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseService
 import eu.europa.ec.mrzscannerLogic.service.MrzParseResult
 import eu.europa.ec.mrzscannerLogic.service.MrzParserService
 import eu.europa.ec.mrzscannerLogic.service.TextRecognitionService
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MrzImageAnalyzer(
     private val resultFlow: ProducerScope<MrzScanState>,
     private val parserService: MrzParserService,
+    private val driverLicenseParser: DriverLicenseParseService,
     private val textRecognitionService: TextRecognitionService,
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
@@ -119,29 +121,40 @@ class MrzImageAnalyzer(
 
         val allLines = recognizedText.split("\n")
 
-        // 1. Limpeza Prévia: Remove espaços e normaliza caracteres confusos
-        val cleanedLines = allLines.map { line ->
-            cleanLine(line)
-        }
 
-        // 2. Filtragem Inteligente: Mantém APENAS linhas que parecem MRZ
+
+
+        // 1. Limpeza Prévia: Remove espaços e normaliza caracteres confusos
+        // Filtragem Inteligente: Mantém APENAS linhas que parecem MRZ
         // Critério: Tamanho > 20 e contém '<<' ou dígitos suficientes
-        val candidateLines = cleanedLines.filter { line ->
-            isValidMrzLine(line)
-        }
+
+        val mrzCandidates = allLines
+            .map { cleanLine(it) }
+            .filter { isValidMrzLine(it) }
+
 
         // Se não sobrarem linhas candidatas suficientes, aborta sem resetar bruscamente
-        if (candidateLines.size < 2) {
-            // Feedback visual de que a câmera está ativa
-            resultFlow.trySend(MrzScanState.Processing(0.1f))
-            return
+        if (mrzCandidates.size >= 2) {
+            Log.d("MRZ_PROC", "Tentando Parse com linhas limpas: $mrzCandidates")
+            // 3. Tentativa de Parse
+            val parseResult = parserService.parse(mrzCandidates)
+            handleParseMrzResult(parseResult)
+        }else{
+            Log.d("VISUAL_PROC", "Tentando Parse Visual (Carta Condução)...")
+
+            val dlResult = driverLicenseParser.parse(allLines)
+
+            if (dlResult is MrzParseResult.Success) {
+                Log.i("VISUAL_SUCCESS", "Carta detetada: ${dlResult.document.documentNumber}")
+                handleSuccessfulParse(dlResult.document)
+
+            } else {
+                consecutiveSuccessCount = 0
+            }
         }
+    }
 
-        Log.d("MRZ_PROC", "Tentando Parse com linhas limpas: $candidateLines")
-
-        // 3. Tentativa de Parse
-        val parseResult = parserService.parse(candidateLines)
-
+    private fun handleParseMrzResult(parseResult: MrzParseResult){
         when (parseResult) {
             is MrzParseResult.Success -> {
                 Log.i("MRZ_SUCCESS", "Documento Criado: ${parseResult.document.documentNumber}")
@@ -159,12 +172,12 @@ class MrzImageAnalyzer(
         }
     }
 
-
     /**
      * Lida com parse bem-sucedido
      * Requer múltiplas confirmações antes de emitir sucesso
      */
     private fun handleSuccessfulParse(document: MrzDocument) {
+
         // Verificar se é o mesmo documento do frame anterior
         val isSameDocument = lastDetectedDocument?.let { last ->
             when {

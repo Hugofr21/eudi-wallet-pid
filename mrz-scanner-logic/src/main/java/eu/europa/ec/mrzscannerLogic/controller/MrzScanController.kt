@@ -14,9 +14,11 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
+import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseService
 import eu.europa.ec.mrzscannerLogic.service.MrzParserService
 import eu.europa.ec.mrzscannerLogic.service.TextRecognitionService
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
+import eu.europa.ec.uilogic.navigation.DashboardScreens
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.ProducerScope
@@ -68,6 +70,7 @@ interface MrzScanController {
 class MrzScanControllerImpl(
     private val resourceProvider: ResourceProvider,
     private val parserService: MrzParserService,
+    private val driverLicenseParseService: DriverLicenseParseService,
     private val textRecognitionService: TextRecognitionService
 ) : MrzScanController {
 
@@ -127,6 +130,7 @@ class MrzScanControllerImpl(
         val analyzer = MrzImageAnalyzer(
             resultFlow = resultFlow,
             parserService = parserService,
+            driverLicenseParser = driverLicenseParseService,
             textRecognitionService = textRecognitionService,
             scope = CoroutineScope(Dispatchers.Default),
             dispatcher = Dispatchers.Default,
