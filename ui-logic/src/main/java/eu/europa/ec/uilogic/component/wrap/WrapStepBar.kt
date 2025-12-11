@@ -82,7 +82,7 @@ fun WrapStepBar(currentStep: Int, steps: List<String>, modifier: Modifier = Modi
     // Substituir a shape utilizada anteriormente por uma forma rectangular (0.dp)
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(0.dp), // <-- bordas retas (usar 4.dp, 6.dp, etc. para cantos leves)
+        shape = RoundedCornerShape(0.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = SIZE_EXTRA_SMALL.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.background,
@@ -125,18 +125,17 @@ private fun Indicator(
         val offsetDp = with(density) { (itemInfo.offset).toDp() }
         val widthDp = with(density) { (itemInfo.size).toDp() }
 
-        // Altura do indicador alinhada visualmente ao conteúdo; ajuste se necessário.
-        val indicatorHeight: Dp = 36.dp // reduzir para 28.dp ou aumentar conforme tipografia
+        val indicatorHeight: Dp = 36.dp
 
         Box(
             Modifier
                 .offset(x = offsetDp)
                 .width(widthDp)
                 .height(indicatorHeight)
-                .padding(vertical = 4.dp) // ajusta o espaçamento vertical dentro do cartão
+                .padding(vertical = 4.dp)
                 .background(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(2.dp) // cantos muito discretos; usar 0.dp para recto absoluto
+                    shape = RoundedCornerShape(2.dp)
                 )
         )
     }

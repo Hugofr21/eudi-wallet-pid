@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.zxing)
     implementation(libs.gson)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.foundation)
 
     testImplementation(project(LibraryModule.TestLogic.path))
 }

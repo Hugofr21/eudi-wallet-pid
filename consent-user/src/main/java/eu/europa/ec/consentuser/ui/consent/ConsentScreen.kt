@@ -192,26 +192,31 @@ fun ConsentAndTosSection(
     ) {
         WrapText(
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .align(Alignment.CenterHorizontally),
             text = stringResource(R.string.consent_screen_title),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Start
+                textAlign = TextAlign.Center
             )
         )
 
-        VSpacer.Small()
+        VSpacer.ExtraLarge()
 
         Icon(
             imageVector = Icons.Default.Security,
             contentDescription = stringResource(R.string.consent_icon_cd),
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.size(72.dp),
             tint = MaterialTheme.colorScheme.primary
         )
 
+
+        VSpacer.ExtraLarge()
+
         WrapText(
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .align(Alignment.CenterHorizontally),
             text = stringResource(R.string.user_consent_step_2_description),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.bodySmall,
@@ -254,7 +259,8 @@ fun ConsentAndTosSection(
         ) {
             WrapCheckbox(
                 modifier = Modifier
-                    .size(24.dp),
+                    .size(24.dp)
+                    .align(Alignment.Top),
                 checkboxData = CheckboxDataUi(
                     isChecked = dataProtectionCheckBoxData.isChecked,
                     enabled = dataProtectionCheckBoxData.enabled,

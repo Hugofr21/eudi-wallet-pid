@@ -200,7 +200,7 @@ private fun MainContent(
 
 
             VerificationCard(
-                onClick = { /* abrir detalhes da identificação eletrónica */ }
+                onClick = { }
             )
             VSpacer.Medium()
         }
