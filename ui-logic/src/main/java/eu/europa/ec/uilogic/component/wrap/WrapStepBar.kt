@@ -46,6 +46,7 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
@@ -69,6 +70,7 @@ private val labelTextStyle: TextStyle
 
 private const val inactiveTextColorAlpha = 0.35f
 
+
 @Composable
 fun WrapStepBar(currentStep: Int, steps: List<String>, modifier: Modifier = Modifier) {
     val textMeasurer = rememberTextMeasurer()
@@ -77,12 +79,13 @@ fun WrapStepBar(currentStep: Int, steps: List<String>, modifier: Modifier = Modi
 
     val startIndex = calculateStartIndex(currentStep, steps, textMeasurer)
 
+    // Substituir a shape utilizada anteriormente por uma forma rectangular (0.dp)
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = buttonsShape,
+        shape = RoundedCornerShape(0.dp), // <-- bordas retas (usar 4.dp, 6.dp, etc. para cantos leves)
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = SIZE_EXTRA_SMALL.dp),
         colors = CardDefaults.elevatedCardColors(
-            MaterialTheme.colorScheme.background,
+            containerColor = MaterialTheme.colorScheme.background,
         ),
     ) {
         Box {
@@ -119,18 +122,21 @@ private fun Indicator(
     val density = LocalDensity.current
     val itemInfo = listState.layoutInfo.visibleItemsInfo.find { it.index == currentStep }
     if (itemInfo != null) {
-        val offsetDp = with(density) { (itemInfo.offset ).toDp() }
+        val offsetDp = with(density) { (itemInfo.offset).toDp() }
         val widthDp = with(density) { (itemInfo.size).toDp() }
+
+        // Altura do indicador alinhada visualmente ao conteúdo; ajuste se necessário.
+        val indicatorHeight: Dp = 36.dp // reduzir para 28.dp ou aumentar conforme tipografia
 
         Box(
             Modifier
                 .offset(x = offsetDp)
-//                .padding(top = SPACING_MEDIUM.dp)
                 .width(widthDp)
-                .height(25.dp)
+                .height(indicatorHeight)
+                .padding(vertical = 4.dp) // ajusta o espaçamento vertical dentro do cartão
                 .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = inactiveTextColorAlpha),
-                    shape = RoundedCornerShape(16.dp)
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(2.dp) // cantos muito discretos; usar 0.dp para recto absoluto
                 )
         )
     }

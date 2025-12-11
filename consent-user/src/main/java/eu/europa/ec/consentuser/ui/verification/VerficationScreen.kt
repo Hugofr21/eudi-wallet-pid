@@ -64,6 +64,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 
 val LightSkyBlue   = Color(0xFFCAE6FD)
+val NeutralText = Color(0xFF0D0D0D)
 val OceanBlue      = Color(0xFF2A5ED9)
 val DeepBlue       = Color(0xFF0048D2)
 val SoftYellow     = Color(0xFFFFF1BA)
@@ -139,7 +140,6 @@ private fun handleNavigationEffect(
     }
 }
 
-
 @Composable
 private fun MainContent(
     paddingValues: PaddingValues,
@@ -150,45 +150,57 @@ private fun MainContent(
             .padding(paddingValues)
     ) {
 
-//        TopStepBar(currentStep = 2)
 
         VSpacer.ExtraLarge()
 
+
+// Imagem central maior com mínimo de altura, alinhada ao centro
         WrapImage(
             modifier = Modifier
                 .wrapContentSize()
-                .defaultMinSize(minHeight = DEFAULT_ACTION_CARD_HEIGHT.dp)
+                .defaultMinSize(minHeight = (DEFAULT_ACTION_CARD_HEIGHT * 1.15).dp)
                 .align(Alignment.CenterHorizontally),
             iconData = AppIcons.WalletSecured,
             contentScale = ContentScale.Fit
         )
 
+
         VSpacer.ExtraLarge()
 
+
+// Título principal com tipografia enfatizada
         WrapText(
             text = stringResource(R.string.consent_verification_content_title),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.titleLarge,
+//                color = NeutralText
             ),
         )
+
+
         VSpacer.Medium()
+
 
         WrapText(
             text = stringResource(R.string.consent_verification_content_description),
             textConfig = TextConfig(
                 style = MaterialTheme.typography.bodyLarge,
-                maxLines = 6
+                maxLines = 6,
+//                color = NeutralText
             ),
         )
 
+
         VSpacer.Large()
+
 
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
 
+
             VerificationCard(
-                onClick = {  }
+                onClick = { /* abrir detalhes da identificação eletrónica */ }
             )
             VSpacer.Medium()
         }
@@ -203,7 +215,7 @@ private fun VerificationCard(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = LightSkyBlue,
+            containerColor = LightSkyBlue.copy(alpha = 0.6F),
             contentColor = LightSkyBlue
         ),
         elevation = CardDefaults.cardElevation(
@@ -214,12 +226,16 @@ private fun VerificationCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(SPACING_MEDIUM.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             WrapIcon(
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(28.dp)
+                    .align(Alignment.Top),
                 iconData = AppIcons.eID,
-                customTint = Color(0xFF0D0D0D)
+                customTint = NeutralText,
+
             )
+
 
             HSpacer.Small()
             Column {
@@ -227,7 +243,7 @@ private fun VerificationCard(
                     text = "Electronic Identification",
                     textConfig = TextConfig(
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color(0xFF0D0D0D)
+                        color = NeutralText
                     )
                 )
                 VSpacer.ExtraSmall()
@@ -235,7 +251,7 @@ private fun VerificationCard(
                     text = "Under applicable regulations and legislation, you may not create a profile solely to obtain identification. To verify your identity, please request credential validation directly from the PID provider.",
                     textConfig = TextConfig(
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF0D0D0D)
+                        color = NeutralText
                     )
                 )
             }
@@ -262,17 +278,18 @@ private fun ContinueButton(
 }
 
 
-
 @ThemeModePreviews
 @Composable
 private fun ContentPreview() {
     PreviewTheme {
+
 
         val buttonConfig = ButtonConfig(
             type = ButtonType.PRIMARY,
             onClick = { },
             enabled = true
         )
+
 
         ContentScreen(
             stickyBottom = {
