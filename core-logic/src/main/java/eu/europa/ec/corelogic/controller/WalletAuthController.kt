@@ -11,6 +11,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.PasswordCredential
 import androidx.credentials.PublicKeyCredential
 import androidx.credentials.exceptions.CreateCredentialNoCreateOptionException
+import eu.europa.ec.resourceslogic.provider.ResourceProvider
 
 
 sealed class DigitalCredentialsPartialState {
@@ -25,11 +26,11 @@ interface WalletAuthController{
 }
 
 class WalletAuthIControllerImpl (
-    private val context: Context
+    private val resourceProvider: ResourceProvider
 ): WalletAuthController {
 
     private suspend fun saveCredentials(context: Context, userId: String, password: String) {
-        val credentialManager = CredentialManager.create(context)
+        val credentialManager = CredentialManager.create(resourceProvider.provideContext())
         try {
             credentialManager.createCredential(
                 request = CreatePasswordRequest(userId, password),

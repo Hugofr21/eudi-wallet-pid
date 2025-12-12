@@ -1,10 +1,13 @@
 package eu.europa.ec.corelogic.controller
 
 
+import com.google.gson.Gson
+import eu.europa.ec.businesslogic.controller.crypto.KeyPairController
 import eu.europa.ec.corelogic.model.did.AuthChallenge
 import eu.europa.ec.corelogic.model.did.AuthResponse
 import eu.europa.ec.corelogic.model.did.DidDocument
-import eu.europa.ec.storagelogic.model.Connection
+import eu.europa.ec.storagelogic.dao.ConnectionDao
+import eu.europa.ec.storagelogic.model.DidEntity
 
 interface WalletDidDocumentController {
     /**
@@ -16,9 +19,9 @@ interface WalletDidDocumentController {
         peerDidDocument: DidDocument
     )
 
-    suspend fun getAllConnections(): List<Connection>
+    suspend fun getAllConnections(): List<DidEntity>
 
-    suspend fun getConnectionByDid(peerDid: String): Connection?
+    suspend fun getConnectionByDid(peerDid: String): DidEntity?
 
     suspend fun deleteConnection(peerDid: String)
 
@@ -35,7 +38,9 @@ interface WalletDidDocumentController {
 }
 
 class WalletDidDocumentControllerImpl (
-
+    private val  keyPairController: KeyPairController,
+    private val connectionDao: ConnectionDao,
+    private val gson: Gson = Gson()
 ): WalletDidDocumentController {
 
     override suspend fun saveConnection(
@@ -46,11 +51,11 @@ class WalletDidDocumentControllerImpl (
         TODO("Not yet implemented")
     }
 
-    override suspend fun getAllConnections(): List<Connection> {
+    override suspend fun getAllConnections(): List<DidEntity> {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getConnectionByDid(peerDid: String): Connection? {
+    override suspend fun getConnectionByDid(peerDid: String): DidEntity? {
         TODO("Not yet implemented")
     }
 

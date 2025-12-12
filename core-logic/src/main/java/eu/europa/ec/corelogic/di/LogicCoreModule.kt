@@ -18,6 +18,7 @@ package eu.europa.ec.corelogic.di
 
 import android.content.Context
 import com.google.android.datatransport.runtime.dagger.Provides
+import eu.europa.ec.businesslogic.controller.crypto.KeyPairController
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.corelogic.config.WalletConfigNetworkConfig
@@ -43,6 +44,7 @@ import eu.europa.ec.eudi.wallet.EudiWallet
 import eu.europa.ec.networklogic.repository.WalletAttestationRepository
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.storagelogic.dao.BookmarkDao
+import eu.europa.ec.storagelogic.dao.ConnectionDao
 import eu.europa.ec.storagelogic.dao.RevokedDocumentDao
 import eu.europa.ec.storagelogic.dao.TransactionLogDao
 import io.ktor.client.HttpClient
@@ -157,10 +159,12 @@ fun provideWalletCoreDocumentsController(
 
 @Factory
 fun provideWalletCoreDidDocumentController(
-
+     keyPairController: KeyPairController,
+    connectionDao: ConnectionDao,
     ): WalletDidDocumentControllerImpl =
     WalletDidDocumentControllerImpl(
-
+        keyPairController,
+        connectionDao
     )
 
 

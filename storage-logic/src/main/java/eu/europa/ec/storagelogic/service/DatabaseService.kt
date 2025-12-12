@@ -28,8 +28,9 @@ import eu.europa.ec.storagelogic.model.Bookmark
 import eu.europa.ec.storagelogic.model.RevokedDocument
 import eu.europa.ec.storagelogic.model.TransactionLog
 import eu.europa.ec.storagelogic.model.BackupLog
-import eu.europa.ec.storagelogic.model.Connection
+import eu.europa.ec.storagelogic.model.DidEntity
 import eu.europa.ec.storagelogic.model.IssuerLog
+import eu.europa.ec.storagelogic.model.DidKeyMapping
 
 @Database(
     entities = [
@@ -38,7 +39,8 @@ import eu.europa.ec.storagelogic.model.IssuerLog
         TransactionLog::class,
         BackupLog::class,
         IssuerLog::class,
-        Connection::class
+        DidEntity::class,
+        DidKeyMapping::class
     ],
     version = 1
 )
