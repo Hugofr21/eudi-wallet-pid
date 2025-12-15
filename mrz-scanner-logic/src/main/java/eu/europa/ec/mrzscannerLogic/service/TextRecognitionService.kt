@@ -19,10 +19,7 @@ class TextRecognitionServiceImpl : TextRecognitionService {
 
     override suspend fun recognizeText(image: InputImage, rotation: Int): Result<Text>{
         return try {
-            // O método process() retorna um Task<Text>
             val result: Text = recognizer.process(image).await()
-
-            // CORREÇÃO: Retornar o objeto 'result' (Text), NÃO 'result.text' (String)
             Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)

@@ -6,8 +6,6 @@ import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import androidx.core.graphics.scale
-import androidx.core.graphics.set
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.segmentation.Segmentation
@@ -20,7 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.launch
-import java.nio.ByteBuffer // NOVO
+import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 
 class FaceImageAnalyzer(
@@ -179,15 +177,20 @@ class FaceImageAnalyzer(
                     try {
                         // O ML Kit devolve geralmente 256x256. A imagem pode ser 500x700.
                         // NÃO FAZEMOS verificação de igualdade. Passamos tudo para a função aplicar.
-                        val finalBitmap = applyBackgroundMask(
+                        val bitmapWithWhiteBg = applyBackgroundMask(
                             image = safeBitmap,
                             maskBuffer = segmentationMask.buffer,
                             maskWidth = segmentationMask.width,
                             maskHeight = segmentationMask.height
                         )
 
-                        Log.i("FaceAnalyzer", "Fundo removido. Enviando imagem...")
-                        resultFlow.trySend(MrzScanState.Success(capturedImage = finalBitmap))
+                        Log.i("FaceAnalyzer", "Fundo branco aplicado. A recentrar conteúdo...")
+
+                        // --- NOVO PASSO 2: Recentrar o conteúdo na tela branca ---
+                        val finalCenteredBitmap = centerContentOnWhiteCanvas(bitmapWithWhiteBg)
+
+                        Log.i("FaceAnalyzer", "Imagem final centrada. Enviando para UI...")
+                        resultFlow.trySend(MrzScanState.Success(capturedImage = finalCenteredBitmap))
                         consecutiveSuccesses = 0
 
                     } catch (e: Exception) {
@@ -355,6 +358,77 @@ class FaceImageAnalyzer(
         return Bitmap.createBitmap(bitmap, x, y, validWidth, validHeight)
     }
 
+    /**
+     * NOVO: Pega numa imagem com fundo branco, deteta os limites do conteúdo
+     * (a pessoa) e redesenha esse conteúdo perfeitamente centrado numa nova tela branca.
+     */
+    private fun centerContentOnWhiteCanvas(inputBitmap: Bitmap): Bitmap {
+        val width = inputBitmap.width
+        val height = inputBitmap.height
+        val pixels = IntArray(width * height)
+        inputBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        // 1. Encontrar os limites (bounding box) dos píxeis que NÃO são brancos
+        var minX = width
+        var minY = height
+        var maxX = -1
+        var maxY = -1
+        var foundContent = false
+
+        // Cor branca pura em inteiro
+        val whitePixel = Color.WHITE
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val pixel = pixels[y * width + x]
+                // Se o píxel não for branco puro, faz parte da pessoa
+                if (pixel != whitePixel) {
+                    if (x < minX) minX = x
+                    if (x > maxX) maxX = x
+                    if (y < minY) minY = y
+                    if (y > maxY) maxY = y
+                    foundContent = true
+                }
+            }
+        }
+
+        // Se por algum motivo a imagem for toda branca (erro de segmentação), devolve a original
+        if (!foundContent || minX > maxX || minY > maxY) {
+            return inputBitmap
+        }
+
+        // Dimensões reais do conteúdo (a pessoa recortada)
+        val contentWidth = maxX - minX + 1
+        val contentHeight = maxY - minY + 1
+
+        // 2. Criar uma nova tela final, preenchida com Branco
+        // Usamos ARGB_8888 para garantir qualidade, embora não precisemos de transparência aqui.
+        val finalCenteredBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(finalCenteredBitmap)
+        canvas.drawColor(Color.WHITE) // Preenche o fundo de branco
+
+        // 3. Calcular as coordenadas para desenhar o conteúdo centrado
+        // Posição X para centrar horizontalmente
+        val drawX = (width - contentWidth) / 2f
+        // Posição Y para centrar verticalmente
+        val drawY = (height - contentHeight) / 2f
+
+        // 4. Recortar apenas o conteúdo da imagem original
+        val contentOnlyBitmap = Bitmap.createBitmap(inputBitmap, minX, minY, contentWidth, contentHeight)
+
+        // 5. Desenhar o conteúdo na posição centrada na nova tela branca
+        // Usamos um Paint com anti-aliasing para suavizar as bordas
+        val paint = android.graphics.Paint().apply { isAntiAlias = true }
+        canvas.drawBitmap(contentOnlyBitmap, drawX, drawY, paint)
+
+        // Limpar bitmaps intermédios para poupar memória
+        contentOnlyBitmap.recycle()
+        if (inputBitmap != finalCenteredBitmap) {
+            inputBitmap.recycle()
+        }
+
+        return finalCenteredBitmap
+    }
     fun close() {
         segmenter.close()
     }
