@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import eu.europa.ec.dashboardfeature.interactor.ScannerInteractor
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
+import eu.europa.ec.mrzscannerLogic.model.ScanType
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
@@ -237,13 +238,16 @@ class DriverLicenseScreenViewModel(
         viewModelScope.launch {
             try {
                 // SCANNING CONTÍNUO: Vai continuar lendo documentos indefinidamente
-                scannerInteractor.startScanning(owner, preview).collect { scanState ->
+                scannerInteractor.startScanning(owner, preview, ScanType.Document).collect { scanState ->
                     setState { copy(scanState = scanState) }
 
                     when (scanState) {
                         is MrzScanState.Success -> {
                             // Documento detectado com sucesso
-                            setEvent(Event.OnScanResult(scanState.document))
+                            val doc = scanState.document
+                            if (doc != null) {
+                                setEvent(Event.OnScanResult(doc))
+                            }
 
                             // MUDANÇA: NÃO para o scanning automaticamente
                             // Apenas mostra o resultado e continua escaneando

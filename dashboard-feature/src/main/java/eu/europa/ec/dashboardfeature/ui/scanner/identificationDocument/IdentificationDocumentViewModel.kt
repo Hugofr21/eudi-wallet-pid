@@ -4,14 +4,22 @@ import android.net.Uri
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
+import com.nimbusds.jose.shaded.gson.Gson
+import eu.europa.ec.commonfeature.config.IssuanceFlowType
+import eu.europa.ec.commonfeature.config.IssuanceUiConfig
 import eu.europa.ec.dashboardfeature.interactor.ScannerInteractor
+import eu.europa.ec.dashboardfeature.ui.dashboard.DashboardScreen
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
+import eu.europa.ec.mrzscannerLogic.model.ScanType
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
+import eu.europa.ec.uilogic.navigation.IssuanceScreens
+import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
+import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import eu.europa.ec.uilogic.serializer.UiSerializer
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
@@ -37,7 +45,8 @@ sealed class Event : ViewEvent {
     // Inicialização
     data class InitializeScanner(
         val lifecycleOwner: LifecycleOwner,
-        val previewView: PreviewView
+        val previewView: PreviewView,
+        val scanType: ScanType
     ) : Event()
 
     // Controle de scanning
@@ -237,13 +246,17 @@ class IdentificationDocumentViewModel(
         viewModelScope.launch {
             try {
                 // SCANNING CONTÍNUO: Vai continuar lendo documentos indefinidamente
-                scannerInteractor.startScanning(owner, preview).collect { scanState ->
+                scannerInteractor.startScanning(owner, preview, ScanType.Document).collect { scanState ->
                     setState { copy(scanState = scanState) }
 
                     when (scanState) {
                         is MrzScanState.Success -> {
+                            val doc = scanState.document
                             // Documento detectado com sucesso
-                            setEvent(Event.OnScanResult(scanState.document))
+                            if (doc != null)
+                                setEvent(Event.OnScanResult(doc))
+                            else
+                                setEvent(Event.OnScanError("Documento não reconhecido"))
 
                             // MUDANÇA: NÃO para o scanning automaticamente
                             // Apenas mostra o resultado e continua escaneando
@@ -403,18 +416,25 @@ class IdentificationDocumentViewModel(
         setEffect { Effect.ShowDialog.Help }
     }
 
+
+
     private fun confirmDocument() {
         val document = viewState.value.scannedDocument
+        val jsonDoc = Gson().toJson(document)
         if (document != null) {
             // Parar scanning ao confirmar
             stopScanning()
 
-            // Navegar para próxima tela
             setEffect {
                 Effect.Navigation.SwitchScreen(
-                    screenRoute = "document_details/${document.documentNumber}",
-                    popUpToScreenRoute = "scanner",
-                    inclusive = true
+                    screenRoute = generateComposableNavigationLink(
+                        screen = DashboardScreens.FaceIdDetails,
+                        arguments = generateComposableArguments(
+                            mapOf(
+                                "documentId" to jsonDoc
+                            )
+                        )
+                    )
                 )
             }
         }

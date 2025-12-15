@@ -85,6 +85,11 @@ sealed class DashboardScreens {
 
     data object DrivingLicense : Screen(name = "DRIVING_LICENSE")
 
+    data object FaceIdDetails : Screen(
+        name = "FACE_ID_DETAILS",
+        parameters = "?documentId={documentId}"
+    )
+
 
 }
 

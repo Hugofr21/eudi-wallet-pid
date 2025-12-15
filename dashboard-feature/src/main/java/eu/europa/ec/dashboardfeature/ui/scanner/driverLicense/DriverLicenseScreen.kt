@@ -221,28 +221,27 @@ private fun AutomaticScannerContent(
 // ============================================
 // OVERLAY ESPECÍFICO PARA CARTA DE CONDUÇÃO
 // ============================================
-
 @Composable
 private fun DrivingLicenseOverlay(scanState: MrzScanState) {
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // Fundo semi-transparente para focar a atenção no centro
+        // Fundo semi-transparente (Máscara)
         Canvas(modifier = Modifier.fillMaxSize()) {
             val canvasWidth = size.width
             val canvasHeight = size.height
 
-            // Dimensões de uma Carta de Condução (Proporção ID-1 ~ 1.58)
-            // Aumentado para 95% da largura do ecrã para facilitar leitura
-            val cardWidth = canvasWidth * 0.95f
+            // AUMENTAR A ÁREA: Usar 96% da largura em vez de 95%
+            val cardWidth = canvasWidth * 0.96f
+            // Proporção ID-1 (Cartão de Crédito/Carta): 85.60 × 53.98 mm (~1.58)
             val cardHeight = cardWidth / 1.58f
 
             val left = (canvasWidth - cardWidth) / 2
             val top = (canvasHeight - cardHeight) / 2
 
-            // Desenhar escurecimento à volta
-            // (Na prática desenhamos 4 retângulos pretos à volta do centro)
-            val maskColor = Color.Black.copy(alpha = 0.6f)
+            // Diminuí a opacidade de 0.6f para 0.5f para ver melhor "à volta"
+            val maskColor = Color.Black.copy(alpha = 0.5f)
 
+            // Desenhar máscara (4 retângulos à volta do buraco)
             // Topo
             drawRect(maskColor, topLeft = Offset(0f, 0f), size = androidx.compose.ui.geometry.Size(canvasWidth, top))
             // Baixo
@@ -253,57 +252,46 @@ private fun DrivingLicenseOverlay(scanState: MrzScanState) {
             drawRect(maskColor, topLeft = Offset(left + cardWidth, top), size = androidx.compose.ui.geometry.Size(left, cardHeight))
         }
 
-        // A Caixa de Enquadramento (Borda)
+        // A Borda de Enquadramento (O "Retângulo")
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxWidth(0.95f) // 95% da largura
-                .aspectRatio(1.58f) // Formato Cartão
+                .fillMaxWidth(0.96f) // Coincide com o Canvas
+                .aspectRatio(1.58f)
                 .border(
-                    width = 3.dp,
+                    width = 4.dp, // Borda mais grossa para ser bem visível
                     color = when (scanState) {
-                        is MrzScanState.Success -> Color.Green
-                        is MrzScanState.Processing -> Color.Yellow
-                        else -> Color.White
+                        is MrzScanState.Success -> Color(0xFF00FF00) // Verde Neon
+                        is MrzScanState.Processing -> Color(0xFFFFEB3B) // Amarelo
+                        else -> Color.White.copy(alpha = 0.8f)
                     },
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(12.dp)
                 )
         ) {
-            // Cantos decorativos
+            // Cantos decorativos (Mira)
             CornerMarkers()
+        }
 
-            // Texto guia centralizado
-            if (scanState !is MrzScanState.Success) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "ENQUADRE A CARTA",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
+        // Feedback de Texto (Instrução central)
+        if (scanState !is MrzScanState.Success) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(top = 16.dp) // Ligeiramente desfasado do centro exato
+            ) {
+                // Barra de Progresso se estiver a ler
+                if (scanState is MrzScanState.Processing) {
+                    LinearProgressIndicator(
+                        progress = scanState.confidence,
+                        modifier = Modifier
+                            .width(200.dp)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = Color.Green,
+                        trackColor = Color.White.copy(alpha = 0.5f)
                     )
                 }
             }
-        }
-
-        // Indicador de progresso de leitura
-        if (scanState is MrzScanState.Processing) {
-            LinearProgressIndicator(
-                progress = scanState.confidence,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .fillMaxWidth(0.8f)
-                    .padding(top = 180.dp) // Abaixo do cartão
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = Color.Green,
-                trackColor = Color.White.copy(alpha = 0.3f)
-            )
         }
     }
 }
@@ -311,7 +299,6 @@ private fun DrivingLicenseOverlay(scanState: MrzScanState) {
 // ============================================
 // RESULTADO: CAMPOS ESPECÍFICOS CARTA
 // ============================================
-
 @Composable
 private fun DrivingLicenseResultCard(
     document: MrzDocument,
@@ -319,26 +306,34 @@ private fun DrivingLicenseResultCard(
     onScanAnother: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp), // Margem inferior
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(16.dp)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(24.dp)
+            // Permitir scroll se houver muitos dados (opcional, mas recomendado)
+            // .verticalScroll(rememberScrollState())
+        ) {
 
-            // Header
+            // --- CABEÇALHO ---
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(32.dp))
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Carta Detetada", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("Carta Detetada", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Divider()
+            Divider(color = Color.LightGray.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Exibir dados mapeados da EuDrivingLicense (convertidos no MrzDocument)
-            // Assumindo que o ViewModel mapeou os dados visuais para estes campos
+            // --- CAMPOS PRINCIPAIS (1, 2, 5) ---
+
+            // Campo 5: Número da Carta
             DLField("5. NÚMERO DA CARTA", document.documentNumber)
 
             val surnames = when (document) {
@@ -353,44 +348,109 @@ private fun DrivingLicenseResultCard(
                 is MrzDocument.DrivingLicense -> document.givenNames
             }
 
+            // Campos 1 e 2: Nomes
             Row(Modifier.fillMaxWidth()) {
                 Box(Modifier.weight(1f)) { DLField("1. APELIDO", surnames) }
                 Spacer(Modifier.width(8.dp))
                 Box(Modifier.weight(1f)) { DLField("2. NOME", givenNames) }
             }
 
-            // Se for MRZDocument.DrivingLicense, tentamos mostrar categorias se existirem
-            if (document is MrzDocument.DrivingLicense && document.licenseCategories.isNotEmpty()) {
-                DLField("9. CATEGORIAS", document.licenseCategories)
-            }
+            // --- CAMPOS ESPECÍFICOS DA CARTA (Smart Cast) ---
+            if (document is MrzDocument.DrivingLicense) {
 
-            // Se tiver datas
-            Row(Modifier.fillMaxWidth()) {
-                if (document.dateOfBirth.isNotEmpty()) {
-                    Box(Modifier.weight(1f)) { DLField("3. NASCIMENTO", document.dateOfBirth) }
-                }
-                document.expiryDate?.let { expiry ->
+                // Campo 3: Data e Local
+                Row(Modifier.fillMaxWidth()) {
+                    Box(Modifier.weight(0.4f)) {
+                        DLField("3. NASCIMENTO", document.dateOfBirth)
+                    }
                     Spacer(Modifier.width(8.dp))
-                    Box(Modifier.weight(1f)) { DLField("4b. VALIDADE", expiry) }
+                    Box(Modifier.weight(0.6f)) {
+                        // O 'placeOfBirth' vem do split do campo 3
+                        DLField("LOCAL", document.placeOfBirth)
+                    }
+                }
+
+                // Campos 4a, 4b, 4c
+                Row(Modifier.fillMaxWidth()) {
+                    Box(Modifier.weight(1f)) {
+                        DLField("4a. EMISSÃO", document.dateOfIssue)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.weight(1f)) {
+                        DLField("4b. VALIDADE", document.dateOfExpiry)
+                    }
+                }
+
+                DLField("4c. ENTIDADE EMISSORA", document.issuingAuthority)
+
+                // Campos 4d, 9 e 8
+                Row(Modifier.fillMaxWidth()) {
+                    Box(Modifier.weight(1f)) {
+                        DLField("4d. N. CONTROLO", document.auditNumber)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.weight(1f)) {
+                        DLField("9. CATEGORIAS", document.licenseCategories)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Campo 8: Morada (Importante!)
+                // Usamos um fundo ligeiro para destacar a morada
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(8.dp)) {
+                        DLField("8. MORADA", document.address)
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botões
+            // --- BOTÕES ---
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = onScanAnother, modifier = Modifier.weight(1f)) { Text("Repetir") }
-                Button(onClick = onConfirm, modifier = Modifier.weight(1f)) { Text("Confirmar") }
+                OutlinedButton(
+                    onClick = onScanAnother,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Repetir")
+                }
+
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Confirmar")
+                }
             }
         }
     }
 }
 
+// Pequeno ajuste no componente de campo para lidar com nulos de forma elegante
 @Composable
-private fun DLField(label: String, value: String) {
-    Column(modifier = Modifier.padding(vertical = 6.dp)) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray, fontWeight = FontWeight.Bold)
-        Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+private fun DLField(label: String, value: String?) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.sp
+        )
+        Text(
+            text = if (value.isNullOrBlank()) "-" else value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 

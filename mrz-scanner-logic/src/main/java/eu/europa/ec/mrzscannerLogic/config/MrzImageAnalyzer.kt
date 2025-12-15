@@ -1,8 +1,12 @@
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
+import eu.europa.ec.mrzscannerLogic.middleware.DrivingLicenseAggregator
+import eu.europa.ec.mrzscannerLogic.middleware.ProbabilityAggregator
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
 import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseService
 import eu.europa.ec.mrzscannerLogic.service.MrzParseResult
@@ -32,7 +36,7 @@ class MrzImageAnalyzer(
     private val textRecognitionService: TextRecognitionService,
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
-    private val throttleMs: Long = 150L, // Processa ~6-7 frames/segundo
+    private val throttleMs: Long = 600L, // Processa ~6-7 frames/segundo
     private val roiBottomFraction: Float = 0.3f, // Foca nos 30% inferiores
     private val requiredSuccessFrames: Int = 2 // Requer 2 leituras consecutivas
 ) : ImageAnalysis.Analyzer {
@@ -48,6 +52,9 @@ class MrzImageAnalyzer(
     private var totalFrames = 0L
     private var processedFrames = 0L
     private var successfulReads = 0L
+
+    private val dlAggregator = DrivingLicenseAggregator()
+    private val probabilityAggregator = ProbabilityAggregator()
 
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
@@ -76,8 +83,11 @@ class MrzImageAnalyzer(
             return
         }
 
+        val bitmap = imageProxy.toBitmap()
         val rotation = imageProxy.imageInfo.rotationDegrees
-        val inputImage = InputImage.fromMediaImage(mediaImage, rotation)
+
+        // 2. InputImage via Bitmap
+        val inputImage = InputImage.fromBitmap(bitmap, rotation)
 
         // Processar de forma assíncrona
         scope.launch(dispatcher) {
@@ -85,12 +95,11 @@ class MrzImageAnalyzer(
                 // OCR no frame atual
                 val textResult = textRecognitionService.recognizeText(inputImage, rotation)
 
-                textResult.onSuccess { recognizedText ->
+                textResult.onSuccess { textObject ->
                     processRecognizedText(
-                        recognizedText = recognizedText,
-                        imageHeight = imageProxy.height,
-                        imageWidth = imageProxy.width,
-                        rotation = rotation
+                        textObject = textObject,
+                        rotation = rotation,
+                        bitmap = bitmap,
                     )
                 }.onFailure { e ->
                     // Erro de OCR - não interrompe o fluxo, continua tentando
@@ -109,17 +118,18 @@ class MrzImageAnalyzer(
      * Implementamos filtragem por conteúdo (heurística).
      */
     private fun processRecognizedText(
-        recognizedText: String,
-        imageHeight: Int,
-        imageWidth: Int,
+        textObject: Text,
+        bitmap: Bitmap,
         rotation: Int
     ) {
+        val fullText = textObject.text
+
         // Debug para confirmar entrada
-        if (recognizedText.isNotEmpty()) {
-            Log.d("MRZ_RAW", "OCR Bruto:\n$recognizedText")
+        if (fullText.isNotEmpty()) {
+            Log.d("MRZ_RAW", "OCR Bruto:\n$fullText")
         }
 
-        val allLines = recognizedText.split("\n")
+        val allLines = fullText.split("\n")
 
 
 
@@ -133,26 +143,73 @@ class MrzImageAnalyzer(
             .filter { isValidMrzLine(it) }
 
 
-        // Se não sobrarem linhas candidatas suficientes, aborta sem resetar bruscamente
         if (mrzCandidates.size >= 2) {
-            Log.d("MRZ_PROC", "Tentando Parse com linhas limpas: $mrzCandidates")
-            // 3. Tentativa de Parse
+            Log.d("MRZ_PROC", "Padrão MRZ detetado.")
             val parseResult = parserService.parse(mrzCandidates)
-            handleParseMrzResult(parseResult)
-        }else{
-            Log.d("VISUAL_PROC", "Tentando Parse Visual (Carta Condução)...")
 
-            val dlResult = driverLicenseParser.parse(allLines)
-
-            if (dlResult is MrzParseResult.Success) {
-                Log.i("VISUAL_SUCCESS", "Carta detetada: ${dlResult.document.documentNumber}")
-                handleSuccessfulParse(dlResult.document)
-
-            } else {
-                consecutiveSuccessCount = 0
+            if (parseResult is MrzParseResult.Success) {
+                handleParseMrzResult(parseResult)
+                return // Se encontrou MRZ, para por aqui
             }
         }
+
+
+        Log.d("DL_PROC", "Tentando Carta de Condução por Blocos...")
+
+        // AQUI ESTÁ A CORREÇÃO: Passamos o textObject que tem os blocos
+        val dlResult = driverLicenseParser.parse(textObject)
+
+        if (dlResult is MrzParseResult.Success) {
+            Log.i("DL_SUCCESS", "Carta detetada via Blocos!")
+            val dlDoc = dlResult.document as MrzDocument.DrivingLicense
+
+            // Passamos para o agregador
+            handleDrivingLicensePartial(dlDoc, bitmap, rotation)
+        } else {
+            // Se falhar ambos, resetamos
+            consecutiveSuccessCount = 0
+        }
+
     }
+
+    private fun handleDrivingLicensePartial(
+        partialDoc: MrzDocument.DrivingLicense,
+        bitmap: Bitmap,
+        rotation: Int
+    ) {
+        // 1. Verificar Reset (Se mudou de carta)
+        // Se o número atual for muito diferente do vencedor atual, resetamos
+        // ... (lógica de reset simples) ...
+
+        // 2. Adicionar à probabilidade
+        probabilityAggregator.addFrame(partialDoc)
+
+        // 3. Informar UI do progresso (Opcional, para barra de loading)
+        val progress = probabilityAggregator.getConfidenceProgress()
+        resultFlow.trySend(MrzScanState.Processing(progress))
+
+        // 4. Verificar se temos certeza absoluta
+        if (probabilityAggregator.isConfident()) {
+
+            // Obter o documento "Vencedor Estatístico"
+            val finalDoc = probabilityAggregator.getResult()
+
+            Log.i("PROBABILITY", "Vencedor Confirmado (Campo 5): ${finalDoc.documentNumber}")
+
+            scope.launch {
+                resultFlow.trySend(MrzScanState.Success(
+                    document = finalDoc
+                    // capturedImage = ... (corte a imagem aqui se quiser)
+                ))
+                probabilityAggregator.reset()
+                isProcessing.set(false)
+            }
+        } else {
+            // Continua a ler mais frames para melhorar a precisão
+            isProcessing.set(false)
+        }
+    }
+
 
     private fun handleParseMrzResult(parseResult: MrzParseResult){
         when (parseResult) {
@@ -262,49 +319,4 @@ class MrzImageAnalyzer(
         return fillerRatio in 0.1f..0.6f
     }
 
-    /**
-     * Calcula confiança baseado na qualidade do texto reconhecido
-     */
-    private fun calculateConfidence(text: String): Float {
-        val lines = text.split("\n").filter { it.isNotBlank() }
-
-        if (lines.isEmpty()) return 0f
-
-        // Fatores de confiança:
-        // 1. Número de linhas (mais linhas = melhor)
-        val linesFactor = (lines.size.toFloat() / 10f).coerceIn(0f, 1f)
-
-        // 2. Presença de caracteres '<' (indicativo de MRZ)
-        val fillerFactor = if (text.contains('<')) 0.3f else 0f
-
-        // 3. Densidade de caracteres maiúsculos
-        val uppercaseRatio = text.count { it.isUpperCase() }.toFloat() / text.length
-        val uppercaseFactor = uppercaseRatio.coerceIn(0f, 0.3f)
-
-        return (linesFactor + fillerFactor + uppercaseFactor).coerceIn(0f, 1f)
-    }
-
-    /**
-     * Obtém estatísticas de processamento (para debug)
-     */
-    fun getStatistics(): AnalyzerStatistics {
-        return AnalyzerStatistics(
-            totalFrames = totalFrames,
-            processedFrames = processedFrames,
-            successfulReads = successfulReads,
-            processingRate = if (totalFrames > 0) {
-                (processedFrames.toFloat() / totalFrames * 100)
-            } else 0f
-        )
-    }
 }
-
-/**
- * Estatísticas do analyzer (útil para debug e otimização)
- */
-data class AnalyzerStatistics(
-    val totalFrames: Long,
-    val processedFrames: Long,
-    val successfulReads: Long,
-    val processingRate: Float // Percentagem de frames processados
-)

@@ -25,6 +25,10 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle.v130)
     implementation(libs.androidx.camera.view.v130)
     implementation(libs.androidx.monitor)
+    implementation(libs.face.detection)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta4")
+
 }
 
 excludeFromKoverReport(

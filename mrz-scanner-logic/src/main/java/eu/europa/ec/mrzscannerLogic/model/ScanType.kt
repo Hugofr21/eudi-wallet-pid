@@ -1,4 +1,6 @@
 package eu.europa.ec.mrzscannerLogic.model
 
-class ScanType {
+sealed class ScanType {
+    object Face : ScanType()
+    object Document : ScanType()
 }

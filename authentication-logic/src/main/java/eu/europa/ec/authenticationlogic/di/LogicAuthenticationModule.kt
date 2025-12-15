@@ -18,6 +18,7 @@ package eu.europa.ec.authenticationlogic.di
 
 import android.content.Context
 import eu.europa.ec.authenticationlogic.config.StorageConfig
+import eu.europa.ec.authenticationlogic.config.StorageConfigImpl
 import eu.europa.ec.authenticationlogic.controller.authentication.BiometricAuthenticationController
 import eu.europa.ec.authenticationlogic.controller.authentication.BiometricAuthenticationControllerImpl
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationController
@@ -36,15 +37,35 @@ import eu.europa.ec.authenticationlogic.controller.storage.PinStorageController
 import eu.europa.ec.authenticationlogic.controller.storage.PinStorageControllerImpl
 import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherControllerImpl
 import eu.europa.ec.authenticationlogic.controller.storage.SQLCipherStorageController
+import eu.europa.ec.authenticationlogic.storage.PrefsBiometryStorageProvider
+import eu.europa.ec.authenticationlogic.storage.PrefsLogStorageProvider
+import eu.europa.ec.authenticationlogic.storage.PrefsPassphraseStorageProvider
+import eu.europa.ec.authenticationlogic.storage.PrefsPinStorageProvider
+import eu.europa.ec.authenticationlogic.storage.PrefsSQLCipherStorageProvider
 import eu.europa.ec.businesslogic.controller.crypto.CryptoController
+import eu.europa.ec.businesslogic.controller.storage.PrefsController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
+import org.koin.core.annotation.Single
 
 @Module
 @ComponentScan("eu.europa.ec.authenticationlogic")
 class LogicAuthenticationModule
+
+@Single
+fun provideStorageConfig(
+    prefsController: PrefsController,
+    cryptoController: CryptoController
+): StorageConfig = StorageConfigImpl(
+    pinImpl = PrefsPinStorageProvider(prefsController, cryptoController),
+    biometryImpl = PrefsBiometryStorageProvider(prefsController),
+    sqlCipherImpl = PrefsSQLCipherStorageProvider(prefsController, cryptoController),
+    passphraseImpl = PrefsPassphraseStorageProvider(prefsController, cryptoController),
+    logImpl = PrefsLogStorageProvider(prefsController, cryptoController),
+)
+
 
 @Factory
 fun provideBiometricAuthenticationController(

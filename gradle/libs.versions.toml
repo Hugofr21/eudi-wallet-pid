@@ -40,6 +40,7 @@ datastoreCore = "1.2.0-rc01"
 datastorePreferencesVersion = "1.2.0-rc01"
 documentfile = "1.1.0"
 eudiLibJvmSiopOpenid4vpKt = "0.11.0"
+faceDetection = "16.1.7"
 gmsPlugin = "4.4.4"
 guice = "7.0.0"
 jsoup = "1.21.2"
@@ -153,6 +154,7 @@ coil-kt-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "co
 coil-kt-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 datastore-core = { module = "androidx.datastore:datastore-core", version.ref = "datastoreCore" }
 eudi-lib-jvm-siop-openid4vp-kt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-siop-openid4vp-kt", version.ref = "eudiLibJvmSiopOpenid4vpKt" }
+face-detection = { module = "com.google.mlkit:face-detection", version.ref = "faceDetection" }
 guice = { module = "com.google.inject:guice", version.ref = "guice" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }

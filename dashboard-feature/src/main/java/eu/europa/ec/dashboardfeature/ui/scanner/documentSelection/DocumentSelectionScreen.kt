@@ -133,7 +133,7 @@ private fun Content(
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.weight(20f))
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,

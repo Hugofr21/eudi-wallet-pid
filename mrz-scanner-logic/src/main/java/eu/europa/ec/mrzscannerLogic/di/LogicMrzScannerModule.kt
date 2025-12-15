@@ -4,10 +4,14 @@ import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanController
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanControllerImpl
+import eu.europa.ec.mrzscannerLogic.service.CameraService
+import eu.europa.ec.mrzscannerLogic.service.CameraServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.ChecksumValidationService
 import eu.europa.ec.mrzscannerLogic.service.ChecksumValidationServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseService
 import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseServiceImpl
+import eu.europa.ec.mrzscannerLogic.service.FaceService
+import eu.europa.ec.mrzscannerLogic.service.FaceServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.MrzParserService
 import eu.europa.ec.mrzscannerLogic.service.MrzParserServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.OcrCorrectionService
@@ -23,6 +27,14 @@ import org.koin.core.annotation.Single
 @Module
 @ComponentScan("eu.europa.ec.mrzscannerLogic")
 class LogicMrzScannerModule
+
+
+@Single
+fun provideCameraService(
+    resourceProvider: ResourceProvider,
+): CameraService =
+    CameraServiceImpl(resourceProvider)
+
 
 @Single
 fun provideOcrCorrectionService(): OcrCorrectionService =
@@ -53,15 +65,24 @@ fun provideDriverLicenseParseService(): DriverLicenseParseService =
 
 
 @Single
+fun provideFaceService(): FaceService =
+    FaceServiceImpl()
+
+
+@Single
 fun provideMrzScanController(
+    cameraService: CameraService,
     resourceProvider: ResourceProvider,
     parserService: MrzParserService,
+    faceService: FaceService,
     driverLicenseParseService : DriverLicenseParseService,
     textRecognitionService: TextRecognitionService,
 ): MrzScanController =
     MrzScanControllerImpl(
+        cameraService = cameraService,
         resourceProvider = resourceProvider,
         parserService = parserService,
+        faceService = faceService,
         driverLicenseParseService = driverLicenseParseService,
         textRecognitionService = textRecognitionService
     )

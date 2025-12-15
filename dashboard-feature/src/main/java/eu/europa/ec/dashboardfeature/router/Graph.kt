@@ -31,6 +31,7 @@ import eu.europa.ec.dashboardfeature.ui.documents.detail.DocumentDetailsScreen
 import eu.europa.ec.dashboardfeature.ui.profile.ProfileScreen
 import eu.europa.ec.dashboardfeature.ui.scanner.documentSelection.DocumentSelectionScreen
 import eu.europa.ec.dashboardfeature.ui.scanner.driverLicense.DriverLicenseScreen
+import eu.europa.ec.dashboardfeature.ui.scanner.faceId.FaceIdScreen
 import eu.europa.ec.dashboardfeature.ui.scanner.identificationDocument.IdentificationDocumentScreen
 import eu.europa.ec.dashboardfeature.ui.settings.SettingsScreen
 import eu.europa.ec.dashboardfeature.ui.transactions.detail.TransactionDetailsScreen
@@ -210,6 +211,27 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
 
         composable(DashboardScreens.DrivingLicense.screenRoute) {
             DriverLicenseScreen(navController, koinViewModel())
+        }
+
+        composable(
+            route = DashboardScreens.FaceIdDetails.screenRoute,
+            deepLinks = listOf(),
+            arguments = listOf(
+                navArgument("documentId") {
+                    type = NavType.StringType
+                },
+            )
+        ) {
+            FaceIdScreen(
+                navController,
+                koinViewModel(
+                    parameters = {
+                        parametersOf(
+                            it.arguments?.getString("documentId").orEmpty(),
+                        )
+                    }
+                )
+            )
         }
     }
 }

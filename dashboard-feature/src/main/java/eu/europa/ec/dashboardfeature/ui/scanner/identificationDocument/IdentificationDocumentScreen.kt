@@ -72,6 +72,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import eu.europa.ec.mrzscannerLogic.model.ScanType
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -214,7 +215,8 @@ private fun AutomaticScannerContent(
         viewModel?.setEvent(
             Event.InitializeScanner(
                 lifecycleOwner = lifecycleOwner,
-                previewView = previewView
+                previewView = previewView,
+                scanType = ScanType.Document
             )
         )
     }

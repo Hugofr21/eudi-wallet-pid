@@ -1,67 +1,80 @@
 package eu.europa.ec.mrzscannerLogic.utils
 
-object TextReconizer {
-    /**
-     * Limpeza para NOMES (Campos 1, 2, Localidade)
-     * Regra: Se aparecer um número, converte para a letra parecida.
-     */
-    private fun String.sanitizeName(): String {
+object TextSanitize {
+    fun String.sanitizeName(): String {
         return this.uppercase()
-            // Problema "2 não reconhece": No nome, um 2 é provavelmente um Z
-            .replace("2", "Z")
-            .replace("7", "Z") // Às vezes 7 é lido em vez de Z
-
-            // Problema "e por o":
             .replace("0", "O")
-            .replace("3", "E") // 3 no nome vira E
-            .replace("6", "G")
-            .replace("9", "P") // Raro, mas acontece
-
-            // Outros comuns
             .replace("1", "I")
+            .replace("3", "E")
             .replace("4", "A")
             .replace("5", "S")
             .replace("8", "B")
             .replace("|", "I")
-            .replace("$", "S")
-            .replace("@", "A")
-
-            // Limpa lixo final
-            .replace(Regex("[^\\p{L}'\\s-]"), "")
+            .replace(Regex("[^A-ZÀ-ÿ'\\s-]"), "") // Remove números do nome
             .trim()
     }
 
-    /**
-     * Limpeza para DATAS e NÚMEROS (Campos 3, 4a, 4b, 5)
-     * Regra: Se aparecer uma letra, converte para o número parecido.
-     */
-    private fun String.sanitizeDate(): String {
-        // Normaliza separadores primeiro
-        var clean = this.replace(" ", "").replace("-", "/").replace(".", "/")
-
-        return clean.uppercase()
-            // Problema "2 não reconhece": Na data, um Z é um 2
-            .replace("Z", "2")
-            .replace("?", "2") // ? às vezes aparece em vez de 2
-
-            // Problema "e por o": Na data, O/D/Q é 0.
+    fun String.sanitizeDate(): String {
+        return this.replace(" ", "")
+            .replace("-", "/")
+            .replace(".", "/")
+            .uppercase()
             .replace("O", "0")
             .replace("D", "0")
-            .replace("Q", "0")
-            .replace("U", "0")
-
-            // Outros comuns
             .replace("I", "1")
             .replace("L", "1")
-            .replace("|", "1")
-            .replace("E", "3") // E na data é 3
+            .replace("Z", "2")
+            .replace("E", "3")
             .replace("A", "4")
             .replace("S", "5")
             .replace("G", "6")
+            .replace("T", "7")
             .replace("B", "8")
-            .replace("T", "7") // T é 7
-
-            // Remove tudo o que não for número ou barra
+            .replace("%", "") // Erro visto no log: 199%
             .replace(Regex("[^0-9/]"), "")
+    }
+
+    /**
+     * Limpa o campo 4c (Entidade Emissora) de forma genérica.
+     * Corrige erros de OCR (1->I, |->I) e normaliza o separador.
+     * Funciona para: "1MT-LISBOA", "TKSF-OSLO", "DGT - MADRID".
+     */
+     fun sanitizeAuthority(raw: String): String {
+        if (raw.isBlank()) return ""
+
+        var clean = raw.uppercase().trim()
+
+        // 1. Normalização do Separador (Hífen)
+        // O OCR muitas vezes lê " - ", " . " ou apenas " " no lugar do hífen
+        clean = clean.replace(" -", "-")
+            .replace("- ", "-")
+            .replace(" . ", "-")
+            // Se tiver um ponto no meio de letras (ex: IMT.PORTO), vira hífen
+            .replace(".", "-")
+
+        // 2. Correção Genérica de 1º Caractere
+        // Em siglas (seja IMT, INCM, ID, etc), é muito raro começar com número '1' ou '0'.
+        // É quase sempre 'I' ou 'O'.
+        if (clean.isNotEmpty()) {
+            val first = clean.first()
+            if (first == '1' || first == '|' || first == '!' || first == 'L') {
+                // Assume que é um 'I' (erro muito comum: 1MT -> IMT, 1NCM -> INCM)
+                clean = "I" + clean.substring(1)
+            } else if (first == '0') {
+                // Assume que é um 'O' (ex: 0SLO -> OSLO)
+                clean = "O" + clean.substring(1)
+            }
+        }
+
+        // 3. Limpeza Final
+        // Mantém Letras, Números, Hífen e Espaços (para cidades compostas ex: CASTELO BRANCO)
+        clean = clean.replace(Regex("[^A-Z0-9- ]"), "").trim()
+
+        // Remove hífens duplicados se o OCR leu "--"
+        while (clean.contains("--")) {
+            clean = clean.replace("--", "-")
+        }
+
+        return clean
     }
 }
