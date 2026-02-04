@@ -35,29 +35,25 @@ class MrzParserServiceImpl(
 
     override fun parse(lines: List<String>): MrzParseResult {
         val format = detectFormat(lines)
-            ?: return MrzParseResult.InvalidFormat("Formato não reconhecido. Linhas: ${lines.size}")
+            ?: return MrzParseResult.InvalidFormat("Unrecognized format. Lines: ${lines.size}")
 
         return when (format) {
             MrzFormat.TD3 -> parseTD3(lines)
             MrzFormat.TD1 -> parseTD1(lines)
-            MrzFormat.TD2 -> parseTD2(lines) // TD2 geralmente não usado em PT moderno, mas mantido
+            MrzFormat.TD2 -> parseTD2(lines)
         }
     }
 
     override fun detectFormat(lines: List<String>): MrzFormat? {
         val count = lines.size
 
-        // Lógica baseada em geometria (comprimento das strings)
-        // Tolerância de +/- 4 caracteres para erros de corte do OCR
+
         return when {
-            // TD3 (Passaporte): 2 linhas longas (~44 chars)
+
             count == 2 && lines.all { it.length in 40..50 } -> MrzFormat.TD3
 
-            // TD1 (Cartão Cidadão): 3 linhas médias (~30 chars)
             count == 3 && lines.all { it.length in 28..34 } -> MrzFormat.TD1
 
-            // Fallback: Se tiver 3 linhas e a do meio for curta, pode ser erro de quebra,
-            // mas se tiver 2 linhas médias, pode ser TD2 antigo.
             count == 2 && lines.all { it.length in 32..40 } -> MrzFormat.TD2
 
             else -> null
@@ -66,8 +62,7 @@ class MrzParserServiceImpl(
 
     private fun parseTD1(rawLines: List<String>): MrzParseResult {
         try {
-            // ... (Lógica de limpeza das linhas e geometria igual ao anterior) ...
-            // [Mantenha a lógica de limpar 1< para I< e padronizar tamanho]
+
             val lines = rawLines.map { line ->
                 line.uppercase().replace(" ", "").replace("1<", "I<").replace("L<", "I<")
                     .let { if (it.length > 30) it.substring(0, 30) else it.padEnd(30, '<') }
@@ -76,60 +71,46 @@ class MrzParserServiceImpl(
             val line2 = lines[1]
             val line3 = lines[2]
 
-            // --- EXTRAÇÃO ---
-
-            // País: Sempre 3 letras. Usamos replaceDigitsWithAlpha para forçar letras.
             val issuingCountry = line1.substring(2, 5).replaceDigitsWithAlpha()
 
-            // Numero Documento: Letras e Números permitidos em muitos países.
-            // Para TD1 genérico, não podemos forçar replaceAlphaWithDigits() agressivamente aqui,
-            // pois alguns países usam letras no número.
-            // Apenas removemos o filler '<'
             val documentNumber = line1.substring(5, 14).replace("<", "")
             val checkDoc = line1[14]
 
-            // --- DATAS (Usando a nova classe MrzDate) ---
+
             val dobString = line2.substring(0, 6)
-            val birthDate = MrzDate.parseBirthDate(dobString) // Lógica inteligente de século
+            val birthDate = MrzDate.parseBirthDate(dobString)
             val checkDob = line2[6]
 
             val expiryString = line2.substring(8, 14)
-            val expiryDate = MrzDate.parseExpiryDate(expiryString) // Lógica inteligente de validade
+            val expiryDate = MrzDate.parseExpiryDate(expiryString)
             val checkExpiry = line2[14]
 
-            // --- SEXO ---
+
             val sex = MrzSex.parse(line2[7].toString())
 
-            // Nacionalidade
+
             val nationality = line2.substring(15, 18).replaceDigitsWithAlpha()
 
-            // Checksum Composto
+
             val checkComposite = line2[29]
 
-            // --- NOMES ---
+
             val namesClean = line3.replaceDigitsWithAlpha()
             val nameSection = namesClean.replace("<<", "|").split("|")
             val surname = nameSection.getOrNull(0)?.replace("<", " ")?.trim() ?: ""
             val givenNames = nameSection.getOrNull(1)?.replace("<", " ")?.trim() ?: ""
 
 
-            // --- VALIDAÇÃO ---
-            // Validamos não apenas o checksum, mas se a data faz sentido
             val isChecksumValid = checksumService.validate(documentNumber, checkDoc) &&
                     checksumService.validate(birthDate.rawMrz, checkDob) &&
                     checksumService.validate(expiryDate.rawMrz, checkExpiry)
 
             val isDataValid = birthDate.isValid && expiryDate.isValid
 
-            // Atualize o seu MrzDocument para aceitar MrzDate e MrzSex em vez de String
-            // Ou converta para String aqui usando .toString() se não quiser mudar o Model agora
             val document = MrzDocument.IdCard(
                 documentNumber = documentNumber,
-
-                // Agora passamos a string formatada correta (dd/mm/yyyy)
                 dateOfBirth = birthDate.toString(),
                 dateOfExpiry = expiryDate.toString(),
-
                 nationality = nationality,
                 sex = sex.code, // "M", "F" ou "X"
                 issuingCountry = issuingCountry,
@@ -156,20 +137,17 @@ class MrzParserServiceImpl(
             val lines = rawLines.map { line ->
                 line.uppercase()
                     .replace(" ", "")
-                    .replace("1<", "P<") // Corrige P lido como 1
+                    .replace("1<", "P<")
                     .let { if (it.length > 44) it.substring(0, 44) else it.padEnd(44, '<') }
             }
 
             val line1 = lines[0]
             val line2 = lines[1]
 
-            // Implementação padrão de extração TD3...
             val documentNumber = line2.substring(0, 9).replaceAlphaWithDigits()
             val checkDoc = line2[9]
             val dob = line2.substring(13, 19).replaceAlphaWithDigits()
             val expiry = line2.substring(21, 27).replaceAlphaWithDigits()
-
-            // Reconstrução de nomes
             val nameSection = line1.substring(5).replaceDigitsWithAlpha().replace("<<", "|").split("|")
             val surname = nameSection.getOrNull(0)?.replace("<", " ")?.trim() ?: ""
             val givenNames = nameSection.getOrNull(1)?.replace("<", " ")?.trim() ?: ""

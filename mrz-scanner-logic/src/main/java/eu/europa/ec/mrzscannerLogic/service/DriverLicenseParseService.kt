@@ -129,7 +129,7 @@ class DriverLicenseParseServiceImpl : DriverLicenseParseService {
         val hasNumber = licenseNumber.length >= 7 // Pelo menos L-12345
 
         if (!hasIdentity && !hasNumber) {
-            return MrzParseResult.InvalidFormat("Dados insuficientes")
+            return MrzParseResult.InvalidFormat("Data insufficient for parsing")
         }
 
         val doc = MrzDocument.DrivingLicense(
@@ -144,9 +144,9 @@ class DriverLicenseParseServiceImpl : DriverLicenseParseService {
             auditNumber = auditNumber,
             address = address,
             licenseCategories = categories ?: "",
-            issuingCountry = "PRT",
-            nationality = "PRT",
-            sex = MrzSex.Unspecified.name,
+            issuingCountry = "UNKNOWN",
+            nationality = "UNKNOWN",
+            sex = "UNKNOWN",
             isValid = true,
             rawLines = fullRawText.split("\n")
         )

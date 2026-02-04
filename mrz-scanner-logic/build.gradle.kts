@@ -28,6 +28,7 @@ dependencies {
     implementation(libs.face.detection)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta4")
+    implementation(libs.androidx.ui.graphics)
 
 }
 

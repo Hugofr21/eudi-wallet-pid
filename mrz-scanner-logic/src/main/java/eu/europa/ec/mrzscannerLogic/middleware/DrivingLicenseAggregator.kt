@@ -100,12 +100,10 @@ class DrivingLicenseAggregator {
 
 
     private fun pickBest(old: String, new: String): String {
-        // Lógica: Se o 'new' segue o padrão rigoroso (tem espaço no fim) e o 'old' não, escolhemos o 'new'.
         val newHasFormat = new.contains(" ") && new.contains("-")
         val oldHasFormat = old.contains(" ") && old.contains("-")
-
         if (newHasFormat && !oldHasFormat) return new
-        if (oldHasFormat) return old // Mantém a estabilidade se já tivermos um bom
+        if (oldHasFormat) return old
 
         return if (new.length > old.length) new else old
     }
