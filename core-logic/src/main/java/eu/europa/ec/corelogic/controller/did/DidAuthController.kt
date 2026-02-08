@@ -12,6 +12,7 @@ interface DidAuthController {
 class DidAuthControllerImpl (
 
 ): DidAuthController{
+
     override suspend fun getOrCreateDidDocument(serviceEndpoint: String): DidDocument {
         TODO("Not yet implemented")
     }

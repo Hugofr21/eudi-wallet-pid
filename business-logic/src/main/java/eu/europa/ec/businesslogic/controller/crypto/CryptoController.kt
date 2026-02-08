@@ -51,6 +51,9 @@ interface CryptoController {
     fun encryptPin(pin: String): Pair<String, String>
 
     fun verifyPin( attempt: String, storedSaltB64: String, storedHashB64: String): Boolean
+
+    fun hashPin(pin: String): Pair<String, String>
+
     fun verifyPhrase(attempt:List<String>, storedHashB64: String): Boolean
 
     fun deriveKey(password: String, salt: ByteArray): ByteArray
@@ -71,13 +74,14 @@ class CryptoControllerImpl(
     companion object {
         private const val AES_EXTERNAL_TRANSFORMATION = "AES/GCM/NoPadding"
         private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
-        private const val GCM_TAG_SIZE_BITS = 128
+        private const val GCM_TAG_LENGTH_BITS = 128
         private const val CODE_VERIFIER_MIN = 43
         private const val CODE_VERIFIER_MAX = 128
         const val MAX_GUID_LENGTH = 64
         private const val SALT_BITS = 16
         private const val ITERATION_COUNT = 100_000
         private const val KEY_LENGTH = 256
+        private const val SALT_LENGTH_BYTES = 32
     }
 
 
@@ -94,18 +98,15 @@ class CryptoControllerImpl(
     override fun getCipher(encrypt: Boolean, ivBytes: ByteArray?, userAuthenticationRequired: Boolean): Cipher? {
         return try {
             val cipher = Cipher.getInstance(AES_EXTERNAL_TRANSFORMATION)
+            val key = keystoreController.retrieveOrGenerateSecretKey(userAuthenticationRequired)
             if (encrypt) {
 //                println("getCipher → init ENCRYPT_MODE with ivBytes")
-                val key = keystoreController.retrieveOrGenerateSecretKey(userAuthenticationRequired)
                 cipher.init(Cipher.ENCRYPT_MODE, key)
             } else {
 //                println("getCipher → init DECRYPT_MODE with ivBytes")
-                val key = keystoreController.retrieveOrGenerateSecretKey(userAuthenticationRequired)
-                cipher.init(
-                    Cipher.DECRYPT_MODE,
-                    key,
-                    GCMParameterSpec(GCM_TAG_SIZE_BITS, ivBytes ?: ByteArray(0))
-                )
+                if (ivBytes == null || ivBytes.isEmpty()) throw IllegalArgumentException("IV required for decryption")
+                val spec = GCMParameterSpec(GCM_TAG_LENGTH_BITS, ivBytes)
+                cipher.init(Cipher.DECRYPT_MODE, key, spec)
             }
             cipher
         } catch (e: Exception) {
@@ -140,11 +141,24 @@ class CryptoControllerImpl(
         storedSaltB64: String,
         storedHashB64: String
     ): Boolean {
-        val salt      = Base64.decode(storedSaltB64, Base64.NO_WRAP)
-        val storedHash = Base64.decode(storedHashB64, Base64.NO_WRAP)
-        val attemptHash = deriveKey(attempt, salt)
-        if (storedHash.size != attemptHash.size) return false
-        return storedHash.indices.all { storedHash[it] == attemptHash[it] }
+        return try {
+            val salt = Base64.decode(storedSaltB64, Base64.NO_WRAP)
+            val storedHash = Base64.decode(storedHashB64, Base64.NO_WRAP)
+            val attemptHash = deriveKey(attempt, salt)
+            MessageDigest.isEqual(storedHash, attemptHash)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    override fun hashPin(pin: String): Pair<String, String> {
+        val salt = generateSalt()
+        val hash = deriveKey(pin, salt)
+
+        val saltB64 = Base64.encodeToString(salt, Base64.NO_WRAP)
+        val hashB64 = Base64.encodeToString(hash, Base64.NO_WRAP)
+
+        return saltB64 to hashB64
     }
 
     override fun verifyPhrase(
@@ -160,8 +174,9 @@ class CryptoControllerImpl(
 
 
     override fun deriveKey(password: String, salt: ByteArray): ByteArray {
+        val normalizedPassword = Normalizer.normalize(password, Normalizer.Form.NFKD)
         val spec = PBEKeySpec(
-            password.toCharArray(),
+            normalizedPassword.toCharArray(),
             salt,
             ITERATION_COUNT,
             KEY_LENGTH

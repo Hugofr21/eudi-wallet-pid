@@ -19,17 +19,15 @@ package eu.europa.ec.authenticationlogic.controller.storage
 import eu.europa.ec.authenticationlogic.config.StorageConfig
 
 interface PinStorageController {
-    fun retrievePin(): String
     fun setPin(pin: String)
     fun isPinValid(pin: String): Boolean
+    fun hasPin(): Boolean
+    fun clearPin()
 }
 
 class PinStorageControllerImpl(private val storageConfig: StorageConfig) : PinStorageController {
-    override fun retrievePin(): String = storageConfig.pinStorageProvider.retrievePin()
-
-    override fun setPin(pin: String) {
-        storageConfig.pinStorageProvider.setPin(pin)
-    }
-
+    override fun hasPin(): Boolean = storageConfig.pinStorageProvider.hasPin()
+    override fun clearPin() = storageConfig.pinStorageProvider.clearPin()
+    override fun setPin(pin: String) = storageConfig.pinStorageProvider.setPin(pin)
     override fun isPinValid(pin: String): Boolean = storageConfig.pinStorageProvider.isPinValid(pin)
 }

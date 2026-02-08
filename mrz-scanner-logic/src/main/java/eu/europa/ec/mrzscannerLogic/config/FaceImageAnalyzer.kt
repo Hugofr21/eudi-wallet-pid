@@ -34,16 +34,14 @@ class FaceImageAnalyzer(
     @Volatile private var lastProcessTime = 0L
     private var consecutiveSuccesses = 0
 
-    // --- NOVO: Inicialização do Segmentador ---
     private val segmenter: Segmenter by lazy {
         val options = SelfieSegmenterOptions.Builder()
             .setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE)
-            // Pedimos a máscara em tamanho bruto para bater certo com os píxeis do bitmap
             .enableRawSizeMask()
             .build()
         Segmentation.getClient(options)
     }
-    // -----------------------------------------
+
 
     @OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {

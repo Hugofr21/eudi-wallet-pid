@@ -23,6 +23,15 @@ import eu.europa.ec.businesslogic.extension.decodeFromBase64
 import eu.europa.ec.businesslogic.extension.decodeFromPemBase64String
 import eu.europa.ec.businesslogic.extension.encodeToBase64String
 import java.security.MessageDigest
+/**
+
+ **/
+interface PinStorageProvider {
+    fun setPin(pin: String)
+    fun isPinValid(pin: String): Boolean
+    fun hasPin(): Boolean
+    fun clearPin()
+}
 
 class PrefsPinStorageProvider(
     private val prefsController: PrefsController,
@@ -31,69 +40,33 @@ class PrefsPinStorageProvider(
 
     companion object {
         private const val KEY_SALT = "DevicePinSalt"
-        private const val KEY_HASH         = "DevicePinHash"
-        private const val KEY_IV         = "DevicePinIv"
+        private const val KEY_HASH = "DevicePinHash"
     }
 
     override fun setPin(pin: String) {
-        val saltByteArray = cryptoController.generateSalt()
-        val keyByteArrayDerive = cryptoController.deriveKey(pin, saltByteArray)
+        val (saltB64, hashB64) = cryptoController.hashPin(pin)
 
-        val cipher = cryptoController.getCipher(
-            encrypt = true,
-            userAuthenticationRequired = false
-        )
-
-        val encryptedBytes = cryptoController.encryptDecrypt(
-            cipher = cipher,
-            byteArray = keyByteArrayDerive
-        )
-
-        val ivBytes = cipher?.iv ?: return
-
-        prefsController.setString(KEY_SALT, saltByteArray.encodeToBase64String())
-        prefsController.setString(KEY_HASH, encryptedBytes.encodeToBase64String())
-        prefsController.setString(KEY_IV, ivBytes.encodeToBase64String())
-    }
-
-    override fun retrievePin(): String {
-        val ivB64   = prefsController.getString(KEY_IV,     "").ifEmpty { return "" }
-        val ctB64   = prefsController.getString(KEY_HASH,     "").ifEmpty { return "" }
-
-        val iv   = decodeFromBase64(ivB64)
-        val ct   = decodeFromBase64(ctB64)
-
-        val cipher = cryptoController.getCipher(
-            encrypt = false,
-            ivBytes = iv,
-            userAuthenticationRequired = false
-        )
-        val decryptedBytes = cryptoController.encryptDecrypt(
-            cipher = cipher,
-            byteArray = ct
-        )
-        return decryptedBytes.toString(Charsets.UTF_8)
+        prefsController.setString(KEY_SALT, saltB64)
+        prefsController.setString(KEY_HASH, hashB64)
     }
 
     override fun isPinValid(pin: String): Boolean {
-        val saltB64 = prefsController.getString(KEY_SALT, "")
-        val ctB64 = prefsController.getString(KEY_HASH, "")
-        val ivB64   = prefsController.getString(KEY_IV,     "")
+        val storedSalt = prefsController.getString(KEY_SALT, "")
+        val storedHash = prefsController.getString(KEY_HASH, "")
 
-        val salt = saltB64.decodeFromPemBase64String() ?: return false
-        val iv   = ivB64.decodeFromPemBase64String()   ?: return false
-        val ct   = ctB64.decodeFromPemBase64String()   ?: return false
+        if (storedSalt.isEmpty() || storedHash.isEmpty()) {
+            return false
+        }
 
-        val attemptDerived = cryptoController.deriveKey(pin, salt)
+        return cryptoController.verifyPin(pin, storedSalt, storedHash)
+    }
 
-        val cipher = cryptoController.getCipher(
-            encrypt = false,
-            ivBytes = iv,
-            userAuthenticationRequired = false
-        ) ?: return false
+    override fun hasPin(): Boolean {
+        return prefsController.getString(KEY_HASH, "").isNotEmpty()
+    }
 
-        val storedDerived = cryptoController.encryptDecrypt(cipher, ct)
-
-        return MessageDigest.isEqual(storedDerived, attemptDerived)
+    override fun clearPin() {
+        prefsController.setString(KEY_SALT, "")
+        prefsController.setString(KEY_HASH, "")
     }
 }

@@ -126,6 +126,7 @@ internal class WalletCoreConfigImpl(
                 .withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
                 .withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
                 .build(),
+
             OpenId4VciManager.Config.Builder()
                 .withIssuerUrl(issuerUrl = "https://issuer-backend.eudiw.dev")
                 .withClientAuthenticationType(OpenId4VciManager.ClientAuthenticationType.AttestationBased)
