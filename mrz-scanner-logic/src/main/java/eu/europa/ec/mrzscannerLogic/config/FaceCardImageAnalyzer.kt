@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 
-class FaceImageAnalyzer(
+class FaceCardImageAnalyzer(
     private val resultFlow: ProducerScope<MrzScanState>,
     private val faceService: FaceService,
     private val throttleMs: Long = 200L,

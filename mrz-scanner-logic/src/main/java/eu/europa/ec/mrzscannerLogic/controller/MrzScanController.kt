@@ -1,6 +1,6 @@
 package eu.europa.ec.mrzscannerLogic.controller
 
-import FaceImageAnalyzer
+import FaceCardImageAnalyzer
 import MrzImageAnalyzer
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -151,7 +151,7 @@ class MrzScanControllerImpl(
         scope: ProducerScope<MrzScanState>
     ): ImageAnalysis.Analyzer {
         return when (scanType) {
-            is ScanType.Face -> FaceImageAnalyzer(
+            is ScanType.Face -> FaceCardImageAnalyzer(
                 resultFlow = scope,
                 faceService = faceService,
                 scope = CoroutineScope(Dispatchers.Default),
