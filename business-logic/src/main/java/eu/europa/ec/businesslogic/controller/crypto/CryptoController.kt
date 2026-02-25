@@ -17,16 +17,13 @@
 package eu.europa.ec.businesslogic.controller.crypto
 
 import android.util.Base64
-import eu.europa.ec.businesslogic.util.crypto.HashUtils
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.text.Normalizer
 import javax.crypto.Cipher
-import javax.crypto.Mac
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
-import javax.crypto.spec.SecretKeySpec
 
 
 interface CryptoController {

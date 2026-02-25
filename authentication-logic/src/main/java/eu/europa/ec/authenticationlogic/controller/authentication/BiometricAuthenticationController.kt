@@ -76,6 +76,7 @@ class BiometricAuthenticationControllerImpl(
 
     private companion object {
         const val MAX_RETRIES = 3
+        const val VALIDATION_TOKEN = "VALID_BIOMETRIC_PAYLOAD"
     }
 
     private fun isRecoverableError(errorCode: Int): Boolean {
@@ -86,17 +87,17 @@ class BiometricAuthenticationControllerImpl(
 
     override fun deviceSupportsBiometrics(listener: (BiometricsAvailability) -> Unit) {
         val biometricManager = BiometricManager.from(resourceProvider.provideContext())
-        when (biometricManager.canAuthenticate(BIOMETRIC_STRONG)) {
-            BiometricManager.BIOMETRIC_SUCCESS -> listener.invoke(BiometricsAvailability.CanAuthenticate)
-            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> listener.invoke(BiometricsAvailability.NonEnrolled)
-            else -> {
+        val authenticators = BIOMETRIC_STRONG
+        when (biometricManager.canAuthenticate(authenticators)) {
+            BiometricManager.BIOMETRIC_SUCCESS -> listener(BiometricsAvailability.CanAuthenticate)
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> listener(BiometricsAvailability.NonEnrolled)
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> listener(
+                BiometricsAvailability.Failure(
+                    resourceProvider.getString(R.string.biometric_no_hardware)
+                )
+            )
 
-                when (biometricManager.canAuthenticate(BIOMETRIC_WEAK)) {
-                    BiometricManager.BIOMETRIC_SUCCESS -> listener.invoke(BiometricsAvailability.CanAuthenticate)
-                    BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> listener.invoke(BiometricsAvailability.NonEnrolled)
-                    else -> listener.invoke(BiometricsAvailability.Failure(resourceProvider.getString(R.string.biometric_no_hardware)))
-                }
-            }
+            else -> listener(BiometricsAvailability.Failure("Biometric status unknown or unavailable"))
         }
     }
 
@@ -108,44 +109,150 @@ class BiometricAuthenticationControllerImpl(
     ) {
         val activity = context as? FragmentActivity
         if (activity == null) {
-            listener.invoke(BiometricsAuthenticate.Failed("Invalid context"))
+            listener(BiometricsAuthenticate.Failed("Invalid context: Must be FragmentActivity"))
             return
         }
 
         activity.lifecycleScope.launch {
-            val (biometricData, cipher) = retrieveCrypto()
-            if (cipher == null) {
-                listener.invoke(BiometricsAuthenticate.Failed(context.getString(R.string.generic_error_description)))
-                return@launch
-            }
+            try {
+                val (storedBiometry, cipher) = retrieveCrypto()
 
-            val data = authenticate(
-                activity = activity,
-                biometryCrypto = BiometricCrypto(BiometricPrompt.CryptoObject(cipher)),
-                promptInfo = BiometricPrompt.PromptInfo.Builder()
+                if (cipher == null) {
+                    listener(
+                        BiometricsAuthenticate.Failed("Crypto initialization failed. Keystore key might be invalidated.")
+                    )
+                    return@launch
+                }
+
+                val promptInfo = BiometricPrompt.PromptInfo.Builder()
                     .setTitle(activity.getString(R.string.biometric_prompt_title))
                     .setSubtitle(activity.getString(R.string.biometric_prompt_subtitle))
                     .setNegativeButtonText(activity.getString(R.string.generic_cancel))
                     .setAllowedAuthenticators(BIOMETRIC_STRONG)
-                    .build(),
-                notifyOnAuthenticationFailure = notifyOnAuthenticationFailure
-            )
+                    .build()
 
-            when {
-                data.authenticationResult != null -> {
-                    val state = verifyCrypto(context, data.authenticationResult, biometricData)
-                    listener.invoke(state)
+                val authResult = authenticateInternal(
+                    activity = activity,
+                    cryptoObject = BiometricPrompt.CryptoObject(cipher),
+                    promptInfo = promptInfo,
+                    notifyOnAuthenticationFailure = notifyOnAuthenticationFailure
+                )
+
+
+                if (authResult.authenticationResult != null) {
+                    val verificationState =
+                        processCryptoResult(authResult.authenticationResult, storedBiometry)
+                    listener(verificationState)
+                } else {
+
+                    handleBiometricFailure(
+                        authResult,
+                        retryCount,
+                        context,
+                        notifyOnAuthenticationFailure,
+                        listener
+                    )
                 }
-                isRecoverableError(data.errorCode) && retryCount < MAX_RETRIES -> {
-                    listener.invoke(BiometricsAuthenticate.Failed("Too many attempts. Please use PIN or password."))
-                    authenticate(context, notifyOnAuthenticationFailure, listener, retryCount + 1)
+
+            } catch (e: Exception) {
+
+                biometryStorageController.setBiometricAuthentication(null)
+                listener(BiometricsAuthenticate.Failed("Security Error: ${e.message}"))
+            }
+        }
+    }
+
+
+    private suspend fun authenticateInternal(
+        activity: FragmentActivity,
+        cryptoObject: BiometricPrompt.CryptoObject,
+        promptInfo: BiometricPrompt.PromptInfo,
+        notifyOnAuthenticationFailure: Boolean
+    ): BiometricPromptData = suspendCancellableCoroutine { continuation ->
+        val prompt = BiometricPrompt(
+            activity,
+            ContextCompat.getMainExecutor(activity),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    if (continuation.isActive) {
+                        continuation.resume(BiometricPromptData(null, errorCode, errString))
+                    }
                 }
-                data.errorCode == BiometricPrompt.ERROR_USER_CANCELED || data.errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON -> {
-                    listener.invoke(BiometricsAuthenticate.Cancelled)
+
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    if (continuation.isActive) {
+                        continuation.resume(BiometricPromptData(result))
+                    }
                 }
-                else -> {
-                    listener.invoke(BiometricsAuthenticate.Failed(data.errorString.toString()))
+
+                override fun onAuthenticationFailed() {
+                    if (continuation.isActive && notifyOnAuthenticationFailure) {
+                        continuation.resume(BiometricPromptData(null))
+                    }
                 }
+            }
+        )
+        prompt.authenticate(promptInfo, cryptoObject)
+    }
+
+    private suspend fun processCryptoResult(
+        result: BiometricPrompt.AuthenticationResult,
+        storedBiometry: BiometricAuthentication?
+    ): BiometricsAuthenticate = withContext(dispatcher) {
+        val cipher = result.cryptoObject?.cipher
+            ?: return@withContext BiometricsAuthenticate.Failed("Cipher is null after auth")
+
+        try {
+            if (storedBiometry == null) {
+                val encryptedBytes = cryptoController.encryptDecrypt(
+                    cipher = cipher,
+                    byteArray = VALIDATION_TOKEN.toByteArray(StandardCharsets.UTF_8)
+                )
+                val newBiometry = BiometricAuthentication(
+                    encryptedPayload = encryptedBytes.encodeToPemBase64String().orEmpty(),
+                    ivString = cipher.iv.encodeToPemBase64String().orEmpty()
+                )
+                biometryStorageController.setBiometricAuthentication(newBiometry)
+                BiometricsAuthenticate.Success
+            } else {
+                val decryptedBytes = cryptoController.encryptDecrypt(
+                    cipher = cipher,
+                    byteArray = storedBiometry.encryptedPayload.decodeFromPemBase64String()
+                        ?: ByteArray(0)
+                )
+
+                val decryptedString = String(decryptedBytes, StandardCharsets.UTF_8)
+
+                if (decryptedString == VALIDATION_TOKEN) {
+                    BiometricsAuthenticate.Success
+                } else {
+                    BiometricsAuthenticate.Failed("Integrity check failed: Decrypted data mismatch.")
+                }
+            }
+        } catch (e: Exception) {
+            BiometricsAuthenticate.Failed("Crypto Operation Failed: ${e.message}")
+        }
+    }
+
+    private fun handleBiometricFailure(
+        result: BiometricPromptData,
+        retryCount: Int,
+        context: Context,
+        notifyFailure: Boolean,
+        listener: (BiometricsAuthenticate) -> Unit
+    ) {
+        when {
+            result.errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                    result.errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON -> {
+                listener(BiometricsAuthenticate.Cancelled)
+            }
+
+            isRecoverableError(result.errorCode) && retryCount < MAX_RETRIES -> {
+                authenticate(context, notifyFailure, listener, retryCount + 1)
+            }
+
+            else -> {
+                listener(BiometricsAuthenticate.Failed(result.errorString.toString()))
             }
         }
     }
@@ -201,52 +308,13 @@ class BiometricAuthenticationControllerImpl(
     private suspend fun retrieveCrypto(): Pair<BiometricAuthentication?, Cipher?> =
         withContext(dispatcher) {
             val biometricData = biometryStorageController.getBiometricAuthentication()
-//            println("BiometricAuthenticationControllerImpl.retrieveCrypto: biometricData=$biometricData")
             val cipher = cryptoController.getCipher(
                 encrypt = biometricData == null,
                 ivBytes = biometricData?.ivString?.decodeFromPemBase64String() ?: ByteArray(0)
             )
-//            println("BiometricAuthenticationControllerImpl.retrieveCrypto: cipher=$cipher")
             Pair(biometricData, cipher)
         }
 
-    private suspend fun verifyCrypto(
-        context: Context,
-        result: AuthenticationResult?,
-        biometricAuthentication: BiometricAuthentication?
-    ): BiometricsAuthenticate = withContext(dispatcher) {
-        result?.cryptoObject?.cipher?.let {
-            if (biometricAuthentication == null) {
-                val randomString = cryptoController.generateCodeVerifier()
-                biometryStorageController.setBiometricAuthentication(
-                    BiometricAuthentication(
-                        randomString = randomString,
-                        encryptedString = cryptoController.encryptDecrypt(
-                            cipher = it,
-                            byteArray = randomString.toByteArray(StandardCharsets.UTF_8)
-                        ).encodeToPemBase64String().orEmpty(),
-                        ivString = it.iv.encodeToPemBase64String().orEmpty()
-                    )
-                )
-                BiometricsAuthenticate.Success
-            } else {
-                if (biometricAuthentication.randomString
-                        .toByteArray(StandardCharsets.UTF_8)
-                        .contentEquals(
-                            cryptoController.encryptDecrypt(
-                                cipher = it,
-                                byteArray = biometricAuthentication.encryptedString
-                                    .decodeFromPemBase64String() ?: ByteArray(0)
-                            )
-                        )
-                ) {
-                    BiometricsAuthenticate.Success
-                } else {
-                    BiometricsAuthenticate.Failed(context.getString(R.string.generic_error_description))
-                }
-            }
-        } ?: BiometricsAuthenticate.Failed(context.getString(R.string.generic_error_description))
-    }
 }
 
 sealed class BiometricsAuthenticate {

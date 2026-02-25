@@ -23,15 +23,6 @@ import eu.europa.ec.businesslogic.extension.decodeFromBase64
 import eu.europa.ec.businesslogic.extension.decodeFromPemBase64String
 import eu.europa.ec.businesslogic.extension.encodeToBase64String
 import java.security.MessageDigest
-/**
-
- **/
-interface PinStorageProvider {
-    fun setPin(pin: String)
-    fun isPinValid(pin: String): Boolean
-    fun hasPin(): Boolean
-    fun clearPin()
-}
 
 class PrefsPinStorageProvider(
     private val prefsController: PrefsController,

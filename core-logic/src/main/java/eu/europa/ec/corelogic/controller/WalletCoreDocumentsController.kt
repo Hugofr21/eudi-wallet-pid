@@ -384,7 +384,7 @@ class WalletCoreDocumentsControllerImpl(
                         is IssueDocumentsPartialState.UserAuthRequired -> emit(
                             IssueDocumentPartialState.UserAuthRequired(
                                 crypto = response.crypto,
-                                resultHandler = response.resultHandler
+                                resultHandler = response.resultHandler,
                             )
                         )
 
@@ -772,6 +772,11 @@ class WalletCoreDocumentsControllerImpl(
                             keyUnlockDataMap.values.first() //TODO: Revisit this once Core adds support.
 
                         val cryptoObject = keyUnlockData?.getCryptoObjectForSigning()
+
+                        if (cryptoObject == null) {
+                            event.cancel("CryptoObject initialization failed")
+                            return@launch
+                        }
 
                         trySendBlocking(
                             IssueDocumentsPartialState.UserAuthRequired(

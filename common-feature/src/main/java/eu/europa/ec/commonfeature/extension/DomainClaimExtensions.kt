@@ -1,5 +1,8 @@
 package eu.europa.ec.commonfeature.extension
 
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.fragment.app.FragmentActivity
 import eu.europa.ec.commonfeature.ui.request.model.DocumentPayloadDomain
 import eu.europa.ec.commonfeature.util.keyIsPortrait
 import eu.europa.ec.commonfeature.util.keyIsSignature
