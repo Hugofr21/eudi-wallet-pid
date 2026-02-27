@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -141,7 +142,7 @@ private fun Content(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         Card(
             onClick = { viewModel?.setEvent(Event.GoDrivingLicense) },
             modifier = Modifier.fillMaxWidth(),
@@ -181,6 +182,45 @@ private fun Content(
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
+        Card(
+            onClick = { viewModel?.setEvent(Event.LivenessFace) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RectangleShape,
+
+            ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DirectionsCar,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Deteção de rosto",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Leitura do rosto",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    imageVector = Icons.Default.Face,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        VSpacer.Medium()
         Surface(
             shape = RectangleShape,
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),

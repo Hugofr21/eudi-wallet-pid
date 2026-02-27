@@ -11,11 +11,14 @@ import com.google.mlkit.vision.face.FaceContour
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import eu.europa.ec.mrzscannerLogic.controller.FaceFeatures
+import eu.europa.ec.mrzscannerLogic.model.FaceGeometry
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-class FaceAnalyser (
 
+class FaceAnalyser (
+    private val onFaceDetected: (geometry: FaceGeometry, features: FaceFeatures) -> Unit
 ): ImageAnalysis.Analyzer{
 
     private val detector: FaceDetector = FaceDetection.getClient(
@@ -36,16 +39,22 @@ class FaceAnalyser (
             image.close()
             return
         }
+        val rotationDegrees = image.imageInfo.rotationDegrees
 
         val inputImage = InputImage.fromMediaImage(
             mediaImage,
             image.imageInfo.rotationDegrees
         )
 
+        val isPortrait = rotationDegrees == 90 || rotationDegrees == 270
+        val imgWidth = if (isPortrait) image.height else image.width
+        val imgHeight = if (isPortrait) image.width else image.height
+
+
         detector.process(inputImage)
             .addOnSuccessListener { faces ->
                 if (faces.size == 1) {
-                    processFace(faces[0])
+                    processFace(faces[0], imgWidth, imgHeight)
                 }
             }
             .addOnCompleteListener {
@@ -53,26 +62,59 @@ class FaceAnalyser (
             }
     }
 
-    private fun processFace(face: Face) {
-        val x = face.headEulerAngleX
-        val y = face.headEulerAngleY
-        val z = face.headEulerAngleZ
-        val b = face.boundingBox.bottom
-        val h = face.boundingBox.height()
-        val w = face.boundingBox.width()
+    private fun processFace(face: Face, imgWidth: Int, imgHeight: Int) {
+        val yaw   = face.headEulerAngleY
+        val pitch = face.headEulerAngleX
+        val roll  = face.headEulerAngleZ
 
-        val earLeft  = computeEAR(face, FaceContour.LEFT_EYE) // eyes left
-        val earRight = computeEAR(face, FaceContour.RIGHT_EYE) // eyes right
+        val earLeft  = computeEAR(face, FaceContour.LEFT_EYE)
+        val earRight = computeEAR(face, FaceContour.RIGHT_EYE)
 
         val mar      = computeMAR(face)
 
         val leftEyeOpenProb  = face.leftEyeOpenProbability  ?: 1f
         val rightEyeOpenProb = face.rightEyeOpenProbability ?: 1f
 
+        val smileProb = face.smilingProbability ?: 0f
+
         val asymmetry = computeAsymmetryScore(face)
 
+        val geometry = FaceGeometry(
+            yawDeg             = yaw,
+            pitchDeg           = pitch,
+            rollDeg            = roll,
+            earLeft            = earLeft,
+            earRight           = earRight,
+            mar                = mar,
+            leftEyeOpenProb    = leftEyeOpenProb,
+            rightEyeOpenProb   = rightEyeOpenProb,
+            asymmetryScore     = asymmetry,
+            smileProb          = smileProb
+        )
 
+        val features = FaceFeatures(
+            boundingBox = face.boundingBox,
+            faceOval = face.getContour(FaceContour.FACE)?.points ?: emptyList(),
+            leftEye = face.getContour(FaceContour.LEFT_EYE)?.points ?: emptyList(),
+            rightEye = face.getContour(FaceContour.RIGHT_EYE)?.points ?: emptyList(),
+            leftEyebrowTop = face.getContour(FaceContour.LEFT_EYEBROW_TOP)?.points ?: emptyList(),
+            leftEyebrowBottom = face.getContour(FaceContour.LEFT_EYEBROW_BOTTOM)?.points ?: emptyList(),
+            rightEyebrowTop = face.getContour(FaceContour.RIGHT_EYEBROW_TOP)?.points ?: emptyList(),
+            rightEyebrowBottom = face.getContour(FaceContour.RIGHT_EYEBROW_BOTTOM)?.points ?: emptyList(),
+            noseBridge = face.getContour(FaceContour.NOSE_BRIDGE)?.points ?: emptyList(),
+            noseBottom = face.getContour(FaceContour.NOSE_BOTTOM)?.points ?: emptyList(),
+            upperLipTop = face.getContour(FaceContour.UPPER_LIP_TOP)?.points ?: emptyList(),
+            upperLipBottom = face.getContour(FaceContour.UPPER_LIP_BOTTOM)?.points ?: emptyList(),
+            lowerLipTop = face.getContour(FaceContour.LOWER_LIP_TOP)?.points ?: emptyList(),
+            lowerLipBottom = face.getContour(FaceContour.LOWER_LIP_BOTTOM)?.points ?: emptyList(),
+            imageWidth = imgWidth,
+            imageHeight = imgHeight
+        )
+
+        onFaceDetected(geometry, features)
     }
+
+
     private fun computeEAR(face: Face, contourType: Int): Float {
         val pts = face.getContour(contourType)?.points ?: return 0f
         if (pts.size < 13) return 0f
@@ -89,35 +131,47 @@ class FaceAnalyser (
         else (vertical1 + vertical2) / (2f * horizontal)
     }
 
+    /**
+     * 1. Horizontal Width: Measured from the outermost corners of the mouth
+     * 2. Vertical Height: Measured precisely along the INTERNAL contours
+     * 3. Absolute geometric center point of the lip (middle index), without centroid bias
+     **/
+
     private fun computeMAR(face: Face): Float {
-        val upper = face.getContour(FaceContour.UPPER_LIP_TOP)?.points ?: return 0f
-        val lower = face.getContour(FaceContour.LOWER_LIP_BOTTOM)?.points ?: return 0f
+        val upperLipTop = face.getContour(FaceContour.UPPER_LIP_TOP)?.points ?: return 0f
+        if (upperLipTop.size < 3) return 0f
 
-        if (upper.isEmpty() || lower.isEmpty()) return 0f
+        val leftCorner = upperLipTop.first()
+        val rightCorner = upperLipTop.last()
+        val horizontal = euclidean(leftCorner, rightCorner)
 
-        // Vertical: midpoint of upper lip top vs. midpoint of lower lip bottom
-        val upperMid = midpoint(upper)
-        val lowerMid = midpoint(lower)
-        val vertical = euclidean(upperMid, lowerMid)
+        if (horizontal < 1e-4f) return 0f
 
-        // Horizontal: first to last point of the upper lip contour
-        val horizontal = euclidean(upper.first(), upper.last())
 
-        return if (horizontal < 1e-4f) 0f else vertical / horizontal
+        val upperLipInner = face.getContour(FaceContour.UPPER_LIP_BOTTOM)?.points ?: return 0f
+        val lowerLipInner = face.getContour(FaceContour.LOWER_LIP_TOP)?.points ?: return 0f
+
+        if (upperLipInner.isEmpty() || lowerLipInner.isEmpty()) return 0f
+        val upperCenter = upperLipInner[upperLipInner.size / 2]
+        val lowerCenter = lowerLipInner[lowerLipInner.size / 2]
+
+        val vertical = euclidean(upperCenter, lowerCenter)
+
+        return vertical / horizontal
     }
 
+    /**
+     * EAR ratio asymmetry: real faces show more difference under yaw
+     * Normalise: ratio of 1.0 means perfect symmetry -> low "liveness" signal
+     * We invert: large deviation from 1.0 means more depth cue
+     **/
 
     private fun computeAsymmetryScore(face: Face): Float {
         val earL = computeEAR(face, FaceContour.LEFT_EYE)
         val earR = computeEAR(face, FaceContour.RIGHT_EYE)
-
-        // EAR ratio asymmetry: real faces show more difference under yaw
         val earRatio = if (earR < 1e-4f) 1f else earL / earR
-        // Normalise: ratio of 1.0 means perfect symmetry → low "liveness" signal
-        // We invert: large deviation from 1.0 means more depth cue
         val earAsymmetry = abs(earRatio - 1f).coerceIn(0f, 1f)
 
-        // Nose-tip offset relative to bounding box width
         val noseTip = face.getContour(FaceContour.NOSE_BRIDGE)?.points?.lastOrNull()
         val bbox    = face.boundingBox
         val noseTipScore = if (noseTip != null && bbox.width() > 0) {
@@ -125,8 +179,7 @@ class FaceAnalyser (
             abs(noseTip.x - centerX) / bbox.width().toFloat()
         } else 0f
 
-        // Combine: both signals weighted equally
-        val raw = (earAsymmetry * 0.5f + noseTipScore * 0.5f) * 2f   // scale to [0..1]
+        val raw = (earAsymmetry * 0.5f + noseTipScore * 0.5f) * 2f
         return raw.coerceIn(0f, 1f)
     }
 
@@ -136,11 +189,6 @@ class FaceAnalyser (
         return sqrt(dx * dx + dy * dy).toFloat()
     }
 
-    private fun midpoint(pts: List<PointF>): PointF {
-        val x = pts.sumOf { it.x.toDouble() } / pts.size
-        val y = pts.sumOf { it.y.toDouble() } / pts.size
-        return PointF(x.toFloat(), y.toFloat())
-    }
-
     fun close() = detector.close()
 }
+

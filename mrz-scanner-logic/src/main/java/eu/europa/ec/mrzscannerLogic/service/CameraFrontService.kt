@@ -1,7 +1,10 @@
 package eu.europa.ec.mrzscannerLogic.service
 
 import android.view.MotionEvent
+import androidx.camera.core.AspectRatio
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.CameraState
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -13,8 +16,12 @@ import androidx.lifecycle.LifecycleOwner
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.businesslogic.controller.log.LogControllerImpl
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 interface CameraFrontService {
     fun start(
@@ -38,9 +45,18 @@ class CameraFrontServiceImpl(
     }
 
     private var cameraProvider: ProcessCameraProvider? = null
-    private var imageCapture: ImageCapture? = null
-    private val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private var cameraExecutor: ExecutorService? = null
+    private var camera: Camera? = null
+    private val _cameraState = MutableStateFlow<CameraState>(CameraState.Idle)
+    val cameraState: StateFlow<CameraState> = _cameraState.asStateFlow()
 
+
+    sealed class CameraState {
+        object Idle : CameraState()
+        object Starting : CameraState()
+        object Running : CameraState()
+        data class Error(val exception: Throwable) : CameraState()
+    }
 
 
     override fun start(lifecycleOwner: LifecycleOwner,previewView: PreviewView, analysisUseCase: ImageAnalysis) {
@@ -51,61 +67,51 @@ class CameraFrontServiceImpl(
         }, resourceProvider.provideContext().mainExecutor)
     }
     private fun bindPreview(
-        cameraProvider: ProcessCameraProvider,
+        provider: ProcessCameraProvider,
         previewView: PreviewView,
         analysisUseCase: ImageAnalysis,
         lifecycleOwner: LifecycleOwner
     ) {
-        val provider = cameraProvider ?: return;
-
         val preview = Preview.Builder()
+            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
             .build()
             .also { it.setSurfaceProvider(previewView.surfaceProvider) }
 
-        imageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-            .build()
-
-        analysisUseCase = ImageAnalysis.Builder()
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .build()
-            .also { analysis ->
-                frameAnalyser?.let { analysis.setAnalyzer(cameraExecutor, it) }
-            }
         val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+
         try {
             provider.unbindAll()
-            provider.bindToLifecycle(
+            camera = provider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
                 preview,
-                imageCapture,
                 analysisUseCase
             )
-            logController.d(TAG, "Camera bound successfully")
+            logController.d(TAG, { "Câmara vinculada com sucesso" })
         } catch (ex: Exception) {
-            logController.e(TAG, "Use case binding failed", ex)
+            _cameraState.value = CameraState.Error(ex)
+            logController.e(TAG, ex)
         }
-
     }
 
     override fun stop() {
-        cameraExecutor.shutdown();
+        _cameraState.value = CameraState.Idle
         cameraProvider?.unbindAll()
-        logController.d(TAG, "Camera stopped successfully")
+        cameraExecutor?.shutdown()
+        cameraExecutor = null
+        camera = null
+        logController.d(TAG, { "Resource of camera stop" })
     }
 
-    override fun isRunning(): Boolean {
-        if (cameraProvider == null) {
-            return false
+    override fun isRunning(): Boolean = _cameraState.value is CameraState.Running
+
+    private fun ensureExecutorActive() {
+        if (cameraExecutor == null || cameraExecutor!!.isShutdown) {
+            cameraExecutor = Executors.newSingleThreadExecutor()
         }
-        return cameraProvider!!.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)
     }
 
-    override fun setupTapToFocus(
-        previewView: PreviewView,
-        enabled: Boolean
-    ) {
+    override fun setupTapToFocus(previewView: PreviewView, enabled: Boolean) {
         if (!enabled) {
             previewView.setOnTouchListener(null)
             return
@@ -114,18 +120,17 @@ class CameraFrontServiceImpl(
         previewView.setOnTouchListener { view, event ->
             if (event.action != MotionEvent.ACTION_UP) return@setOnTouchListener false
 
-            val currentCamera = cameraProvider ?: return@setOnTouchListener false
+            val currentCamera = camera ?: return@setOnTouchListener false
 
-            val factory = SurfaceOrientedMeteringPointFactory(
-                previewView.width.toFloat(),
-                previewView.height.toFloat()
-            )
+            val factory = previewView.meteringPointFactory
             val point = factory.createPoint(event.x, event.y)
-            val action = FocusMeteringAction.Builder(point).build()
+            val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
+                .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                .build()
 
             currentCamera.cameraControl.startFocusAndMetering(action)
             view.performClick()
-            return@setOnTouchListener true
+            true
         }
     }
 

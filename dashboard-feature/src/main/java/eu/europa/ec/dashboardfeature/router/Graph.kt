@@ -33,6 +33,7 @@ import eu.europa.ec.dashboardfeature.ui.scanner.documentSelection.DocumentSelect
 import eu.europa.ec.dashboardfeature.ui.scanner.driverLicense.DriverLicenseScreen
 import eu.europa.ec.dashboardfeature.ui.scanner.faceId.FaceIdScreen
 import eu.europa.ec.dashboardfeature.ui.scanner.identificationDocument.IdentificationDocumentScreen
+import eu.europa.ec.dashboardfeature.ui.scanner.livenessFace.LivenessFaceScreen
 import eu.europa.ec.dashboardfeature.ui.settings.SettingsScreen
 import eu.europa.ec.dashboardfeature.ui.transactions.detail.TransactionDetailsScreen
 import eu.europa.ec.dashboardfeature.ui.wifi.info.InfoWifiAware
@@ -232,6 +233,10 @@ fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
                     }
                 )
             )
+        }
+
+        composable(DashboardScreens.LivenessFace.screenRoute) {
+            LivenessFaceScreen(navController, koinViewModel())
         }
     }
 }

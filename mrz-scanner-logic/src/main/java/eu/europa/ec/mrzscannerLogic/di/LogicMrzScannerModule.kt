@@ -1,9 +1,12 @@
 package eu.europa.ec.mrzscannerLogic.di
 
-import androidx.camera.view.PreviewView
-import androidx.lifecycle.LifecycleOwner
+import eu.europa.ec.businesslogic.controller.log.LogController
+import eu.europa.ec.mrzscannerLogic.controller.LivenessDetectionFaceController
+import eu.europa.ec.mrzscannerLogic.controller.LivenessDetectionFaceControllerImpl
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanController
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanControllerImpl
+import eu.europa.ec.mrzscannerLogic.service.CameraFrontService
+import eu.europa.ec.mrzscannerLogic.service.CameraFrontServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.CameraService
 import eu.europa.ec.mrzscannerLogic.service.CameraServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.ChecksumValidationService
@@ -34,6 +37,14 @@ fun provideCameraService(
     resourceProvider: ResourceProvider,
 ): CameraService =
     CameraServiceImpl(resourceProvider)
+
+@Single
+fun provideCameraFrontService(
+    resourceProvider: ResourceProvider,
+    logController: LogController
+): CameraFrontService =
+    CameraFrontServiceImpl(resourceProvider, logController)
+
 
 
 @Single
@@ -87,3 +98,13 @@ fun provideMrzScanController(
         textRecognitionService = textRecognitionService
     )
 
+
+@Single
+fun provideLivenessDetectionsFaceController(
+    cameraFrontService: CameraFrontService,
+    logController: LogController
+): LivenessDetectionFaceController =
+    LivenessDetectionFaceControllerImpl(
+        cameraFrontService = cameraFrontService,
+        logController = logController,
+    )

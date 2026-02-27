@@ -20,6 +20,8 @@ sealed class Event : ViewEvent {
     object GoIdentifierDocument : Event()
     object GoDrivingLicense : Event()
 
+    object LivenessFace : Event()
+
 }
 
 sealed class Effect : ViewSideEffect {
@@ -36,9 +38,7 @@ sealed class Effect : ViewSideEffect {
 }
 
 @KoinViewModel
-class DocumentSelectionViewModel(
-
-) : MviViewModel<Event, State, Effect>() {
+class DocumentSelectionViewModel() : MviViewModel<Event, State, Effect>() {
 
 
     override fun setInitialState(): State {
@@ -53,6 +53,8 @@ class DocumentSelectionViewModel(
             Event.GoBack -> setEffect { Effect.Navigation.Pop }
             Event.GoIdentifierDocument -> navigateIdentifierDocument()
             Event.GoDrivingLicense -> navigateDriverLicense()
+            Event.LivenessFace -> navigateLivenessFace()
+
         }
     }
 
@@ -68,6 +70,14 @@ class DocumentSelectionViewModel(
         setEffect {
           Effect.Navigation.SwitchScreen(
                 screenRoute = DashboardScreens.DrivingLicense.screenName
+            )
+        }
+    }
+
+    private fun navigateLivenessFace(){
+        setEffect {
+            Effect.Navigation.SwitchScreen(
+                screenRoute = DashboardScreens.LivenessFace.screenName
             )
         }
     }

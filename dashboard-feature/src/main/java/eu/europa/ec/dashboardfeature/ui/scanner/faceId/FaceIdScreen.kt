@@ -112,7 +112,7 @@ fun FaceIdScreen(
                             bitmap = capturedBitmap.asImageBitmap(),
                             contentDescription = "Rosto Capturado",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop // Ou Fit se quiser ver tudo sem cortes
+                            contentScale = ContentScale.Crop
                         )
                     }
 

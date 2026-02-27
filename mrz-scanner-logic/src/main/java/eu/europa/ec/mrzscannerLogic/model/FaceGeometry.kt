@@ -23,5 +23,8 @@ data class FaceGeometry(
      */
     val rightEyeOpenProb: Float,
     /** Confidence score of the facial asymmetry index [0..1, 1=perfectly symmetric]. */
-    val asymmetryScore: Float
+    val asymmetryScore: Float,
+
+
+    val smileProb: Float
 )

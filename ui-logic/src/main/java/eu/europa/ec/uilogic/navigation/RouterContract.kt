@@ -90,7 +90,7 @@ sealed class DashboardScreens {
         parameters = "?documentId={documentId}"
     )
 
-
+    data object LivenessFace : Screen(name = "LIVENESS_FACE")
 }
 
 sealed class WIFIScreens {

@@ -35,6 +35,8 @@ import eu.europa.ec.dashboardfeature.interactor.DocumentsInteractor
 import eu.europa.ec.dashboardfeature.interactor.DocumentsInteractorImpl
 import eu.europa.ec.dashboardfeature.interactor.HomeInteractor
 import eu.europa.ec.dashboardfeature.interactor.HomeInteractorImpl
+import eu.europa.ec.dashboardfeature.interactor.LivenessInteractor
+import eu.europa.ec.dashboardfeature.interactor.LivenessInteractorImpl
 import eu.europa.ec.dashboardfeature.interactor.PersonIdentificationDataImpl
 import eu.europa.ec.dashboardfeature.interactor.PersonIdentificationDataInteractor
 import eu.europa.ec.dashboardfeature.interactor.ScannerInteractor
@@ -47,6 +49,7 @@ import eu.europa.ec.dashboardfeature.interactor.TransactionsInteractor
 import eu.europa.ec.dashboardfeature.interactor.TransactionsInteractorImpl
 import eu.europa.ec.dashboardfeature.interactor.WifiAwareInteractor
 import eu.europa.ec.dashboardfeature.interactor.WifiAwareInteractorImpl
+import eu.europa.ec.mrzscannerLogic.controller.LivenessDetectionFaceController
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import org.koin.core.annotation.ComponentScan
@@ -57,6 +60,13 @@ import org.koin.core.annotation.Scoped
 @Module
 @ComponentScan("eu.europa.ec.dashboardfeature")
 class FeatureDashboardModule
+
+@Factory
+fun provideLivenessInteractor(
+    livenessController: LivenessDetectionFaceController
+): LivenessInteractor = LivenessInteractorImpl(
+    livenessController,
+)
 
 @Factory
 fun provideDashboardInteractor(

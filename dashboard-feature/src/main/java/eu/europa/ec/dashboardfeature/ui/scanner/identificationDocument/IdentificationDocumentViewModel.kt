@@ -41,27 +41,21 @@ data class State(
 
 sealed class Event : ViewEvent {
     object GoBack : Event()
-
-    // Inicialização
     data class InitializeScanner(
         val lifecycleOwner: LifecycleOwner,
         val previewView: PreviewView,
         val scanType: ScanType
     ) : Event()
 
-    // Controle de scanning
     object StartScanning : Event()
     object StopScanning : Event()
     object RetryScanning : Event()
 
-    // Permissões
     data class OnPermissionStateChanged(val availability: CameraAvailability) : Event()
 
-    // Resultados
     data class OnScanResult(val document: MrzDocument) : Event()
     data class OnScanError(val message: String) : Event()
 
-    // Ações do usuário
     object TriggerManualCapture : Event()
     data class OnImageSelected(val uri: Uri) : Event()
     object ShowHelp : Event()
@@ -379,18 +373,12 @@ class IdentificationDocumentViewModel(
 
     private fun handleDrivingLicense(license: MrzDocument.DrivingLicense) {
         viewModelScope.launch {
-            // Validações de carta de condução
         }
     }
-
-    // ============================================
-    // Ações do Usuário
-    // ============================================
 
     private fun triggerManualCapture() {
         viewModelScope.launch {
             setState { copy(scanState = MrzScanState.Processing()) }
-            // Implementar captura manual se necessário
         }
     }
 
@@ -422,9 +410,7 @@ class IdentificationDocumentViewModel(
         val document = viewState.value.scannedDocument
         val jsonDoc = Gson().toJson(document)
         if (document != null) {
-            // Parar scanning ao confirmar
             stopScanning()
-
             setEffect {
                 Effect.Navigation.SwitchScreen(
                     screenRoute = generateComposableNavigationLink(
