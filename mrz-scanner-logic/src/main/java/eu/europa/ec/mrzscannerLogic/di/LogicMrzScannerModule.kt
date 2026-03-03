@@ -1,10 +1,13 @@
 package eu.europa.ec.mrzscannerLogic.di
 
+import android.hardware.SensorManager
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.mrzscannerLogic.controller.LivenessDetectionFaceController
 import eu.europa.ec.mrzscannerLogic.controller.LivenessDetectionFaceControllerImpl
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanController
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanControllerImpl
+import eu.europa.ec.mrzscannerLogic.service.AnalyzerGuidelineCardService
+import eu.europa.ec.mrzscannerLogic.service.AnalyzerGuidelineCardServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.CameraFrontService
 import eu.europa.ec.mrzscannerLogic.service.CameraFrontServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.CameraService
@@ -19,6 +22,8 @@ import eu.europa.ec.mrzscannerLogic.service.MrzParserService
 import eu.europa.ec.mrzscannerLogic.service.MrzParserServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.OcrCorrectionService
 import eu.europa.ec.mrzscannerLogic.service.OcrCorrectionServiceImpl
+import eu.europa.ec.mrzscannerLogic.service.SensorDocumentService
+import eu.europa.ec.mrzscannerLogic.service.SensorDocumentServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.TextRecognitionService
 import eu.europa.ec.mrzscannerLogic.service.TextRecognitionServiceImpl
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
@@ -81,10 +86,24 @@ fun provideFaceService(): FaceService =
 
 
 @Single
+fun provideAnalyzerGuidelineCardService(
+    log: LogController
+): AnalyzerGuidelineCardService =
+    AnalyzerGuidelineCardServiceImpl(log = log)
+
+@Single
+fun providerSensorDocumentServiceImpl(
+    log: LogController,
+    resourceProvider: ResourceProvider
+): SensorDocumentService = SensorDocumentServiceImpl(log, resourceProvider)
+
+@Single
 fun provideMrzScanController(
     cameraService: CameraService,
     resourceProvider: ResourceProvider,
     parserService: MrzParserService,
+    sensorDocumentService: SensorDocumentService,
+    analyzerGuidelineCardService: AnalyzerGuidelineCardService,
     faceService: FaceService,
     driverLicenseParseService : DriverLicenseParseService,
     textRecognitionService: TextRecognitionService,
@@ -95,7 +114,9 @@ fun provideMrzScanController(
         parserService = parserService,
         faceService = faceService,
         driverLicenseParseService = driverLicenseParseService,
-        textRecognitionService = textRecognitionService
+        textRecognitionService = textRecognitionService,
+        sensorDocumentService = sensorDocumentService,
+        analyzerGuidelineCardService = analyzerGuidelineCardService
     )
 
 

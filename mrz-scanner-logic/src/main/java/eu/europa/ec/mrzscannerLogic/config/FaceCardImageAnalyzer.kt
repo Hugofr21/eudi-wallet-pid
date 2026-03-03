@@ -12,7 +12,9 @@ import com.google.mlkit.vision.segmentation.Segmentation
 import com.google.mlkit.vision.segmentation.Segmenter
 import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
+import eu.europa.ec.mrzscannerLogic.service.AnalyzerGuidelineCardService
 import eu.europa.ec.mrzscannerLogic.service.FaceService
+import eu.europa.ec.mrzscannerLogic.service.SensorDocumentService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +30,8 @@ class FaceCardImageAnalyzer(
     private val requiredSuccessFrames: Int = 3,
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    antiSpoofingService: AnalyzerGuidelineCardService,
+    sensorDocumentService: SensorDocumentService,
 ) : ImageAnalysis.Analyzer {
 
     private val isProcessing = AtomicBoolean(false)

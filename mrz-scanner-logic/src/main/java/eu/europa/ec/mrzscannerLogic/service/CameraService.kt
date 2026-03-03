@@ -28,6 +28,7 @@ interface CameraService {
     fun stop()
     fun isRunning(): Boolean
     fun setupTapToFocus(previewView: PreviewView, enabled: Boolean)
+    fun enableTorch(enabled: Boolean)
 }
 
 class CameraServiceImpl(
@@ -128,5 +129,9 @@ class CameraServiceImpl(
             view.performClick()
             return@setOnTouchListener true
         }
+    }
+
+    override fun enableTorch(enabled: Boolean) {
+        camera?.cameraControl?.enableTorch(enabled)
     }
 }

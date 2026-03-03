@@ -1,6 +1,5 @@
 package eu.europa.ec.mrzscannerLogic.service
 
-import eu.europa.ec.mrzscannerLogic.model.LineType
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
 import eu.europa.ec.mrzscannerLogic.model.MrzFormat
 import eu.europa.ec.mrzscannerLogic.model.MrzSex
@@ -198,15 +197,12 @@ class MrzParserServiceImpl(
             val line1 = lines[0]
             val line2 = lines[1]
 
-            // -----------------------------------------------------------
-            // LINHA 1: Tipo(2) + País(3) + Nomes(31)
-            // Exemplo: I<PRTDE<SOUSA<CARVALHO<<MARIA<<<<<<
-            // -----------------------------------------------------------
 
-            // Tipo de documento (I<, ID, C<)
+
+
             var docType = line1.substring(0, 2).replaceDigitsWithAlpha()
 
-            // País Emissor (sempre letras)
+
             val issuingCountry = line1.substring(2, 5).replaceDigitsWithAlpha()
 
             // Sobrenome e Nome (sempre letras, separados por <<)
@@ -215,47 +211,29 @@ class MrzParserServiceImpl(
             val nameSection = namesRaw.replace("<<", "|").split("|")
             val surname = nameSection.getOrNull(0)?.replace("<", " ")?.trim() ?: ""
             val givenNames = nameSection.getOrNull(1)?.replace("<", " ")?.trim() ?: ""
-
-
-            // -----------------------------------------------------------
-            // LINHA 2: DocNum(9)+Chk(1) + Nac(3) + DN(6)+Chk(1) + Sex(1) + Val(6)+Chk(1) + Opt(7) + ChkComp(1)
-            // Exemplo: 1234567897PRT8001018F2501015<<<<<<<8
-            // -----------------------------------------------------------
-
-            // Número do Documento (predominantemente numérico)
             val documentNumber = line2.take(9).replaceAlphaWithDigits()
             val checkDoc = line2[9]
 
-            // Nacionalidade (letras)
+
             val nationality = line2.substring(10, 13).replaceDigitsWithAlpha()
 
-            // Data de Nascimento (YYMMDD - Numérico)
             val dob = line2.substring(13, 19).replaceAlphaWithDigits()
             val checkDob = line2[19]
 
-            // Sexo (M, F ou <)
             val sex = line2[20].toString()
 
-            // Data de Validade (YYMMDD - Numérico)
+
             val expiry = line2.substring(21, 27).replaceAlphaWithDigits()
             val checkExpiry = line2[27]
 
-            // Dados Opcionais (variável, não forçamos correção alfa/numérica aqui)
             val optionalData = line2.substring(28, 35).replace("<", "")
-
-            // Checksum Composto Final
             val checkComposite = line2[35]
 
-            // -----------------------------------------------------------
-            // Validação e Construção
-            // -----------------------------------------------------------
 
             val isValidDoc = checksumService.validate(documentNumber, checkDoc) &&
                     checksumService.validate(dob, checkDob) &&
                     checksumService.validate(expiry, checkExpiry)
 
-            // Mapeamos para IdCard, pois a maioria dos TD2 são documentos de identidade.
-            // Se o seu sistema tiver uma classe específica para Vistos, altere aqui.
             val document = MrzDocument.IdCard(
                 documentNumber = documentNumber,
                 dateOfBirth = formatDate(dob),
@@ -270,14 +248,13 @@ class MrzParserServiceImpl(
                 expiryCheck = checkExpiry,
                 optionalData = optionalData,
                 compositeCheck = checkComposite,
-                isValid = isValidDoc, // Passa o resultado real da validação
+                isValid = isValidDoc,
                 rawLines = lines
             )
 
             return MrzParseResult.Success(document)
 
         } catch (e: Exception) {
-            // Em caso de erro estrutural grave (ex: substring out of bounds)
             return MrzParseResult.Error(e)
         }
     }

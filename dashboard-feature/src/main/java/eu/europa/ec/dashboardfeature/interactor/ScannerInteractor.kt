@@ -22,6 +22,7 @@ interface ScannerInteractor{
     fun isScanning(): Boolean
 
     fun hasCameraPermission(): Boolean
+    fun enableFlash(newState: Boolean)
 }
 
 class ScannerInteractorImpl(
@@ -55,5 +56,9 @@ class ScannerInteractorImpl(
             context.provideContext(),
             Manifest.permission.CAMERA
         ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    override fun enableFlash(newState: Boolean) {
+       mrzScanController.enableTorch(newState)
     }
 }

@@ -8,12 +8,15 @@ import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
+import eu.europa.ec.mrzscannerLogic.model.AntiSpoofingCheck
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
 import eu.europa.ec.mrzscannerLogic.model.ScanType
+import eu.europa.ec.mrzscannerLogic.service.AnalyzerGuidelineCardService
 import eu.europa.ec.mrzscannerLogic.service.CameraService
 import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseService
 import eu.europa.ec.mrzscannerLogic.service.FaceService
 import eu.europa.ec.mrzscannerLogic.service.MrzParserService
+import eu.europa.ec.mrzscannerLogic.service.SensorDocumentService
 import eu.europa.ec.mrzscannerLogic.service.TextRecognitionService
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +38,12 @@ sealed class MrzScanState {
         val capturedImage: Bitmap? = null,
         val imagePath: String? = null
     ) : MrzScanState()
+
+    data class SecurityCheckFailed(
+        val failedChecks: List<AntiSpoofingCheck>,
+        val reason: String
+    ) : MrzScanState()
+
     data class Error(val message: String, val throwable: Throwable? = null) : MrzScanState()
 }
 
@@ -69,13 +78,15 @@ interface MrzScanController {
      * Ativa/desativa tap-to-focus
      */
     fun enableTapToFocus(enabled: Boolean)
+
+    fun enableTorch(enabled: Boolean)
 }
+
 class MrzScanControllerImpl(
-    // Injeção do Serviço (DIP - Dependency Inversion Principle)
     private val cameraService: CameraService,
     private val resourceProvider: ResourceProvider,
-
-    // Serviços de Domínio (Business Logic)
+    private val analyzerGuidelineCardService: AnalyzerGuidelineCardService,
+    private val sensorDocumentService: SensorDocumentService,
     private val parserService: MrzParserService,
     private val faceService: FaceService,
     private val driverLicenseParseService: DriverLicenseParseService,
@@ -111,6 +122,8 @@ class MrzScanControllerImpl(
         }
 
         try {
+            sensorDocumentService.start(needsRotation = true, needsAccel = true)
+
             val analyzer = createAnalyzer(scanType, this)
 
             Log.d("CameraService", "Starting camera service")
@@ -118,7 +131,6 @@ class MrzScanControllerImpl(
 
 
             cameraService.start(lifecycleOwner, previewView, analyzer)
-
             cameraService.setupTapToFocus(previewView, tapToFocusEnabled)
 
             trySend(MrzScanState.Scanning)
@@ -128,7 +140,6 @@ class MrzScanControllerImpl(
             stopScanning()
         }
 
-        // Cleanup automático quando o flow é cancelado (ex: viewModel scope cancelado)
         awaitClose {
             stopScanning()
             lifecycleOwnerRef = null
@@ -148,6 +159,8 @@ class MrzScanControllerImpl(
             is ScanType.Face -> FaceCardImageAnalyzer(
                 resultFlow = scope,
                 faceService = faceService,
+                antiSpoofingService = analyzerGuidelineCardService,
+                sensorDocumentService = sensorDocumentService,
                 scope = CoroutineScope(Dispatchers.Default),
                 dispatcher = Dispatchers.Default
             )
@@ -157,6 +170,8 @@ class MrzScanControllerImpl(
                 parserService = parserService,
                 driverLicenseParser = driverLicenseParseService,
                 textRecognitionService = textRecognitionService,
+                antiSpoofingService = analyzerGuidelineCardService,
+                sensorDocumentService = sensorDocumentService,
                 scope = CoroutineScope(Dispatchers.Default),
                 dispatcher = Dispatchers.Default,
                 throttleMs = throttleMs,
@@ -171,6 +186,7 @@ class MrzScanControllerImpl(
 
     override fun stopScanning() {
         cameraService.stop()
+        sensorDocumentService.stop()
         textRecognitionService.release()
     }
 
@@ -189,5 +205,9 @@ class MrzScanControllerImpl(
         previewViewRef?.let { view ->
             cameraService.setupTapToFocus(view, enabled)
         }
+    }
+
+    override fun enableTorch(enabled: Boolean) {
+        cameraService.enableTorch(enabled)
     }
 }

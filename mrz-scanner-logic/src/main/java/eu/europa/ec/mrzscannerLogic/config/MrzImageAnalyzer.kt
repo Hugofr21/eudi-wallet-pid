@@ -7,10 +7,13 @@ import com.google.mlkit.vision.text.Text
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
 import eu.europa.ec.mrzscannerLogic.middleware.DrivingLicenseAggregator
 import eu.europa.ec.mrzscannerLogic.middleware.ProbabilityAggregator
+import eu.europa.ec.mrzscannerLogic.model.GuidelineAntiSpoofing
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
+import eu.europa.ec.mrzscannerLogic.service.AnalyzerGuidelineCardService
 import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseService
 import eu.europa.ec.mrzscannerLogic.service.MrzParseResult
 import eu.europa.ec.mrzscannerLogic.service.MrzParserService
+import eu.europa.ec.mrzscannerLogic.service.SensorDocumentService
 import eu.europa.ec.mrzscannerLogic.service.TextRecognitionService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineDispatcher
@@ -38,8 +41,18 @@ class MrzImageAnalyzer(
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val throttleMs: Long = 600L, // Processa ~6-7 frames/segundo
     private val roiBottomFraction: Float = 0.3f, // Foca nos 30% inferiores
-    private val requiredSuccessFrames: Int = 2 // Requer 2 leituras consecutivas
+    private val requiredSuccessFrames: Int = 2, // Número mínimo de frames com sucesso para emitir sucesso
+    private val antiSpoofingService: AnalyzerGuidelineCardService,
+    private val sensorDocumentService: SensorDocumentService
 ) : ImageAnalysis.Analyzer {
+
+    private val securityConfig = GuidelineAntiSpoofing(
+        checkSpecularReflection = true,
+        checkMoirePattern = true,
+        checkGyroscope = true,
+        checkAccelerometer = true,
+        threshold = 0.75f
+    )
 
     private val isProcessing = AtomicBoolean(false)
     @Volatile private var lastProcessTime = 0L
@@ -85,13 +98,39 @@ class MrzImageAnalyzer(
 
         val bitmap = imageProxy.toBitmap()
         val rotation = imageProxy.imageInfo.rotationDegrees
-
-        // 2. InputImage via Bitmap
-        val inputImage = InputImage.fromBitmap(bitmap, rotation)
+        val sensorSnapshot = sensorDocumentService.actual
 
         // Processar de forma assíncrona
         scope.launch(dispatcher) {
             try {
+                val spoofingReport = antiSpoofingService.analyze(
+                    bitmap = bitmap,
+                    config = securityConfig,
+                    gyroscopeMatrix = sensorSnapshot.rotationMatrix,
+                    accelerometerData = sensorSnapshot.accelerometerData
+                )
+
+                if (!spoofingReport.isReal) {
+                    consecutiveSuccessCount = 0
+
+                    val failedChecks = spoofingReport.checks
+                        .filter { !it.passed }
+                        .map { it.check }
+
+                    println("Falhas de spoofing: $failedChecks")
+
+                    resultFlow.trySend(
+                        MrzScanState.SecurityCheckFailed(
+                            failedChecks = failedChecks,
+                            reason = "Documento fisicamente inválido (Score: ${spoofingReport.overallScore})"
+                        )
+                    )
+                    return@launch
+                }
+
+
+                // 2. InputImage via Bitmap
+                val inputImage = InputImage.fromBitmap(bitmap, rotation)
                 // OCR no frame atual
                 val textResult = textRecognitionService.recognizeText(inputImage, rotation)
 
@@ -177,36 +216,21 @@ class MrzImageAnalyzer(
         bitmap: Bitmap,
         rotation: Int
     ) {
-        // 1. Verificar Reset (Se mudou de carta)
-        // Se o número atual for muito diferente do vencedor atual, resetamos
-        // ... (lógica de reset simples) ...
-
-        // 2. Adicionar à probabilidade
         probabilityAggregator.addFrame(partialDoc)
 
-        // 3. Informar UI do progresso (Opcional, para barra de loading)
         val progress = probabilityAggregator.getConfidenceProgress()
         resultFlow.trySend(MrzScanState.Processing(progress))
 
-        // 4. Verificar se temos certeza absoluta
         if (probabilityAggregator.isConfident()) {
-
-            // Obter o documento "Vencedor Estatístico"
             val finalDoc = probabilityAggregator.getResult()
+            Log.i("PROBABILITY", "Vencedor Confirmado: ${finalDoc.documentNumber}")
 
-            Log.i("PROBABILITY", "Vencedor Confirmado (Campo 5): ${finalDoc.documentNumber}")
+            // ★ FIX: send diretamente aqui, sem scope.launch interior
+            // O canal callbackFlow aguenta — trySend é suficiente se o buffer não estiver cheio,
+            // mas para Success usamos send (suspending) via o scope pai já existente
+            resultFlow.trySend(MrzScanState.Success(document = finalDoc))
 
-            scope.launch {
-                resultFlow.trySend(MrzScanState.Success(
-                    document = finalDoc
-                    // capturedImage = ... (corte a imagem aqui se quiser)
-                ))
-                probabilityAggregator.reset()
-                isProcessing.set(false)
-            }
-        } else {
-            // Continua a ler mais frames para melhorar a precisão
-            isProcessing.set(false)
+            probabilityAggregator.reset()
         }
     }
 
@@ -288,8 +312,8 @@ class MrzImageAnalyzer(
             .replace("«", "<") // Corrigir caracteres mal lidos
             .replace("»", "<")
             .replace("°", "0")
-            .replace("o", "0") // OCR pode confundir O com 0
-            .replace("O", "0")
+//            .replace("o", "0") // OCR pode confundir O com 0
+//            .replace("O", "0")
             .replace("l", "1") // l minúsculo com 1
             .replace("|", "I") // pipe com I
     }
