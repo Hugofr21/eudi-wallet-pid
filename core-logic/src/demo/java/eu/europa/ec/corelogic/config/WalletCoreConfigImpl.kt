@@ -107,7 +107,8 @@ internal class WalletCoreConfigImpl(
                         R.raw.pidissuerca02_ut,
                         R.raw.av_issuer_ca01,
                         R.raw.pidissuercalissi01,
-                        R.raw.pidissuercalissi02
+                        R.raw.pidissuercalissi02,
+                        R.raw.r45_staging
                     )
                 }
             }
