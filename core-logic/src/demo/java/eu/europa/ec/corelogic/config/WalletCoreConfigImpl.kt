@@ -106,8 +106,6 @@ internal class WalletCoreConfigImpl(
                         R.raw.pidissuerca02_pt,
                         R.raw.pidissuerca02_ut,
                         R.raw.av_issuer_ca01,
-
-                        // lissi cert root
                         R.raw.pidissuercalissi01,
                         R.raw.pidissuercalissi02
                     )
@@ -133,15 +131,15 @@ internal class WalletCoreConfigImpl(
                 .withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
                 .withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
                 .withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
-                .build()
+                .build(),
 
-//            OpenId4VciManager.Config.Builder().apply {
-//                withIssuerUrl(issuerUrl = "https://issuer.dev.ageverification.dev")
-//                withClientAuthenticationType(OpenId4VciManager.ClientAuthenticationType.None("wallet-dev"))
-//                withParUsage(OpenId4VciManager.Config.ParUsage.IF_SUPPORTED)
-//                withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
-//                withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.IfSupported())
-//            }.build()
+            OpenId4VciManager.Config.Builder()
+                .withIssuerUrl(issuerUrl = "https://test.issuer.dev.ageverification.dev")
+                .withClientAuthenticationType(OpenId4VciManager.ClientAuthenticationType.AttestationBased)
+                .withAuthFlowRedirectionURI(BuildConfig.ISSUE_AUTHORIZATION_DEEPLINK)
+                .withParUsage(OpenId4VciManager.Config.ParUsage.NEVER)
+                .withDPoPUsage(OpenId4VciManager.Config.DPoPUsage.Disabled)
+                .build()
         )
 
         override val walletProviderHost: String
