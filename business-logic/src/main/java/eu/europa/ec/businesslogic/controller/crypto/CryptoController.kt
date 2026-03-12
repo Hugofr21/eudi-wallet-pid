@@ -21,9 +21,11 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.text.Normalizer
 import javax.crypto.Cipher
+import javax.crypto.Mac
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
+import javax.crypto.spec.SecretKeySpec
 
 
 interface CryptoController {
@@ -62,6 +64,10 @@ interface CryptoController {
     fun generateSaltFromMnemonic(mnemonic: List<String>):ByteArray
 
     fun deriveIvFromMnemonic(mnemonic: List<String>): ByteArray
+
+    fun computeVerifier(keyBytes: ByteArray): ByteArray
+
+    fun generateIv(): ByteArray
 }
 
 class CryptoControllerImpl(
@@ -76,9 +82,11 @@ class CryptoControllerImpl(
         private const val CODE_VERIFIER_MAX = 128
         const val MAX_GUID_LENGTH = 64
         private const val SALT_BITS = 16
-        private const val ITERATION_COUNT = 100_000
+
+        private const val PBKDF2_ITERATIONS = 310_000
         private const val KEY_LENGTH = 256
         private const val SALT_LENGTH_BYTES = 32
+        private const val GCM_IV_LENGTH_BYTES = 12
     }
 
 
@@ -87,12 +95,18 @@ class CryptoControllerImpl(
         val random = SecureRandom()
         val code = ByteArray(codeLength)
         random.nextBytes(code)
-        return Base64.encodeToString(code,
-            Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+        return Base64.encodeToString(
+            code,
+            Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING
+        )
             .take(codeLength)
     }
 
-    override fun getCipher(encrypt: Boolean, ivBytes: ByteArray?, userAuthenticationRequired: Boolean): Cipher? {
+    override fun getCipher(
+        encrypt: Boolean,
+        ivBytes: ByteArray?,
+        userAuthenticationRequired: Boolean
+    ): Cipher? {
         return try {
             val cipher = Cipher.getInstance(AES_EXTERNAL_TRANSFORMATION)
             val key = keystoreController.retrieveOrGenerateSecretKey(userAuthenticationRequired)
@@ -127,7 +141,6 @@ class CryptoControllerImpl(
     }
 
 
-
     override fun encryptDecrypt(cipher: Cipher?, byteArray: ByteArray): ByteArray {
         return cipher?.doFinal(byteArray) ?: ByteArray(0)
     }
@@ -159,10 +172,10 @@ class CryptoControllerImpl(
     }
 
     override fun verifyPhrase(
-        attempt:List<String>,
+        attempt: List<String>,
         storedHashB64: String
     ): Boolean {
-        val salt      = generateSaltFromMnemonic(attempt)
+        val salt = generateSaltFromMnemonic(attempt)
         val storedHash = Base64.decode(storedHashB64, Base64.NO_WRAP)
         val attemptHash = deriveKeyFromMnemonic(attempt, salt)
         if (storedHash.size != attemptHash.size) return false
@@ -175,14 +188,14 @@ class CryptoControllerImpl(
         val spec = PBEKeySpec(
             normalizedPassword.toCharArray(),
             salt,
-            ITERATION_COUNT,
+            PBKDF2_ITERATIONS,
             KEY_LENGTH
         )
         val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
         return factory.generateSecret(spec).encoded
     }
 
-    override fun generateSalt():ByteArray{
+    override fun generateSalt(): ByteArray {
         val random = SecureRandom()
         val salt = ByteArray(SALT_BITS)
         random.nextBytes(salt)
@@ -196,10 +209,10 @@ class CryptoControllerImpl(
      * HMAC-based Extract-and-Expand Key Derivation Function (HKDF) rfc5869
      */
 
-    override fun generateSaltFromMnemonic(mnemonic: List<String>):ByteArray{
+    override fun generateSaltFromMnemonic(mnemonic: List<String>): ByteArray {
         val normalized = Normalizer.normalize(mnemonic.joinToString(" "), Normalizer.Form.NFKD)
-        val seed      = ("$normalized::salt").toByteArray(Charsets.UTF_8)
-        val hash      = MessageDigest.getInstance("SHA-256").digest(seed)
+        val seed = ("$normalized::salt").toByteArray(Charsets.UTF_8)
+        val hash = MessageDigest.getInstance("SHA-256").digest(seed)
         return hash.copyOfRange(0, 16)
     }
 
@@ -212,11 +225,11 @@ class CryptoControllerImpl(
         val spec = PBEKeySpec(
             mnemonicString.toCharArray(),
             salt,
-            ITERATION_COUNT,
+            PBKDF2_ITERATIONS,
             KEY_LENGTH
         )
         val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
-        val key =  factory.generateSecret(spec).encoded
+        val key = factory.generateSecret(spec).encoded
         return key
     }
 
@@ -230,5 +243,15 @@ class CryptoControllerImpl(
             .digest(normalized)
         return hash.copyOfRange(0, 12)
     }
+
+    /** HMAC-SHA256(key, domain-separator) → one-way verifier. */
+    override fun computeVerifier(keyBytes: ByteArray): ByteArray {
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(keyBytes, "HmacSHA256"))
+        return mac.doFinal("eudiw-passphrase-verifier-v1".toByteArray(Charsets.UTF_8))
+    }
+
+    override fun generateIv(): ByteArray =
+        ByteArray(GCM_IV_LENGTH_BYTES).also { SecureRandom.getInstanceStrong().nextBytes(it) }
 
 }

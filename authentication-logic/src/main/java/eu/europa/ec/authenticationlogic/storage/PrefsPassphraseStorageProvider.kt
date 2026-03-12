@@ -19,91 +19,90 @@ package eu.europa.ec.authenticationlogic.storage
 import android.util.Base64
 import eu.europa.ec.authenticationlogic.provider.PassphraseStorageProvider
 import eu.europa.ec.businesslogic.controller.crypto.CryptoController
+import eu.europa.ec.businesslogic.controller.crypto.CryptoControllerImpl
 import eu.europa.ec.businesslogic.controller.storage.PrefsController
+import java.security.MessageDigest
 
 class PrefsPassphraseStorageProvider(
     private val prefs: PrefsController,
-    private val crypto: CryptoController
+    private val crypto: CryptoController,
 ) : PassphraseStorageProvider {
 
     companion object {
-        private const val KEY_HASH = "DevicePassphraseHash"
-        private const val KEY_IV   = "DevicePassphraseIv"
-        private const val KEY_SALT   = "DevicePassphraseSalt"
+        private const val KEY_VERIFIER = "DevicePassphraseVerifier"
+        private const val KEY_IV       = "DevicePassphraseIv"
+        private const val KEY_SALT     = "DevicePassphraseSalt"
+
     }
 
     override fun hasPassphrase(): Boolean =
-        prefs.getString(KEY_HASH, "").isNotBlank()
+        prefs.getString(KEY_VERIFIER, "").isNotBlank()
 
+    /** Returns the stored HMAC verifier (Base64), NOT the key. */
     override fun getHash(): String? =
-        prefs.getString(KEY_HASH, "").takeIf { it.isNotBlank() }
+        prefs.getString(KEY_VERIFIER, "").takeIf { it.isNotBlank() }
 
     /**
-     * Derive and store both:
-     *  • the PBKDF2 key (as Base64) under KEY_HASH, and
-     *  • the GCM IV    (as Base64) under KEY_IV.
+     * Derives and stores:
+     *   - Random 32-byte salt  -> KEY_SALT
+     *   - Random 12-byte IV    -> KEY_IV
+     *   - HMAC verifier        -> KEY_VERIFIER  (key is wiped, never stored)
      */
     override fun setPassphrase(passphrase: List<String>) {
-        println("PrefsPassphraseStorageProvider  setPassphrase $passphrase")
-        val saltBytes = crypto.generateSaltFromMnemonic(passphrase)
+        val saltBytes = crypto.generateSalt()
+        val ivBytes   = crypto.generateIv()
+
         val keyBytes  = crypto.deriveKeyFromMnemonic(passphrase, saltBytes)
-        val ivBytes   = crypto.deriveIvFromMnemonic(passphrase)
-
-
-        prefs.setString(KEY_SALT, Base64.encodeToString(saltBytes, Base64.NO_WRAP))
-        prefs.setString(KEY_HASH, Base64.encodeToString(keyBytes, Base64.NO_WRAP))
-        prefs.setString(KEY_IV,   Base64.encodeToString(ivBytes, Base64.NO_WRAP))
-
-//        println("Salt (hex): ${saltBytes.joinToString("") { "%02x".format(it) }}")
-//        println("Salt (Base64): ${Base64.encodeToString(saltBytes, Base64.NO_WRAP)}")
-//
-//        println("Key (hex): ${keyBytes.joinToString("") { "%02x".format(it) }}")
-//        println("Key (Base64): ${Base64.encodeToString(keyBytes, Base64.NO_WRAP)}")
-//
-//        println("IV (hex): ${ivBytes.joinToString("") { "%02x".format(it) }}")
-//        println("IV (Base64): ${Base64.encodeToString(ivBytes, Base64.NO_WRAP)}")
+        try {
+            val verifier = crypto.computeVerifier(keyBytes)
+            prefs.setString(KEY_SALT,     Base64.encodeToString(saltBytes, Base64.NO_WRAP))
+            prefs.setString(KEY_IV,       Base64.encodeToString(ivBytes,   Base64.NO_WRAP))
+            prefs.setString(KEY_VERIFIER, Base64.encodeToString(verifier,  Base64.NO_WRAP))
+        } finally {
+            keyBytes.fill(0)   // wipe key from heap
+        }
     }
 
     /**
-     * Verify a passphrase by re‑deriving & comparing against the stored hash.
+     * Re-derives the key from [input] + stored salt, then compares
+     * HMAC verifiers using constant-time MessageDigest.isEqual().
+     * [MED-1] Constant-time: prevents timing oracle.
      */
     override fun verifyPassphrase(input: List<String>): Boolean {
-        val stored = prefs.getString(KEY_HASH, "")
-        if (stored.isBlank()) return false
-        return crypto.verifyPhrase(input, stored)
-    }
+        val storedB64 = prefs.getString(KEY_VERIFIER, "")
+        if (storedB64.isBlank()) return false
 
-    /**
-     * Return the raw key bytes (to use for AES) or throw if missing.
-     */
-    override fun retrieveKeyBytes(): ByteArray {
-        val keyB64 = prefs.getString(KEY_HASH, "")
-        if (keyB64.isBlank()) {
-            throw IllegalStateException("No passphrase hash stored in preferences")
+        val saltBytes = retrieveSalt()
+        val keyBytes  = crypto.deriveKeyFromMnemonic(input, saltBytes)
+        return try {
+            val computed = crypto.computeVerifier(keyBytes)
+            val stored   = Base64.decode(storedB64, Base64.NO_WRAP)
+            MessageDigest.isEqual(computed, stored)   // constant-time
+        } finally {
+            keyBytes.fill(0)
         }
-        val decoded = Base64.decode(keyB64, Base64.NO_WRAP)
-        return decoded
     }
 
     /**
-     * Return the raw GCM IV (to use for AES/GCM) or throw if missing.
+     * [HIGH-1] Key is never stored – always throws.
+     * - BackupController must call:
+     * - crypto.deriveKey(passphrase, retrieveSalt())
      */
+    override fun retrieveKeyBytes(): ByteArray =
+        throw UnsupportedOperationException(
+            "The passphrase key is never persisted. " +
+                    "Re-derive it with: crypto.deriveKey(passphrase, retrieveSalt(), iterations, keyLen)"
+        )
+
     override fun retrieveIv(): ByteArray {
-        val ivB64 = prefs.getString(KEY_IV, "")
-        if (ivB64.isBlank()) {
-            throw IllegalStateException("No passphrase hash stored in preferences")
-        }
-        return Base64.decode(ivB64, Base64.NO_WRAP)
+        val b64 = prefs.getString(KEY_IV, "")
+        check(b64.isNotBlank()) { "No IV stored – call setPassphrase() first." }
+        return Base64.decode(b64, Base64.NO_WRAP)
     }
 
-    /**
-     * Return the raw GCM IV (to use for AES/GCM) or throw if missing.
-     */
     override fun retrieveSalt(): ByteArray {
-        val saltB64 = prefs.getString(KEY_SALT, "")
-        if (saltB64.isBlank()) {
-            throw IllegalStateException("No passphrase hash stored in preferences")
-        }
-        return Base64.decode(saltB64, Base64.NO_WRAP)
+        val b64 = prefs.getString(KEY_SALT, "")
+        check(b64.isNotBlank()) { "No salt stored – call setPassphrase() first." }
+        return Base64.decode(b64, Base64.NO_WRAP)
     }
 }

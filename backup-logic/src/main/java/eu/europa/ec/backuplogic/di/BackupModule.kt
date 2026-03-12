@@ -25,12 +25,13 @@ import eu.europa.ec.backuplogic.controller.ListWordsControllerImpl
 import eu.europa.ec.backuplogic.controller.WalletBackupLogController
 import eu.europa.ec.backuplogic.controller.WalletBackupLogControllerImpl
 import eu.europa.ec.backuplogic.interactor.BackupInteractor
-import eu.europa.ec.backuplogic.interactor.BackupInteractorIml
+import eu.europa.ec.backuplogic.interactor.BackupInteractorImpl
 import eu.europa.ec.businesslogic.controller.crypto.CryptoController
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
+import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.storagelogic.dao.BackupLogDao
 import org.koin.core.annotation.Single
 
@@ -40,7 +41,7 @@ class LogicBackupModule
 
 @Factory
 fun provideListWordsController(
-    context: Context
+    context: ResourceProvider
 ): ListWordsController = ListWordsControllerImpl(
     context
 )
@@ -53,7 +54,7 @@ fun provideWalletBackupLogController(backupLogDao: BackupLogDao): WalletBackupLo
 
 @Factory
 fun provideBackupController(
-    context: Context,
+    context: ResourceProvider,
     walletCoreDocumentsController: WalletCoreDocumentsController,
      cryptoController: CryptoController,
     passphraseAuthenticationController: PassphraseAuthenticationController,
@@ -72,8 +73,8 @@ fun provideBackupInteractor(
     listWordsController: ListWordsController,
     backupController: BackupController
 ): BackupInteractor =
-    BackupInteractorIml(
-    listWordsController,
+    BackupInteractorImpl(
+        listWordsController,
         backupController
     )
 

@@ -24,7 +24,6 @@ import eu.europa.ec.businesslogic.controller.storage.PrefsController
 class PrefsBiometryStorageProvider(
     private val prefsController: PrefsController
 ) : BiometryStorageProvider {
-
     private val gson = Gson()
 
     override fun getBiometricAuthentication(): BiometricAuthentication? {

@@ -70,15 +70,20 @@ class QuizPhraseWordsViewModel(
     private val interactor: BackupInteractor
 ) : MviViewModel<Event, State, Effect>() {
 
-    companion object {
-        private var originalList = listOf<String>()
-        private var initialSlots = listOf<String>()
-        private var initialRemovedWords = listOf<String>()
-        private var initialIndicesRemoved = listOf<Int>()
-    }
+    private var originalList: List<String> = emptyList()
+    private var initialSlots: List<String> = emptyList()
+    private var initialRemovedWords: List<String> = emptyList()
+    private var initialIndicesRemoved: List<Int> = emptyList()
+
+
 
     override fun setInitialState(): State {
         originalList = interactor.getCachedWords()
+        if (originalList.isEmpty()) {
+            setEffect { Effect.Error }
+            return State.Loading
+        }
+
         val (slots, removedWords, indicesRemoved) = interactor.generateQuiz()
         initialSlots = slots
         initialRemovedWords = removedWords

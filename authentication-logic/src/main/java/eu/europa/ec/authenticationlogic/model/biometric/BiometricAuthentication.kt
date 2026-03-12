@@ -16,7 +16,6 @@
 
 package eu.europa.ec.authenticationlogic.model.biometric
 
-import com.google.gson.annotations.SerializedName
 
 /**
  * Data class used to represent the Biometric information saved in shared preferences and are needed

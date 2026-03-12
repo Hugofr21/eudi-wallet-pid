@@ -21,29 +21,41 @@ import eu.europa.ec.backuplogic.controller.BackupController
 import eu.europa.ec.backuplogic.controller.ListWordsController
 import eu.europa.ec.backuplogic.controller.model.RestoreStatus
 import eu.europa.ec.storagelogic.model.BackupLog
+import java.security.SecureRandom
+
+
 
 interface BackupInteractor {
     suspend fun exportBackup(listQuiz: List<String>): ArrayList<Uri>
-
     suspend fun getLastBackup(): BackupLog?
-
     fun existBackup(): Boolean
     suspend fun restoreWallet(file: Uri, passPhrase: List<String>): List<String>
     suspend fun deleteWallet(identifier: String): Boolean
+
+    /** Generates and caches a fresh mnemonic phrase. Returns the word list. */
     fun initListWordsPreview(): List<String>
 
+    /**
+     * Generates the quiz challenge:
+     * @return Triple(
+     *   slots        — full list with [WORDS_TO_GUESS] positions blanked (""),
+     *   options      — the removed words in shuffled order (shown as choices),
+     *   blankIndices — sorted indices of the blanked positions
+     * )
+     */
     fun generateQuiz(): Triple<List<String>, List<String>, List<Int>>
 
     fun getQuizSlots(): List<String>
-
-    fun finalizeRestore(options: List<String>): RestoreStatus
+    suspend fun finalizeRestore(options: List<String>): RestoreStatus
 
     fun cacheWords(words: List<String>)
-
     fun getCachedWords(): List<String>
+
+    /** Clears cached mnemonic from memory. Call after export or on cancel. */
+    fun clearCachedWords()
 }
 
-class BackupInteractorIml (
+class BackupInteractorImpl (
     private val listWordsController: ListWordsController,
     private val backupController: BackupController
 ): BackupInteractor {
@@ -54,6 +66,9 @@ class BackupInteractorIml (
         private const val WALLET_NAME = "wallet-dev"
         private var _cachedWords: MutableList<String>? = null
     }
+
+    @Volatile
+    private var cachedRestoreOptions: List<String> = emptyList()
 
 
     override fun initListWordsPreview(): List<String> {
@@ -89,12 +104,14 @@ class BackupInteractorIml (
         if (passPhrase.isEmpty() || passPhrase.any { it.isBlank() }) {
             return emptyList()
         }
-        return backupController.restoreBackup(file, passPhrase)
-
+        val resultRestore = backupController.restoreBackup(file, passPhrase)
+        if (!resultRestore.isEmpty()) {
+            cachedRestoreOptions = resultRestore
+        }
     }
 
     override suspend fun deleteWallet(identifier: String): Boolean {
-      return backupController.deleteBackup(identifier)
+        return backupController.deleteBackup(identifier)
     }
 
     override fun cacheWords(words: List<String>) {
@@ -105,14 +122,19 @@ class BackupInteractorIml (
         return _cachedWords ?: emptyList()
     }
 
+    override fun clearCachedWords() {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun finalizeRestore(options: List<String>): RestoreStatus {
+        return RestoreStatus.SUCCESS
+    }
 
     override fun getQuizSlots(): List<String> {
         return _cachedWords ?: emptyList()
     }
 
-    override fun finalizeRestore(options: List<String>): RestoreStatus {
-        TODO("Not yet implemented")
-    }
+
 
 
     override fun generateQuiz(): Triple<List<String>, List<String>, List<Int>> {

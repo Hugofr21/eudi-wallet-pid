@@ -21,3 +21,9 @@ data class BackupKey(
     val backupProvider: String? = null,
     val backupDate: String
 )
+
+sealed interface RestoreStatus {
+    data object Success : RestoreStatus
+    data object NothingSelected : RestoreStatus
+    data class Failure(val reason: String) : RestoreStatus
+}
