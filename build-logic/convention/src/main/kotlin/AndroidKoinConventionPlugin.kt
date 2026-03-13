@@ -36,8 +36,6 @@ class AndroidKoinConventionPlugin : Plugin<Project> {
 
                 pluginManager.hasPlugin("com.android.library") ->
                     configure<LibraryExtension> { addVariantOptions(this.sourceSets) }
-
-                else -> {}
             }
 
             dependencies {
@@ -52,6 +50,7 @@ class AndroidKoinConventionPlugin : Plugin<Project> {
     private fun addVariantOptions(sourceSets: NamedDomainObjectContainer<out AndroidSourceSet>) {
         apply {
             sourceSets.all {
+                @Suppress("UnstableApiUsage")
                 kotlin.directories.add("build/generated/ksp/$name/kotlin")
             }
         }

@@ -21,7 +21,6 @@ import eu.europa.ec.commonfeature.extension.toSelectiveExpandableListItems
 import eu.europa.ec.commonfeature.ui.request.model.DocumentPayloadDomain
 import eu.europa.ec.commonfeature.ui.request.model.DomainDocumentFormat
 import eu.europa.ec.commonfeature.ui.request.model.RequestDocumentItemUi
-import eu.europa.ec.commonfeature.util.docNamespace
 import eu.europa.ec.commonfeature.util.transformPathsToDomainClaims
 import eu.europa.ec.corelogic.extension.toClaimPath
 import eu.europa.ec.corelogic.extension.toClaimPaths
@@ -40,6 +39,7 @@ import eu.europa.ec.uilogic.component.ListItemDataUi
 import eu.europa.ec.uilogic.component.ListItemMainContentDataUi
 import eu.europa.ec.uilogic.component.ListItemTrailingContentDataUi
 import eu.europa.ec.uilogic.component.wrap.ExpandableListItemUi
+
 
 object RequestTransformer {
 
@@ -85,7 +85,6 @@ object RequestTransformer {
                         docId = storageDocument.id,
                         domainDocFormat = DomainDocumentFormat.getFormat(
                             format = storageDocument.format,
-                            namespace = storageDocument.docNamespace
                         ),
                         docClaimsDomain = domainClaims
                     )
@@ -163,18 +162,27 @@ object RequestTransformer {
                             )
                         )
 
-                        is DomainDocumentFormat.MsoMdoc -> mDocItems.add(
-                            MsoMdocItem(
-                                namespace = documentPayload.domainDocFormat.namespace,
-                                elementIdentifier = ClaimPathDomain.toElementIdentifier(
-                                    selectedItemId
+                        is DomainDocumentFormat.MsoMdoc -> {
+                            val elementIdentifier = ClaimPathDomain.toElementIdentifier(
+                                selectedItemId
+                            )
+
+                            val nameSpace = ClaimPathDomain.toNameSpace(selectedItemId)
+
+                            mDocItems.add(
+                                MsoMdocItem(
+                                    namespace = nameSpace,
+                                    elementIdentifier = elementIdentifier
                                 )
                             )
-                        )
+                        }
                     }
                 }
 
-                val disclosedItems = mDocItems.distinctBy { it.elementIdentifier } + sdJwtItems
+                val disclosedItems = mDocItems
+                    .distinctBy {
+                        it.namespace to it.elementIdentifier
+                    } + sdJwtItems
 
                 return@mapNotNull if (disclosedItems.isNotEmpty()) {
                     DisclosedDocument(

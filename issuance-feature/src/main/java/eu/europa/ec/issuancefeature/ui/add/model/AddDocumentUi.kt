@@ -20,5 +20,6 @@ import eu.europa.ec.uilogic.component.ListItemDataUi
 
 data class AddDocumentUi(
     val credentialIssuerId: String,
+    val configurationIds: List<String>,
     val itemData: ListItemDataUi,
 )

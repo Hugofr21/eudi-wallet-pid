@@ -80,6 +80,8 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import eu.europa.ec.corelogic.model.ClaimType
+import eu.europa.ec.eudi.wallet.document.format.MsoMdocFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -327,14 +329,21 @@ private fun ContentPreview() {
                         domainPayload = DocumentPayloadDomain(
                             docName = "docName",
                             docId = "docId",
-                            domainDocFormat = DomainDocumentFormat.MsoMdoc(namespace = "pid"),
+                            domainDocFormat = DomainDocumentFormat.getFormat(
+                                format = MsoMdocFormat(
+                                    docType = "docType",
+                                )
+                            ),
                             docClaimsDomain = listOf(
                                 ClaimDomain.Primitive(
                                     key = "key",
                                     displayTitle = "title",
                                     value = "value",
                                     isRequired = false,
-                                    path = ClaimPathDomain(value = listOf())
+                                    path = ClaimPathDomain(
+                                        value = listOf(),
+                                        type = ClaimType.MsoMdoc(namespace = "namespace")
+                                    )
                                 ),
                             )
                         ),

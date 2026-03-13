@@ -108,6 +108,8 @@ class BackupInteractorImpl (
         if (!resultRestore.isEmpty()) {
             cachedRestoreOptions = resultRestore
         }
+
+        return resultRestore.ifEmpty { emptyList() }
     }
 
     override suspend fun deleteWallet(identifier: String): Boolean {

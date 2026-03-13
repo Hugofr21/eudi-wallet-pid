@@ -21,6 +21,7 @@ import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenti
 import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
 import eu.europa.ec.businesslogic.extension.getLocalizedString
 import eu.europa.ec.businesslogic.extension.safeAsync
+import eu.europa.ec.corelogic.config.VciConfig
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.extension.documentIdentifier
 import eu.europa.ec.corelogic.extension.parseTransactionLog
@@ -76,20 +77,6 @@ import java.net.URLDecoder
 enum class IssuanceMethod {
     OPENID4VCI
 }
-
-sealed class IssueDocumentPartialState {
-    data class Success(val documentId: String) : IssueDocumentPartialState()
-    data class DeferredSuccess(val deferredDocuments: Map<String, String>) :
-        IssueDocumentPartialState()
-
-    data class Failure(val errorMessage: String) : IssueDocumentPartialState()
-    data class UserAuthRequired(
-        val crypto: BiometricCrypto,
-        val resultHandler: DeviceAuthenticationResult,
-    ) : IssueDocumentPartialState()
-}
-
-
 sealed class IssueDocumentsPartialState {
     data class Success(val documentIds: List<DocumentId>) : IssueDocumentsPartialState()
     data class DeferredSuccess(val deferredDocuments: Map<DocumentId, FormatType>) :
@@ -106,6 +93,7 @@ sealed class IssueDocumentsPartialState {
         val resultHandler: DeviceAuthenticationResult,
     ) : IssueDocumentsPartialState()
 }
+
 
 sealed class DeleteDocumentPartialState {
     data object Success : DeleteDocumentPartialState()
@@ -166,11 +154,12 @@ interface WalletCoreDocumentsController {
 
     fun getMainPidDocument(): IssuedDocument?
 
-    fun issueDocument(
+    fun referenceIssuesDocument(
         issuanceMethod: IssuanceMethod,
-        configId: String,
-        issuerId: String
-    ): Flow<IssueDocumentPartialState>
+        configIds: List<String>,
+        issuerId: String,
+        prioritizeDeferred: Boolean = false
+    ): Flow<IssueDocumentsPartialState>
 
     fun issueDocumentsByOfferUri(
         offerUri: String,
@@ -214,6 +203,7 @@ interface WalletCoreDocumentsController {
     fun getWalletCoreConfig(): WalletCoreConfig
 
     fun getEdiWallet(): EudiWallet
+
 }
 
 
@@ -235,9 +225,9 @@ class WalletCoreDocumentsControllerImpl(
         return eudiWallet
     }
 
-    private val openId4VciManagers by lazy {
-        walletCoreConfig.vciConfig.associate { config ->
-            config.issuerUrl to eudiWallet.createOpenId4VciManager(config = config)
+    private val openId4VciManagers: Map<VciConfig, OpenId4VciManager> by lazy {
+        walletCoreConfig.issuersConfig.associateWith { orderConfig ->
+            eudiWallet.createOpenId4VciManager(config = orderConfig.config)
         }
     }
 
@@ -260,7 +250,7 @@ class WalletCoreDocumentsControllerImpl(
         return withContext(dispatcher) {
             runCatching {
 
-                val metadata: Map<String, CredentialIssuerMetadata> =
+                val metadata: Map<VciConfig, CredentialIssuerMetadata> =
                     openId4VciManagers.mapValues { (_, manager) ->
                         manager.getIssuerMetadata().getOrThrow()
                     }
@@ -299,10 +289,11 @@ class WalletCoreDocumentsControllerImpl(
                             ScopedDocumentDomain(
                                 name = name,
                                 configurationId = id.value,
-                                credentialIssuerId = issuer,
-                                ageProof = isAgeVerification,
+                                credentialIssuerId = issuer.config.issuerUrl,
+                                credentialIssuerOrder = issuer.order,
                                 formatType = formatType,
-                                isPid = isPid
+                                isPid = isPid,
+                                ageProof = isAgeVerification
                             )
                         }
                     }
@@ -360,42 +351,47 @@ class WalletCoreDocumentsControllerImpl(
             )
         ).minByOrNull { it.createdAt }
 
-    override fun issueDocument(
+    override fun referenceIssuesDocument(
         issuanceMethod: IssuanceMethod,
-        configId: String,
-        issuerId: String
-    ): Flow<IssueDocumentPartialState> = flow {
+        configIds: List<String>,
+        issuerId: String,
+        prioritizeDeferred: Boolean
+    ): Flow<IssueDocumentsPartialState> = flow {
         when (issuanceMethod) {
             IssuanceMethod.OPENID4VCI -> {
-                issueDocumentWithOpenId4VCI(configId, issuerId).collect { response ->
+                issueDocumentWithOpenId4VCI(
+                    configIds,
+                    issuerId,
+                    prioritizeDeferred
+                ).collect { response ->
                     when (response) {
                         is IssueDocumentsPartialState.Failure -> emit(
-                            IssueDocumentPartialState.Failure(
+                            IssueDocumentsPartialState.Failure(
                                 errorMessage = documentErrorMessage
                             )
                         )
 
                         is IssueDocumentsPartialState.Success -> emit(
-                            IssueDocumentPartialState.Success(
-                                response.documentIds.first()
+                            IssueDocumentsPartialState.Success(
+                                response.documentIds
                             )
                         )
 
                         is IssueDocumentsPartialState.UserAuthRequired -> emit(
-                            IssueDocumentPartialState.UserAuthRequired(
+                            IssueDocumentsPartialState.UserAuthRequired(
                                 crypto = response.crypto,
                                 resultHandler = response.resultHandler,
                             )
                         )
 
                         is IssueDocumentsPartialState.PartialSuccess -> emit(
-                            IssueDocumentPartialState.Success(
-                                response.documentIds.first()
+                            IssueDocumentsPartialState.Success(
+                                response.documentIds
                             )
                         )
 
                         is IssueDocumentsPartialState.DeferredSuccess -> emit(
-                            IssueDocumentPartialState.DeferredSuccess(
+                            IssueDocumentsPartialState.DeferredSuccess(
                                 response.deferredDocuments
                             )
                         )
@@ -404,7 +400,7 @@ class WalletCoreDocumentsControllerImpl(
             }
         }
     }.safeAsync {
-        IssueDocumentPartialState.Failure(errorMessage = documentErrorMessage)
+        IssueDocumentsPartialState.Failure(errorMessage = documentErrorMessage)
     }
 
     override fun issueDocumentsByOfferUri(
@@ -430,7 +426,10 @@ class WalletCoreDocumentsControllerImpl(
                             .credentialIssuerIdentifier
                             .toString()
 
-                        val manager = openId4VciManagers[issuerId]
+                        val manager: OpenId4VciManager? = openId4VciManagers.entries
+                            .find { (vciConfig, _) ->
+                                vciConfig.config.issuerUrl == issuerId
+                            }?.value
                             ?: openId4VciManagers.values.firstOrNull()
 
                         require(manager != null) { documentErrorMessage }
@@ -539,8 +538,11 @@ class WalletCoreDocumentsControllerImpl(
 
             val issuerId = extractCredentialIssuerFromOfferUri(offerUri).getOrNull()
 
-            val manager = issuerId?.let { id -> openId4VciManagers[id] }
-                ?: openId4VciManagers.values.firstOrNull()
+            val manager: OpenId4VciManager? = issuerId?.let { id ->
+                openId4VciManagers.entries.find { (vciConfig, _) ->
+                    vciConfig.config.issuerUrl == id
+                }?.value
+            } ?: openId4VciManagers.values.firstOrNull()
 
             require(manager != null) { genericErrorMessage }
 
@@ -708,17 +710,21 @@ class WalletCoreDocumentsControllerImpl(
         eudiWallet.resolveStatus(document)
 
     private fun issueDocumentWithOpenId4VCI(
-        configId: String,
-        issuerId: String
+        configIds: List<String>,
+        issuerId: String,
+        prioritizeDeferred: Boolean
     ): Flow<IssueDocumentsPartialState> =
         callbackFlow {
 
-            val manager = openId4VciManagers[issuerId]
+            val manager: OpenId4VciManager? =
+                openId4VciManagers.entries.find { (vciConfig, _) ->
+                    vciConfig.config.issuerUrl == issuerId
+                }?.value
             require(manager != null) { documentErrorMessage }
 
-            manager.issueDocumentByConfigurationIdentifier(
-                credentialConfigurationId = configId,
-                onIssueEvent = issuanceCallback()
+            manager.issueDocumentByConfigurationIdentifiers(
+                credentialConfigurationIds = configIds,
+                onIssueEvent = issuanceCallback(prioritizeDeferred)
             )
 
             awaitClose()
@@ -729,7 +735,9 @@ class WalletCoreDocumentsControllerImpl(
             )
         }
 
-    private fun ProducerScope<IssueDocumentsPartialState>.issuanceCallback(): OpenId4VciManager.OnIssueEvent {
+    private fun ProducerScope<IssueDocumentsPartialState>.issuanceCallback(
+        prioritizeDeferred: Boolean = true
+    ): OpenId4VciManager.OnIssueEvent {
 
         var totalDocumentsToBeIssued = 0
         val nonIssuedDocuments: MutableMap<FormatType, String> = mutableMapOf()
@@ -800,8 +808,7 @@ class WalletCoreDocumentsControllerImpl(
                 }
 
                 is IssueEvent.Finished -> {
-                    println("IssueEvent.Finished → issuedDocuments=${event.issuedDocuments}, deferred=${deferredDocuments}")
-                    if (deferredDocuments.isNotEmpty()) {
+                    if (deferredDocuments.isNotEmpty() && (prioritizeDeferred || (issuedDocuments.isEmpty()))) {
                         trySendBlocking(IssueDocumentsPartialState.DeferredSuccess(deferredDocuments))
                         return@OnIssueEvent
                     }

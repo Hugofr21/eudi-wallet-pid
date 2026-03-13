@@ -18,6 +18,7 @@ package eu.europa.ec.corelogic.extension
 
 import eu.europa.ec.corelogic.model.ClaimDomain
 
+
 /**
  * Recursively removes empty groups from a list of [ClaimDomain].
  *

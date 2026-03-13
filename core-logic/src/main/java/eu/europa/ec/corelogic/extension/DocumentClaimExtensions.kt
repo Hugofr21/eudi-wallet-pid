@@ -17,6 +17,7 @@
 package eu.europa.ec.corelogic.extension
 
 import eu.europa.ec.corelogic.model.ClaimPathDomain
+import eu.europa.ec.corelogic.model.ClaimType
 import eu.europa.ec.eudi.wallet.document.format.DocumentClaim
 import eu.europa.ec.eudi.wallet.document.format.MsoMdocClaim
 import eu.europa.ec.eudi.wallet.document.format.SdJwtVcClaim
@@ -47,7 +48,7 @@ fun DocumentClaim.toClaimPaths(
         is SdJwtVcClaim -> {
             val currentPath: List<String> = parentPath + this.identifier
             if (children.isEmpty() || this.value is Collection<*>) {
-                listOf(ClaimPathDomain(currentPath))
+                listOf(ClaimPathDomain(value = currentPath, type = ClaimType.SdJwtVc))
             } else {
                 children.flatMap { child ->
                     child.toClaimPaths(currentPath)
@@ -56,7 +57,12 @@ fun DocumentClaim.toClaimPaths(
         }
 
         is MsoMdocClaim -> {
-            listOf(ClaimPathDomain(listOf(this.identifier)))
+            listOf(
+                ClaimPathDomain(
+                    value = listOf(this.identifier),
+                    type = ClaimType.MsoMdoc(this.nameSpace)
+                )
+            )
         }
     }
 }

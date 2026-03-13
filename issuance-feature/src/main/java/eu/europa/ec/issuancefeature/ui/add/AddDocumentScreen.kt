@@ -21,16 +21,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,11 +52,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import eu.europa.ec.commonfeature.config.IssuanceFlowType
+import eu.europa.ec.commonfeature.config.IssuanceUiConfig
 import eu.europa.ec.corelogic.controller.IssuanceMethod
 import eu.europa.ec.corelogic.util.CoreActions
 import eu.europa.ec.issuancefeature.ui.add.model.AddDocumentUi
+import eu.europa.ec.issuancefeature.utils.codePlaceholder.TestTag
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.AppIcons
+import eu.europa.ec.uilogic.component.ErrorInfo
 import eu.europa.ec.uilogic.component.ListItemDataUi
 import eu.europa.ec.uilogic.component.ListItemMainContentDataUi
 import eu.europa.ec.uilogic.component.ListItemTrailingContentDataUi
@@ -71,9 +77,12 @@ import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
 import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.component.wrap.ButtonConfig
 import eu.europa.ec.uilogic.component.wrap.ButtonType
+import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapButton
 import eu.europa.ec.uilogic.component.wrap.WrapImage
 import eu.europa.ec.uilogic.component.wrap.WrapListItem
+import eu.europa.ec.uilogic.component.wrap.WrapText
+import eu.europa.ec.uilogic.extension.applyTestTag
 import eu.europa.ec.uilogic.extension.finish
 import eu.europa.ec.uilogic.extension.getPendingDeepLink
 import eu.europa.ec.uilogic.navigation.IssuanceScreens
@@ -81,9 +90,9 @@ import eu.europa.ec.uilogic.navigation.helper.handleDeepLinkAction
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
+import eu.europa.ec.uilogic.extension.paddingFrom
 
 @Composable
 fun AddDocumentScreen(
@@ -176,19 +185,11 @@ private fun Content(
     ) {
         MainContent(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .weight(1f)
-                .padding(
-                    paddingValues = PaddingValues(
-                        top = paddingValues.calculateTopPadding(),
-                        bottom = 0.dp,
-                        start = paddingValues.calculateStartPadding(layoutDirection),
-                        end = paddingValues.calculateEndPadding(layoutDirection)
-                    )
-                ),
+                .paddingFrom(paddingValues, bottom = false),
             state = state,
             onEventSend = onEventSend,
-            paddingValues = paddingValues,
             context = context,
         )
 
@@ -218,71 +219,122 @@ private fun Content(
         }.collect()
     }
 }
+
+
 @Composable
 private fun MainContent(
     modifier: Modifier = Modifier,
     state: State,
     onEventSend: (Event) -> Unit,
-    paddingValues: PaddingValues,
     context: Context,
 ) {
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier
+    ) {
         ContentTitle(
             modifier = Modifier.fillMaxWidth(),
             title = state.title,
-            subtitle = state.subtitle
+            subtitle = state.subtitle,
+            subtitleTestTag = TestTag.AddDocumentScreen.SUBTITLE,
         )
 
-
-        val groupedOptions = state.options
-
-
-        groupedOptions.forEach { (issuerId, documents) ->
-            Text(
-                text = issuerId,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier
-                    .padding(top = 8.dp, start = 8.dp, end = 8.dp)
+        if (state.noOptions) {
+            ErrorInfo(
+                modifier = Modifier.fillMaxSize(),
+                informativeText = stringResource(R.string.issuance_add_document_no_options)
             )
+        } else {
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(
-                    top = 8.dp,
-                    bottom = paddingValues.calculateBottomPadding(),
-                    start = 16.dp,
-                    end = 16.dp
-                )
-            ) {
-                items(
-                    items = documents,
-                    key = { addDoc -> "${issuerId}_${addDoc.itemData.itemId}" }
-                ) { addDoc ->
-                    WrapListItem(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(2f),
-                        item = addDoc.itemData,
-                        mainContentVerticalPadding = SPACING_LARGE.dp,
-                        mainContentTextStyle = MaterialTheme.typography.titleMedium,
-                        onItemClick = { optionListItemDataUi ->
-                            onEventSend(
-                                Event.IssueDocument(
-                                    issuanceMethod = IssuanceMethod.OPENID4VCI,
-                                    configId = optionListItemDataUi.itemId,
-                                    context = context,
-                                    issuerId = issuerId
-                                )
-                            )
-                        }
+            VSpacer.Medium()
+
+            Options(
+                options = state.options,
+                modifier = Modifier.fillMaxSize(),
+                footerIsShown = state.showFooterScanner,
+                onOptionClicked = { itemIds, issuerId ->
+                    onEventSend(
+                        Event.IssueDocument(
+                            issuanceMethod = IssuanceMethod.OPENID4VCI,
+                            issuerId = issuerId,
+                            configIds = itemIds,
+                            context = context
+                        )
                     )
                 }
-            }
+            )
         }
     }
 }
+
+@Composable
+private fun Options(
+    options: List<Pair<String, List<AddDocumentUi>>>,
+    footerIsShown: Boolean,
+    modifier: Modifier = Modifier,
+    onOptionClicked: (itemIds: List<String>, issuerId: String) -> Unit,
+) {
+
+    val listState = remember(options) { LazyListState() }
+
+    LazyColumn(
+        state = listState,
+        modifier = modifier
+    ) {
+        options.forEachIndexed { sectionIndex, (issuerId, items) ->
+
+            stickyHeader(key = "hdr-$issuerId") {
+                WrapText(
+                    modifier = modifier
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(bottom = SPACING_MEDIUM.dp),
+                    text = issuerId,
+                    textConfig = TextConfig(
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                )
+            }
+
+            itemsIndexed(
+                items = items,
+                key = { _, item -> "$issuerId-${item.configurationIds.joinToString(",")}" }
+            ) { index, item ->
+                val testTag = TestTag.AddDocumentScreen.optionItem(
+                    issuerId = issuerId,
+                    configIds = item.configurationIds
+                )
+                WrapListItem(
+                    modifier = Modifier
+                        .applyTestTag(testTag)
+                        .fillMaxWidth(),
+                    item = item.itemData,
+                    mainContentVerticalPadding = SPACING_LARGE.dp,
+                    mainContentTextStyle = MaterialTheme.typography.titleMedium,
+                    onItemClick = {
+                        onOptionClicked(item.configurationIds, issuerId)
+                    }
+                )
+                if (index < items.lastIndex) {
+                    Spacer(Modifier.height(SPACING_MEDIUM.dp))
+                }
+            }
+
+            if (sectionIndex != options.lastIndex) {
+                item(key = "sep-$issuerId") { Spacer(Modifier.height(SPACING_MEDIUM.dp)) }
+            }
+        }
+
+        item(key = "footer-spacer") {
+            Spacer(
+                modifier = Modifier
+                    .padding(bottom = SPACING_MEDIUM.dp)
+                    .then(if (!footerIsShown) Modifier.navigationBarsPadding() else Modifier)
+            )
+        }
+    }
+}
+
+
 
 
 @Composable
@@ -325,56 +377,55 @@ private fun Footer(
     }
 }
 
-
 @ThemeModePreviews
 @Composable
 private fun IssuanceAddDocumentScreenPreview() {
     PreviewTheme {
         Content(
             state = State(
+                issuanceConfig = IssuanceUiConfig(
+                    flowType = IssuanceFlowType.NoDocument
+                ),
                 showFooterScanner = true,
                 navigatableAction = ScreenNavigateAction.NONE,
-                title = "Add Document",
-                subtitle = "Select a document to add",
+                title = stringResource(R.string.issuance_add_document_title),
+                subtitle = stringResource(R.string.issuance_add_document_subtitle),
                 options = listOf(
-                    "Issuer 1" to listOf(
-                        AddDocumentUi(
-                            itemData = ListItemDataUi(
-                                itemId = "configId1",
-                                mainContentData = ListItemMainContentDataUi.Text(text = "National ID"),
-                                trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
-                            ),
-                            credentialIssuerId = "Issuer 1"
-                        ),
-                        AddDocumentUi(
-                            itemData = ListItemDataUi(
-                                itemId = "configId2",
-                                mainContentData = ListItemMainContentDataUi.Text(text = "Driving Licence"),
-                                trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
-                            ),
-                            credentialIssuerId = "Issuer 1"
+                    Pair(
+                        "issuer1",
+                        listOf(
+                            AddDocumentUi(
+                                credentialIssuerId = "issuer1",
+                                configurationIds = listOf("configId1"),
+                                itemData = ListItemDataUi(
+                                    itemId = "configId1",
+                                    mainContentData = ListItemMainContentDataUi.Text(text = "National ID"),
+                                    trailingContentData = ListItemTrailingContentDataUi.Icon(
+                                        iconData = AppIcons.Add
+                                    )
+                                )
+                            )
                         )
                     ),
-                    "Issuer 2" to listOf(
-                        AddDocumentUi(
-                            itemData = ListItemDataUi(
-                                itemId = "configId3",
-                                mainContentData = ListItemMainContentDataUi.Text(text = "Residence Permit"),
-                                trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
-                            ),
-                            credentialIssuerId = "Issuer 2"
+                    Pair(
+                        "issuer2",
+                        listOf(
+                            AddDocumentUi(
+                                credentialIssuerId = "issuer2",
+                                configurationIds = listOf("configId2"),
+                                itemData = ListItemDataUi(
+                                    itemId = "configId2",
+                                    mainContentData = ListItemMainContentDataUi.Text(text = "Driving Licence"),
+                                    trailingContentData = ListItemTrailingContentDataUi.Icon(
+                                        iconData = AppIcons.Add
+                                    )
+                                )
+                            )
                         )
                     )
-                ),
-                onBackAction = {},
-                issuanceConfig = null,
-                isLoading = false,
-                error = null,
-                isInitialised = true,
-                notifyOnAuthenticationFailure = false,
-                noOptions = false
+                )
             ),
-            effectFlow = emptyFlow(),
+            effectFlow = Channel<Effect>().receiveAsFlow(),
             onEventSend = {},
             onNavigationRequested = {},
             paddingValues = PaddingValues(all = SPACING_LARGE.dp),
@@ -383,47 +434,58 @@ private fun IssuanceAddDocumentScreenPreview() {
     }
 }
 
+
 @ThemeModePreviews
 @Composable
 private fun DashboardAddDocumentScreenPreview() {
     PreviewTheme {
         Content(
             state = State(
-                showFooterScanner = false,
-                navigatableAction = ScreenNavigateAction.BACKABLE,
-                title = "Add Document",
-                subtitle = "Select a document to add",
-                options = listOf(
-                    "Issuer 3" to listOf(
-                        AddDocumentUi(
-                            itemData = ListItemDataUi(
-                                itemId = "configId1",
-                                mainContentData = ListItemMainContentDataUi.Text(text = "National ID"),
-                                trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
-                            ),
-                            credentialIssuerId = "Issuer 3"
-                        )
-                    ),
-                    "Issuer 4" to listOf(
-                        AddDocumentUi(
-                            itemData = ListItemDataUi(
-                                itemId = "configId2",
-                                mainContentData = ListItemMainContentDataUi.Text(text = "Driving Licence"),
-                                trailingContentData = ListItemTrailingContentDataUi.Icon(iconData = AppIcons.Add)
-                            ),
-                            credentialIssuerId = "Issuer 4"
-                        )
+                issuanceConfig = IssuanceUiConfig(
+                    flowType = IssuanceFlowType.ExtraDocument(
+                        formatType = null
                     )
                 ),
-                onBackAction = {},
-                issuanceConfig = null,
-                isLoading = false,
-                error = null,
-                isInitialised = true,
-                notifyOnAuthenticationFailure = false,
-                noOptions = false
+                showFooterScanner = false,
+                navigatableAction = ScreenNavigateAction.BACKABLE,
+                title = stringResource(R.string.issuance_add_document_title),
+                subtitle = stringResource(R.string.issuance_add_document_subtitle),
+                options = listOf(
+                    Pair(
+                        "issuer1",
+                        listOf(
+                            AddDocumentUi(
+                                credentialIssuerId = "issuer1",
+                                configurationIds = listOf("configId1"),
+                                itemData = ListItemDataUi(
+                                    itemId = "configId1",
+                                    mainContentData = ListItemMainContentDataUi.Text(text = "National ID"),
+                                    trailingContentData = ListItemTrailingContentDataUi.Icon(
+                                        iconData = AppIcons.Add
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    Pair(
+                        "issuer2",
+                        listOf(
+                            AddDocumentUi(
+                                credentialIssuerId = "issuer2",
+                                configurationIds = listOf("configId2"),
+                                itemData = ListItemDataUi(
+                                    itemId = "configId2",
+                                    mainContentData = ListItemMainContentDataUi.Text(text = "Driving Licence"),
+                                    trailingContentData = ListItemTrailingContentDataUi.Icon(
+                                        iconData = AppIcons.Add
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
             ),
-            effectFlow = emptyFlow(),
+            effectFlow = Channel<Effect>().receiveAsFlow(),
             onEventSend = {},
             onNavigationRequested = {},
             paddingValues = PaddingValues(all = SPACING_LARGE.dp),

@@ -16,11 +16,17 @@
 
 package eu.europa.ec.uilogic.extension
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Indication
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -37,7 +43,10 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.debugInspectorInfo
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -165,3 +174,43 @@ fun Modifier.dashedBorder(
     gapLength: Dp = 4.dp,
     cap: StrokeCap = StrokeCap.Round
 ) = dashedBorder(brush = SolidColor(color), shape, strokeWidth, dashLength, gapLength, cap)
+
+fun Modifier.optionalTestTag(testTag: String?): Modifier {
+    return this.then(
+        if (testTag != null) {
+            Modifier.applyTestTag(testTag)
+        } else {
+            Modifier
+        }
+    )
+}
+@SuppressLint("UnnecessaryComposedModifier")
+fun Modifier.applyTestTag(testTag: String): Modifier = composed {
+    val finalTestTag = createTestTag(
+        applicationId = LocalContext.current.packageName,
+        testTag = testTag
+    )
+    return@composed this.then(Modifier.testTag(finalTestTag))
+}
+private fun createTestTag(applicationId: String, testTag: String): String {
+    return "$applicationId:id/$testTag"
+}
+
+@Composable
+fun Modifier.paddingFrom(
+    pv: PaddingValues,
+    top: Boolean = true,
+    start: Boolean = true,
+    end: Boolean = true,
+    bottom: Boolean = true
+): Modifier {
+    val layoutDirection = LocalLayoutDirection.current
+    return this.padding(
+        PaddingValues(
+            top = if (top) pv.calculateTopPadding() else 0.dp,
+            start = if (start) pv.calculateStartPadding(layoutDirection) else 0.dp,
+            end = if (end) pv.calculateEndPadding(layoutDirection) else 0.dp,
+            bottom = if (bottom) pv.calculateBottomPadding() else 0.dp
+        )
+    )
+}

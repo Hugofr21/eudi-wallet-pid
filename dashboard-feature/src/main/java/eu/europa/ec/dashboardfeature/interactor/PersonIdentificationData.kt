@@ -22,7 +22,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
-import eu.europa.ec.commonfeature.util.docNamespace
 import eu.europa.ec.corelogic.config.WalletCoreConfig
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.model.DocumentIdentifier
@@ -191,28 +190,62 @@ class PersonIdentificationDataImpl(
 
 
     private fun printDocuments(label: String, docs: List<IssuedDocument>) {
+
         val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-        println("---- $label Details ----")
-        docs.forEachIndexed { index, doc ->
-            val issuedAt = doc.createdAt
-                ?.atZone(ZoneId.systemDefault())
-                ?.toLocalDateTime()
-                ?.format(formatter)
-                ?: "unknown"
 
-            println("$label #${index + 1}")
-            println("  ID         : ${doc.id}")
-            println("  Format     : ${doc.format.javaClass.simpleName}")
-            println("  Issued At  : $issuedAt")
-            println("  Namespace  : ${doc.docNamespace ?: "n/a"}")
-            println("  Credential Policy   : ${doc.credentialPolicy}...")
-            println("  Claims:")
-            doc.data.claims.forEach { claim ->
-                println("    - ${claim.identifier}: ${claim.value}")
+        val output = buildString {
+
+            appendLine("════════════════════════════════════════════")
+            appendLine(" $label LIST (${docs.size})")
+            appendLine("════════════════════════════════════════════")
+
+            docs.forEachIndexed { index, doc ->
+
+                val createdAt = doc.createdAt
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime()
+                    .format(formatter)
+
+                val issuedAt = doc.issuedAt
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime()
+                    .format(formatter)
+
+                appendLine()
+                appendLine("[$label ${index + 1}]")
+                appendLine("────────────────────────────────────────────")
+                appendLine("Name              : ${doc.name}")
+                appendLine("ID                : ${doc.id}")
+                appendLine("Format            : ${doc.format::class.simpleName}")
+                appendLine("Manager ID        : ${doc.documentManagerId}")
+                appendLine("Credential Policy : ${doc.credentialPolicy}")
+                appendLine("Created At        : $createdAt")
+                appendLine("Issued At         : $issuedAt")
+
+                appendLine()
+                appendLine("Claims")
+                appendLine("────────────────────────────────────────────")
+
+                doc.data.claims
+                    .sortedBy { it.identifier }
+                    .forEach { claim ->
+
+                        val key = claim.identifier
+                            .replace("_", " ")
+                            .replaceFirstChar { it.uppercase() }
+
+                        val value = claim.value?.toString() ?: "null"
+
+                        appendLine("• $key : $value")
+                    }
+
+                appendLine()
             }
-            println("-------------------------------")
-        }
-    }
 
+            appendLine("════════════════════════════════════════════")
+        }
+
+        println(output)
+    }
 
 }

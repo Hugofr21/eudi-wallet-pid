@@ -20,6 +20,7 @@ import android.content.Context
 import eu.europa.ec.authenticationlogic.controller.authentication.BiometricsAvailability
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationResult
 import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
+import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.extension.safeAsync
 import eu.europa.ec.businesslogic.util.safeLet
 import eu.europa.ec.commonfeature.config.SuccessUIConfig
@@ -107,7 +108,8 @@ class DocumentOfferInteractorImpl(
     private val walletCoreDocumentsController: WalletCoreDocumentsController,
     private val deviceAuthenticationInteractor: DeviceAuthenticationInteractor,
     private val resourceProvider: ResourceProvider,
-    private val uiSerializer: UiSerializer
+    private val uiSerializer: UiSerializer,
+    private val configLogic: ConfigLogic
 ) : DocumentOfferInteractor {
 
     private val genericErrorMsg
@@ -178,7 +180,7 @@ class DocumentOfferInteractorImpl(
 
                             println("[resolveDocumentOffer] hasMainPid=$hasMainPid, hasPidInOffer=$hasPidInOffer")
 
-                            if (hasMainPid || hasPidInOffer) {
+                            if (hasMainPid || hasPidInOffer || !configLogic.forcePidActivation) {
                                 println("[resolveDocumentOffer] proceeding with Success state")
                                 ResolveDocumentOfferInteractorPartialState.Success(
                                     documents = offer.offeredDocuments.map { offeredDocument ->

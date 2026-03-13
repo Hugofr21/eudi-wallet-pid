@@ -568,6 +568,7 @@
     <string name="wifi_aware_troubleshoot_title">Wifi Aware Troubleshoot</string>
     <string name="digital_credentials_screen_sign_card_title">Securely sign and manage your digital credentials.</string>
     <string name="quick_pin_too_weak_error">The PIN is too simple. Use a more secure combination.</string>
+    <string name="issuance_add_document_pid_combined">Digital identity provider</string>
 
     <!-- Logs Screen -->
 </resources>

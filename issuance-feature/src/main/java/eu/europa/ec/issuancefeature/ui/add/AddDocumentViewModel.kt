@@ -28,12 +28,11 @@ import eu.europa.ec.commonfeature.config.PresentationMode
 import eu.europa.ec.commonfeature.config.QrScanFlow
 import eu.europa.ec.commonfeature.config.QrScanUiConfig
 import eu.europa.ec.commonfeature.config.RequestUriConfig
-import eu.europa.ec.corelogic.controller.DigitalCredentialsPartialState
 import eu.europa.ec.corelogic.controller.IssuanceMethod
-import eu.europa.ec.corelogic.controller.IssueDocumentPartialState
 import eu.europa.ec.corelogic.di.getOrCreatePresentationScope
 import eu.europa.ec.issuancefeature.interactor.AddDocumentInteractor
-import eu.europa.ec.issuancefeature.interactor.AddDocumentInteractorPartialState
+import eu.europa.ec.issuancefeature.interactor.AddDocumentInteractorIssueDocumentsPartialState
+import eu.europa.ec.issuancefeature.interactor.AddDocumentInteractorScopedPartialState
 import eu.europa.ec.issuancefeature.ui.add.model.AddDocumentUi
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
@@ -65,14 +64,11 @@ import org.koin.core.component.getScopeName
 data class State(
     val navigatableAction: ScreenNavigateAction,
     val onBackAction: (() -> Unit)? = null,
-
-    val issuanceConfig: IssuanceUiConfig?,
-
+    val issuanceConfig: IssuanceUiConfig,
     val isLoading: Boolean = false,
     val error: ContentErrorConfig? = null,
     val isInitialised: Boolean = false,
     val notifyOnAuthenticationFailure: Boolean = false,
-
     val title: String = "",
     val subtitle: String = "",
     val options: List<Pair<String, List<AddDocumentUi>>> = emptyList(),
@@ -90,8 +86,8 @@ sealed class Event : ViewEvent {
     data object DismissError : Event()
     data class IssueDocument(
         val issuanceMethod: IssuanceMethod,
-        val configId: String,
         val issuerId: String,
+        val configIds: List<String>,
         val context: Context
     ) : Event()
 }
@@ -152,8 +148,8 @@ class AddDocumentViewModel(
             is Event.IssueDocument -> {
                 issueDocument(
                     issuanceMethod = event.issuanceMethod,
+                    configIds = event.configIds,
                     issuerId = event.issuerId,
-                    configId = event.configId,
                     context = event.context
                 )
             }
@@ -215,18 +211,18 @@ class AddDocumentViewModel(
 
         viewModelScope.launch {
             addDocumentInteractor.getAddDocumentOption(
-                flowType = viewState.value.issuanceConfig?.flowType
+                flowType = viewState.value.issuanceConfig.flowType
             ).collect { response ->
                 println("AddDocument getAddDocumentOption ${response.getScopeName()}")
                 when (response) {
-                    is AddDocumentInteractorPartialState.Success -> {
+                    is AddDocumentInteractorScopedPartialState.Success -> {
                         setState {
                             copy(
                                 error = null,
                                 options = response.options,
                                 noOptions = false,
                                 showFooterScanner = shouldShowFooterScanner(
-                                    flowType = viewState.value.issuanceConfig?.flowType
+                                    flowType = viewState.value.issuanceConfig.flowType
                                 ),
                                 isInitialised = true,
                                 isLoading = false
@@ -235,7 +231,7 @@ class AddDocumentViewModel(
                         handleDeepLink(deepLinkUri)
                     }
 
-                    is AddDocumentInteractorPartialState.Failure -> {
+                    is AddDocumentInteractorScopedPartialState.Failure -> {
 
                         val deepLinkAction = getDeepLinkAction(deepLinkUri)
 
@@ -260,7 +256,7 @@ class AddDocumentViewModel(
                         }
                     }
 
-                    is AddDocumentInteractorPartialState.NoOptions -> {
+                    is AddDocumentInteractorScopedPartialState.NoOptions -> {
                         setState {
                             copy(
                                 error = null,
@@ -280,7 +276,7 @@ class AddDocumentViewModel(
     private fun issueDocument(
         issuanceMethod: IssuanceMethod,
         issuerId: String,
-        configId: String,
+        configIds: List<String>,
         context: Context
     ) {
         issuanceJob?.cancel()
@@ -293,13 +289,13 @@ class AddDocumentViewModel(
                 )
             }
 
-            addDocumentInteractor.issueDocument(
+            addDocumentInteractor.issueDocuments(
                 issuanceMethod = issuanceMethod,
                 issuerId = issuerId,
-                configId = configId
+                configIds = configIds
             ).collect { response ->
                 when (response) {
-                    is IssueDocumentPartialState.Failure -> {
+                    is AddDocumentInteractorIssueDocumentsPartialState.Failure -> {
                         setState {
                             copy(
                                 error = ContentErrorConfig(
@@ -312,7 +308,7 @@ class AddDocumentViewModel(
                         }
                     }
 
-                    is IssueDocumentPartialState.Success -> {
+                    is AddDocumentInteractorIssueDocumentsPartialState.Success -> {
                         setState {
                             copy(
                                 error = null,
@@ -320,11 +316,11 @@ class AddDocumentViewModel(
                             )
                         }
                         navigateToDocumentIssuanceSuccessScreen(
-                            documentId = response.documentId
+                            documentIds = response.documentIds
                         )
                     }
 
-                    is IssueDocumentPartialState.DeferredSuccess -> {
+                    is AddDocumentInteractorIssueDocumentsPartialState.DeferredSuccess -> {
                         setState {
                             copy(
                                 error = null,
@@ -333,12 +329,12 @@ class AddDocumentViewModel(
                         }
                         navigateToGenericSuccessScreen(
                             route = addDocumentInteractor.buildGenericSuccessRouteForDeferred(
-                                viewState.value.issuanceConfig?.flowType
+                                viewState.value.issuanceConfig.flowType
                             )
                         )
                     }
 
-                    is IssueDocumentPartialState.UserAuthRequired -> {
+                    is AddDocumentInteractorIssueDocumentsPartialState.UserAuthRequired -> {
                         addDocumentInteractor.handleUserAuth(
                             context = context,
                             crypto = response.crypto,
@@ -353,30 +349,25 @@ class AddDocumentViewModel(
                             )
                         )
                     }
-
-                    is DigitalCredentialsPartialState.Failure -> TODO()
-                    is DigitalCredentialsPartialState.Success -> TODO()
                 }
             }
         }
     }
 
-    private fun navigateToDocumentIssuanceSuccessScreen(documentId: String) {
-        val onSuccessNavigation = when (viewState.value.issuanceConfig?.flowType) {
+    private fun navigateToDocumentIssuanceSuccessScreen(documentIds: List<String>) {
+        val onSuccessNavigation = when (viewState.value.issuanceConfig.flowType) {
             is IssuanceFlowType.NoDocument -> ConfigNavigation(
-                navigationType = PushScreen(
+                navigationType = NavigationType.PushScreen(
                     screen = DashboardScreens.Dashboard,
                     popUpToScreen = IssuanceScreens.AddDocument
                 )
             )
 
             is IssuanceFlowType.ExtraDocument -> ConfigNavigation(
-                navigationType = PopTo(
+                navigationType = NavigationType.PopTo(
                     screen = DashboardScreens.Dashboard
                 )
             )
-
-            null -> TODO()
         }
 
         setEffect {
@@ -387,7 +378,7 @@ class AddDocumentViewModel(
                         mapOf(
                             IssuanceSuccessUiConfig.serializedKeyName to uiSerializer.toBase64(
                                 model = IssuanceSuccessUiConfig(
-                                    documentIds = listOf(documentId),
+                                    documentIds = documentIds,
                                     onSuccessNavigation = onSuccessNavigation,
                                 ),
                                 parser = IssuanceSuccessUiConfig.Parser
@@ -399,6 +390,7 @@ class AddDocumentViewModel(
             )
         }
     }
+
 
     private fun navigateToGenericSuccessScreen(route: String) {
         setEffect {
