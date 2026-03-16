@@ -20,6 +20,8 @@ import android.content.Intent
 import android.net.Uri
 import eu.europa.ec.commonfeature.config.OfferUiConfig
 import eu.europa.ec.commonfeature.config.PresentationMode
+import eu.europa.ec.commonfeature.config.QrScanFlow
+import eu.europa.ec.commonfeature.config.QrScanUiConfig
 import eu.europa.ec.commonfeature.config.RequestUriConfig
 import eu.europa.ec.commonfeature.model.PinFlow
 import eu.europa.ec.corelogic.di.getOrCreatePresentationScope
@@ -88,6 +90,8 @@ sealed class Event : ViewEvent {
             ) : DocumentRevocation()
         }
     }
+
+    data object GoToScanQR : Event()
 }
 
 sealed class Effect : ViewSideEffect {
@@ -182,6 +186,13 @@ class DashboardViewModel(
                 hideBottomSheet()
                 goToDocumentDetails(docId = event.documentId)
             }
+
+            // added qr code openid4vp
+            is Event.GoToScanQR -> {
+                navigateToQrScan()
+            }
+
+
         }
     }
 
@@ -279,6 +290,29 @@ class DashboardViewModel(
         }
     }
 
+    private fun navigateToQrScan() {
+
+        setEffect {
+           Effect.Navigation.SwitchScreen(
+                screenRoute = generateComposableNavigationLink(
+                    screen = CommonScreens.QrScan,
+                    arguments = generateComposableArguments(
+                        mapOf(
+                            QrScanUiConfig.serializedKeyName to uiSerializer.toBase64(
+                                QrScanUiConfig(
+                                    title = resourceProvider.getString(R.string.presentation_qr_scan_title),
+                                    subTitle = resourceProvider.getString(R.string.presentation_qr_scan_subtitle),
+                                    qrScanFlow = QrScanFlow.Presentation
+                                ),
+                                QrScanUiConfig.Parser
+                            )
+                        )
+                    )
+                )
+            )
+        }
+    }
+
     private fun handleDeepLink(deepLinkUri: Uri?) {
         deepLinkUri?.let { uri ->
             hasDeepLink(uri)?.let {
@@ -330,4 +364,6 @@ class DashboardViewModel(
             }
         }
     }
+
+
 }

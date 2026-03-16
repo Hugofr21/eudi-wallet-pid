@@ -18,20 +18,18 @@ package eu.europa.ec.dashboardfeature.ui.component
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -45,9 +43,9 @@ import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.wrap.WrapIcon
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import eu.europa.ec.dashboardfeature.ui.dashboard.DashboardViewModel
-
-
+import eu.europa.ec.dashboardfeature.ui.dashboard.Event
 
 private val NightSky       = Color(0xFF071523)
 private val OceanBlueDark  = Color(0xFF113865)
@@ -98,19 +96,16 @@ sealed class BottomNavigationItem(
     )
 
 }
-
 @Composable
-fun BottomNavigationBar(navController: NavController, viewModel: DashboardViewModel? = null) {
-    val navItems = listOf(
-        BottomNavigationItem.Home,
-        BottomNavigationItem.Documents,
-        BottomNavigationItem.Transactions,
-        BottomNavigationItem.WifiAware
-    )
+fun OverlappingBottomNavigationBar(
+    navController: NavController,
+    viewModel: DashboardViewModel? = null
+) {
+    val navItemsLeft = listOf(BottomNavigationItem.Home, BottomNavigationItem.Documents)
+    val navItemsRight = listOf(BottomNavigationItem.Transactions, BottomNavigationItem.WifiAware)
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-
     val isDark = isSystemInDarkTheme()
 
     val palette = if (isDark) {
@@ -129,35 +124,70 @@ fun BottomNavigationBar(navController: NavController, viewModel: DashboardViewMo
         )
     }
 
-    NavigationBar(
-        modifier = Modifier
-            .fillMaxWidth(),
-        containerColor = palette.containerColor,
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.BottomCenter
     ) {
-        navItems.forEach { screen ->
-            NavigationBarItem(
-                icon = {
-                    WrapIcon(iconData = screen.icon)
-                },
-                label = { Text(text = stringResource(screen.titleRes)) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = palette.highlight,
-                    selectedTextColor = palette.highlight,
-                    indicatorColor = palette.accent.copy(alpha = 0.14f),
-                    unselectedIconColor = palette.unselected.copy(alpha = 0.70f),
-                    unselectedTextColor = palette.unselected.copy(alpha = 0.70f)
-                ),
-                selected = currentDestination?.hierarchy?.any {
-                    it.route == screen.route
-                } == true,
-                onClick = {
-                    navController.navigate(screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+        NavigationBar(
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = palette.containerColor,
+        ) {
+            navItemsLeft.forEach { screen ->
+                NavigationBarItem(
+                    icon = { WrapIcon(iconData = screen.icon) },
+                    label = { Text(text = stringResource(screen.titleRes)) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = palette.highlight,
+                        selectedTextColor = palette.highlight,
+                        indicatorColor = palette.accent.copy(alpha = 0.14f),
+                        unselectedIconColor = palette.unselected.copy(alpha = 0.70f),
+                        unselectedTextColor = palette.unselected.copy(alpha = 0.70f)
+                    ),
+                    selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                    onClick = {
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            navItemsRight.forEach { screen ->
+                NavigationBarItem(
+                    icon = { WrapIcon(iconData = screen.icon) },
+                    label = { Text(text = stringResource(screen.titleRes)) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = palette.highlight,
+                        selectedTextColor = palette.highlight,
+                        indicatorColor = palette.accent.copy(alpha = 0.14f),
+                        unselectedIconColor = palette.unselected.copy(alpha = 0.70f),
+                        unselectedTextColor = palette.unselected.copy(alpha = 0.70f)
+                    ),
+                    selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                    onClick = {
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = (-40).dp),
+            contentAlignment = Alignment.Center
+        ) {
+            ScanButton(
+                onClick = {
+                    viewModel?.setEvent(Event.GoToScanQR)
                 }
             )
         }
@@ -168,6 +198,6 @@ fun BottomNavigationBar(navController: NavController, viewModel: DashboardViewMo
 @Composable
 private fun BottomNavigationBarPreview() {
     PreviewTheme {
-        BottomNavigationBar(rememberNavController(),null)
+        OverlappingBottomNavigationBar(rememberNavController(),null)
     }
 }

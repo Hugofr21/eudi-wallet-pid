@@ -19,7 +19,6 @@ package eu.europa.ec.dashboardfeature.ui.home
 import android.Manifest
 import android.content.Context
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +29,6 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -85,16 +83,13 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import eu.europa.ec.dashboardfeature.ui.home.compoment.ScanButton
 import eu.europa.ec.uilogic.component.wrap.CoralRed
-import eu.europa.ec.uilogic.component.wrap.DeepBlue
 import eu.europa.ec.uilogic.component.wrap.LightSkyBlue
 import eu.europa.ec.uilogic.component.wrap.LightTeal
 import eu.europa.ec.uilogic.component.wrap.SoftYellow
 import eu.europa.ec.uilogic.component.wrap.StickyBottomConfig
 import eu.europa.ec.uilogic.component.wrap.StickyBottomType
 import eu.europa.ec.uilogic.component.wrap.WrapStickyBottomContent
-import eu.europa.ec.uilogic.navigation.helper.handleDeepLinkAction
 
 typealias DashboardEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event
 typealias OpenSideMenuEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event.SideMenu.Open
@@ -132,16 +127,7 @@ fun HomeScreen(
                     type = StickyBottomType.Generic
                 )
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    ScanButton(onEventSend = {
-                        viewModel.setEvent(
-                            it
-                        )
-                    })
-                }
+
             }
         },
     ) { paddingValues ->

@@ -1,4 +1,4 @@
-package eu.europa.ec.dashboardfeature.ui.home.compoment
+package eu.europa.ec.dashboardfeature.ui.component
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -8,28 +8,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import eu.europa.ec.dashboardfeature.ui.home.Event
-import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.utils.SPACING_LARGE
 import eu.europa.ec.uilogic.component.utils.VSpacer
-import eu.europa.ec.uilogic.component.wrap.TextConfig
 import eu.europa.ec.uilogic.component.wrap.WrapIcon
-import eu.europa.ec.uilogic.component.wrap.WrapText
 
 @Composable
 fun ScanButton(
-    onEventSend: (Event) -> Unit,
+    onClick: () -> Unit,
 ) {
     Column {
         VSpacer.Small()
         FloatingActionButton(
             modifier = Modifier.align(Alignment.CenterHorizontally),
-            onClick = {
-                onEventSend(Event.GoToScanQR)
-            },
+            onClick = onClick,
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             shape = CircleShape,
@@ -39,15 +32,5 @@ fun ScanButton(
                 iconData = AppIcons.QrScanner
             )
         }
-        VSpacer.ExtraSmall()
-        WrapText(
-            text = stringResource(R.string.home_screen_sign_document_option_scan_qr),
-            textConfig = TextConfig(
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        VSpacer.Small()
     }
 }

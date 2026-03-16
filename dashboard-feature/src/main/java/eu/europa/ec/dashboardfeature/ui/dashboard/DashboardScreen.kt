@@ -46,7 +46,7 @@ import androidx.navigation.compose.rememberNavController
 import eu.europa.ec.businesslogic.extension.getParcelableArrayListExtra
 import eu.europa.ec.corelogic.model.RevokedDocumentDataDomain
 import eu.europa.ec.corelogic.util.CoreActions
-import eu.europa.ec.dashboardfeature.ui.component.BottomNavigationBar
+import eu.europa.ec.dashboardfeature.ui.component.OverlappingBottomNavigationBar
 import eu.europa.ec.dashboardfeature.ui.component.BottomNavigationItem
 import eu.europa.ec.dashboardfeature.ui.dashboard.sidemenu.SideMenuScreen
 import eu.europa.ec.dashboardfeature.ui.documents.list.DocumentsScreen
@@ -97,7 +97,7 @@ internal fun DashboardScreen(
 
     Scaffold(
         bottomBar = {
-            BottomNavigationBar(bottomNavigationController, viewModel)
+            OverlappingBottomNavigationBar(bottomNavigationController, viewModel)
         }
     ) { padding ->
         NavHost(
