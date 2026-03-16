@@ -2,37 +2,6 @@ package eu.europa.ec.dashboardfeature.ui.scanner.identificationDocument
 
 import android.Manifest
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
-import eu.europa.ec.uilogic.extension.openAppSettings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -40,38 +9,44 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.runtime.*
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DocumentScanner
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import eu.europa.ec.mrzscannerLogic.model.ScanType
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.FlashOff
-import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.NoPhotography
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
-import com.google.android.material.color.utilities.Score.score
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
 import eu.europa.ec.mrzscannerLogic.model.AntiSpoofingCheck
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
-import eu.europa.ec.uilogic.component.utils.VSpacer
-
+import eu.europa.ec.mrzscannerLogic.model.ScanType
+import eu.europa.ec.uilogic.extension.openAppSettings
 
 @Composable
 fun IdentificationDocumentScreen(
@@ -106,7 +81,7 @@ fun IdentificationDocumentScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.Black
+        containerColor = Color.White
     ) { paddingValues ->
         when (state.isCameraAvailability) {
             CameraAvailability.NO_PERMISSION -> RequiredPermissionsAsk { viewModel.setEvent(it) }
@@ -114,7 +89,6 @@ fun IdentificationDocumentScreen(
             else -> LoadingScreen()
         }
     }
-
 }
 
 @Composable
@@ -148,29 +122,24 @@ private fun AutomaticScannerContent(
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-
         AndroidView(
             factory = { previewView },
             modifier = Modifier.fillMaxSize()
         )
 
-        TopBar(
-            isFlashOn = state.isFlashOn,
-            onClose = { viewModel.setEvent(Event.GoBack) },
-            onToggleFlash = { viewModel.setEvent(Event.ToggleFlash) },
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
+        ScannerMaskOverlay(scanState = state.scanState)
 
-        AnimatedVisibility(
-            visible = state.scannedDocument == null,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.Center)
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            MrzGuideOverlay(state.scanState)
+            TopBar(
+                isFlashOn = state.isFlashOn,
+                onClose = { viewModel.setEvent(Event.GoBack) },
+                onToggleFlash = { viewModel.setEvent(Event.ToggleFlash) }
+            )
+            Spacer(modifier = Modifier.height(40.dp))
+            InstructionText()
         }
-
-
 
         AnimatedVisibility(
             visible = !state.isScanFrozen.not() &&
@@ -210,6 +179,91 @@ private fun AutomaticScannerContent(
 }
 
 @Composable
+private fun ScannerMaskOverlay(scanState: MrzScanState) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val boxWidth = size.width - 48.dp.toPx()
+            val boxHeight = 130.dp.toPx()
+            val boxTopLeft = Offset(
+                x = (size.width - boxWidth) / 2f,
+                y = (size.height - boxHeight) / 2f
+            )
+            val cornerRadius = CornerRadius(8.dp.toPx())
+
+            val maskPath = Path().apply {
+                addRect(androidx.compose.ui.geometry.Rect(Offset.Zero, size))
+                addRoundRect(
+                    androidx.compose.ui.geometry.RoundRect(
+                        rect = androidx.compose.ui.geometry.Rect(boxTopLeft, androidx.compose.ui.geometry.Size(boxWidth, boxHeight)),
+                        cornerRadius = cornerRadius
+                    )
+                )
+                fillType = PathFillType.EvenOdd
+            }
+
+            drawPath(path = maskPath, color = Color.White)
+
+            val strokeWidth = 1.5.dp.toPx()
+            val dashColor = Color(0xFF9E9E9E)
+
+            drawRoundRect(
+                color = dashColor,
+                topLeft = boxTopLeft,
+                size = androidx.compose.ui.geometry.Size(boxWidth, boxHeight),
+                cornerRadius = cornerRadius,
+                style = Stroke(
+                    width = strokeWidth,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f))
+                )
+            )
+
+            val cornerLen = 20.dp.toPx()
+            val cornerStroke = 4.dp.toPx()
+            val blue = Color(0xFF1976D2)
+
+            drawLine(blue, boxTopLeft, boxTopLeft.copy(x = boxTopLeft.x + cornerLen), cornerStroke)
+            drawLine(blue, boxTopLeft, boxTopLeft.copy(y = boxTopLeft.y + cornerLen), cornerStroke)
+
+            val topRight = boxTopLeft.copy(x = boxTopLeft.x + boxWidth)
+            drawLine(blue, topRight, topRight.copy(x = topRight.x - cornerLen), cornerStroke)
+            drawLine(blue, topRight, topRight.copy(y = topRight.y + cornerLen), cornerStroke)
+
+            val bottomLeft = boxTopLeft.copy(y = boxTopLeft.y + boxHeight)
+            drawLine(blue, bottomLeft, bottomLeft.copy(x = bottomLeft.x + cornerLen), cornerStroke)
+            drawLine(blue, bottomLeft, bottomLeft.copy(y = bottomLeft.y - cornerLen), cornerStroke)
+
+            val bottomRight = Offset(boxTopLeft.x + boxWidth, boxTopLeft.y + boxHeight)
+            drawLine(blue, bottomRight, bottomRight.copy(x = bottomRight.x - cornerLen), cornerStroke)
+            drawLine(blue, bottomRight, bottomRight.copy(y = bottomRight.y - cornerLen), cornerStroke)
+        }
+
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(70.dp))
+            Icon(
+                imageVector = Icons.Default.DocumentScanner,
+                contentDescription = null,
+                tint = Color(0xFF757575),
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = when (scanState) {
+                    is MrzScanState.Processing -> "Reading document… ${(scanState.confidence * 100).toInt()}%"
+                    else -> "Aguardando leitura da MRZ"
+                },
+                color = Color(0xFF757575),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
 private fun TopBar(
     isFlashOn: Boolean,
     onClose: () -> Unit,
@@ -219,90 +273,55 @@ private fun TopBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                    colors = listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent)
-                )
-            )
-            .padding(horizontal = 8.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onClose) {
-            Icon(Icons.Default.Close, contentDescription = "Fechar", tint = Color.White)
+            Icon(Icons.Default.Close, contentDescription = "Fechar", tint = Color.Black)
         }
         Text(
-            text = "Document Scanner",
+            text = "Leitor de Passaporte",
             fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            color = Color.White
+            fontSize = 18.sp,
+            color = Color.Black
         )
         IconButton(onClick = onToggleFlash) {
             Icon(
                 imageVector = if (isFlashOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
                 contentDescription = if (isFlashOn) "Flash On" else "Flash Off",
-                tint = if (isFlashOn) Color(0xFFFFC107) else Color.White
+                tint = Color.Black
             )
         }
     }
 }
-
 
 @Composable
-private fun MrzGuideOverlay(scanState: MrzScanState) {
-    Box(
+private fun InstructionText() {
+    Column(
         modifier = Modifier
-            .padding(horizontal = 24.dp)
             .fillMaxWidth()
-            .height(160.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidth = 2.dp.toPx()
-            val cornerLen = 28.dp.toPx()
-            val cornerStroke = 4.dp.toPx()
-            val blue = Color(0xFF1976D2)
-
-            drawRoundRect(
-                color = Color.White.copy(alpha = 0.4f),
-                size = size,
-                cornerRadius = CornerRadius(8.dp.toPx()),
-                style = Stroke(width = strokeWidth,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 10f)))
-            )
-            // Cantos azuis
-            listOf(
-                Offset(0f, cornerLen) to Offset(0f, 0f),
-                Offset(0f, 0f) to Offset(cornerLen, 0f),
-                Offset(size.width - cornerLen, 0f) to Offset(size.width, 0f),
-                Offset(size.width, 0f) to Offset(size.width, cornerLen),
-                Offset(0f, size.height - cornerLen) to Offset(0f, size.height),
-                Offset(0f, size.height) to Offset(cornerLen, size.height),
-                Offset(size.width - cornerLen, size.height) to Offset(size.width, size.height),
-                Offset(size.width, size.height) to Offset(size.width, size.height - cornerLen),
-            ).forEach { (start, end) -> drawLine(blue, start, end, cornerStroke) }
-        }
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.DocumentScanner, null, tint = Color.White,
-                modifier = Modifier.size(28.dp))
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = when (scanState) {
-                    is MrzScanState.Processing -> "Reading document… ${(scanState.confidence * 100).toInt()}%"
-                    is MrzScanState.Scanning   -> "Align MRZ zone here"
-                    else                       -> "Align MRZ zone here"
-                },
-                color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center
-            )
-        }
+        Text(
+            text = "Posicione a Zona Legível por Máquina (MRZ) dentro da área",
+            color = Color(0xFF333333),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            lineHeight = 22.sp
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = "Certifique-se de que o documento esteja bem iluminado e todo o texto da zona MRZ esteja visível para uma leitura precisa.",
+            color = Color(0xFF666666),
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            lineHeight = 20.sp
+        )
     }
 }
-
-// =============================================================================
-// ★ AutomaticResultCard — sem shape/radius, cola ao fundo do ecrã
-// =============================================================================
 
 @Composable
 private fun AutomaticResultCard(
@@ -310,10 +329,9 @@ private fun AutomaticResultCard(
     onConfirm: () -> Unit,
     onScanAnother: () -> Unit
 ) {
-    // ★ Surface sem shape → sem border radius → cola nas bordas laterais e inferior
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RectangleShape,          // sem radius
+        shape = RectangleShape,
         color = Color.White,
         shadowElevation = 24.dp
     ) {
@@ -322,9 +340,8 @@ private fun AutomaticResultCard(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
-                .padding(top = 20.dp, bottom = 32.dp)  // bottom padding extra para navbar
+                .padding(top = 20.dp, bottom = 32.dp)
         ) {
-            // ── Header ──────────────────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -343,9 +360,9 @@ private fun AutomaticResultCard(
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = when (document) {
-                            is MrzDocument.Passport       -> "📘 Detected automatically"
-                            is MrzDocument.IdCard         -> "🪪 Detected automatically"
-                            is MrzDocument.DrivingLicense -> "🚗 Detected automatically"
+                            is MrzDocument.Passport       -> "Detected automatically"
+                            is MrzDocument.IdCard         -> "Detected automatically"
+                            is MrzDocument.DrivingLicense -> "Detected automatically"
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
@@ -359,7 +376,6 @@ private fun AutomaticResultCard(
                 )
             }
 
-            // ★ Divider sem padding lateral → vai de borda a borda
             HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -368,7 +384,6 @@ private fun AutomaticResultCard(
                 thickness = 1.dp
             )
 
-            // ── Campos do documento ─────────────────────────────────────────
             when (document) {
                 is MrzDocument.Passport -> {
                     DocumentField("Full Name", "${document.givenNames} ${document.surname}")
@@ -399,7 +414,6 @@ private fun AutomaticResultCard(
 
             Spacer(Modifier.height(20.dp))
 
-            // ── Botões ───────────────────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -427,7 +441,6 @@ private fun AutomaticResultCard(
         }
     }
 }
-
 
 @Composable
 private fun DocumentField(label: String, value: String) {
@@ -461,19 +474,19 @@ private fun FloatingErrorAlert(scanState: MrzScanState, onDismiss: () -> Unit) {
     val message = when (scanState) {
         is MrzScanState.SecurityCheckFailed -> translateSecurityToEnglish(scanState)
         is MrzScanState.Error -> scanState.message
-        else -> "Please try again."
+        else -> "Por favor, tente novamente."
     }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         color = Color(0xFFF39C12),
-        shadowElevation = 6.dp
+        shadowElevation = 4.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -485,33 +498,32 @@ private fun FloatingErrorAlert(scanState: MrzScanState, onDismiss: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Scan Error",
+                    text = "Erro na leitura",
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
-                    fontSize = 14.sp
+                    fontSize = 15.sp
                 )
                 Text(
                     text = message,
                     color = Color.White,
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp
                 )
             }
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(24.dp)
             ) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Dismiss",
                     tint = Color.White,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
     }
 }
-
 
 @Composable
 private fun LoadingScreen(message: String = "Iniciando scanner...") {
@@ -520,9 +532,9 @@ private fun LoadingScreen(message: String = "Iniciando scanner...") {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = Color.Black)
             Spacer(modifier = Modifier.height(16.dp))
-            Text(message)
+            Text(message, color = Color.Black)
         }
     }
 }
@@ -546,8 +558,6 @@ private fun translateSecurityToEnglish(state: MrzScanState.SecurityCheckFailed):
     return "$specificReason\nSecurity Score: $scoreText"
 }
 
-
-
 @Composable
 private fun PermissionDeniedMessage(onOpenSettings: () -> Unit) {
     Box(
@@ -561,12 +571,12 @@ private fun PermissionDeniedMessage(onOpenSettings: () -> Unit) {
             ) {
                 Icon(Icons.Default.NoPhotography, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(16.dp))
-                Text("Permissão Negada", style = MaterialTheme.typography.headlineSmall)
+                Text("Permission denied", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(8.dp))
-                Text("É necessário acesso à câmera.", textAlign = TextAlign.Center)
+                Text("Access to the camera is required.", textAlign = TextAlign.Center)
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
-                    Text("Abrir Configurações")
+                    Text("Open Settings")
                 }
             }
         }
@@ -602,6 +612,6 @@ private fun RequiredPermissionsAsk(
             onEventSend(Event.OpenAppSettings)
         }
     } else {
-        LoadingScreen("Solicitando permissão...")
+        LoadingScreen("Requesting permission...")
     }
 }

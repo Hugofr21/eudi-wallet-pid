@@ -16,6 +16,8 @@
 
 package eu.europa.ec.dashboardfeature.router
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -43,6 +45,7 @@ import eu.europa.ec.uilogic.navigation.WIFIScreens
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 fun NavGraphBuilder.featureDashboardGraph(navController: NavController) {
     navigation(
         startDestination = DashboardScreens.Dashboard.screenRoute,

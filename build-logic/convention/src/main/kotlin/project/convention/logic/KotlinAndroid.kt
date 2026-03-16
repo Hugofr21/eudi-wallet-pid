@@ -38,6 +38,17 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 internal fun Project.configureKotlinAndroid(
     commonExtension: CommonExtension<*, *, *, *, *, *>,
 ) {
+
+    configurations.configureEach {
+        resolutionStrategy {
+            force(
+                "com.google.android.datatransport:transport-api:3.2.0",
+                "com.google.android.datatransport:transport-backend-cct:3.3.0",
+                "com.google.android.datatransport:transport-runtime:3.3.0"
+            )
+        }
+    }
+
     commonExtension.apply {
         compileSdk = 36
 

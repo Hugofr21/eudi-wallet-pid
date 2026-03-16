@@ -7,6 +7,9 @@ plugins {
     id("project.android.feature")
 }
 
+
+
+
 android {
     namespace = "eu.europa.ec.mrzscannerLogic"
 }
@@ -15,7 +18,6 @@ android {
 moduleConfig {
     module = LibraryModule.MrzScannerLogic
 }
-
 
 
 dependencies {
