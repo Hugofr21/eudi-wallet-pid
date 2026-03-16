@@ -18,8 +18,8 @@ package eu.europa.ec.networklogic.di
 
 import eu.europa.ec.businesslogic.config.AppBuildType
 import eu.europa.ec.businesslogic.config.ConfigLogic
+import eu.europa.ec.networklogic.repository.WalletAttestationApiImpl
 import eu.europa.ec.networklogic.repository.WalletAttestationRepository
-import eu.europa.ec.networklogic.repository.WalletAttestationRepositoryImpl
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
@@ -68,4 +68,4 @@ fun provideHttpClient(json: Json, configLogic: ConfigLogic): HttpClient {
 
 @Single
 fun provideWalletAttestationRepository(httpClient: HttpClient): WalletAttestationRepository =
-    WalletAttestationRepositoryImpl(httpClient)
+    WalletAttestationApiImpl(httpClient)

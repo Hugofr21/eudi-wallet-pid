@@ -16,16 +16,20 @@
 
 package eu.europa.ec.presentationfeature.interactor
 
+import android.content.Context
 import eu.europa.ec.businesslogic.extension.safeAsync
 import eu.europa.ec.businesslogic.provider.UuidProvider
+import eu.europa.ec.commonfeature.config.PresentationMode
 import eu.europa.ec.commonfeature.config.RequestUriConfig
 import eu.europa.ec.commonfeature.config.toDomainConfig
 import eu.europa.ec.commonfeature.ui.request.model.RequestDocumentItemUi
 import eu.europa.ec.commonfeature.ui.request.transformer.RequestTransformer
+import eu.europa.ec.corelogic.controller.PresentationControllerConfig
 import eu.europa.ec.corelogic.controller.TransferEventPartialState
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.controller.WalletCorePresentationController
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
+import eu.europa.ec.uilogic.navigation.helper.DcApiIntentHolder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
 
@@ -51,6 +55,8 @@ interface PresentationRequestInteractor {
     fun stopPresentation()
     fun updateRequestedDocuments(items: List<RequestDocumentItemUi>)
     fun setConfig(config: RequestUriConfig)
+
+    fun startDCAPIPresentation(context: Context)
 }
 
 class PresentationRequestInteractorImpl(
@@ -64,7 +70,23 @@ class PresentationRequestInteractorImpl(
         get() = resourceProvider.genericErrorMessage()
 
     override fun setConfig(config: RequestUriConfig) {
-        walletCorePresentationController.setConfig(config.toDomainConfig())
+        val domainConfig = config.toDomainConfig()
+
+        val finalConfig = if (config.presentationMode is PresentationMode.DocumentPresentationForAPI) {
+            val intent = DcApiIntentHolder.retrieveIntent()
+            PresentationControllerConfig.DocumentPresentationForAPI("", intent)
+        } else {
+            domainConfig
+        }
+
+        walletCorePresentationController.setConfig(finalConfig)
+    }
+
+    override fun startDCAPIPresentation(context: Context) {
+        val intent = DcApiIntentHolder.retrieveIntent()
+        intent?.let {
+            walletCorePresentationController.startDCAPIPresentation(it)
+        }
     }
 
     override fun getRequestDocuments(): Flow<PresentationRequestInteractorPartialState> =

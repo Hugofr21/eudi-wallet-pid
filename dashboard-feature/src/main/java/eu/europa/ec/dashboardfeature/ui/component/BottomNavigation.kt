@@ -45,9 +45,7 @@ import eu.europa.ec.uilogic.component.preview.PreviewTheme
 import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
 import eu.europa.ec.uilogic.component.wrap.WrapIcon
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import eu.europa.ec.dashboardfeature.ui.dashboard.DashboardViewModel
-import eu.europa.ec.dashboardfeature.ui.home.compoment.ScanButton
 
 
 

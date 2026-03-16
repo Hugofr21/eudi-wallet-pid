@@ -16,6 +16,7 @@
 
 package eu.europa.ec.dashboardfeature.ui.home
 
+import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import eu.europa.ec.commonfeature.config.PresentationMode
 import eu.europa.ec.commonfeature.config.QrScanFlow
@@ -37,8 +38,11 @@ import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.CommonScreens
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.ProximityScreens
+import eu.europa.ec.uilogic.navigation.helper.DeepLinkType
+import eu.europa.ec.uilogic.navigation.helper.IntentAction
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
+import eu.europa.ec.uilogic.navigation.helper.hasDeepLink
 import eu.europa.ec.uilogic.serializer.UiSerializer
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
@@ -61,7 +65,7 @@ data class State(
 ) : ViewState
 
 sealed class Event : ViewEvent {
-    data object Init : Event()
+    data class Init(val intentAction: IntentAction?) : Event()
     data object StartProximityFlow : Event()
 
     sealed class AuthenticateCard : Event() {
@@ -125,6 +129,8 @@ sealed class Effect : ViewSideEffect {
 
         data object OnAppSettings : Navigation()
         data object OnSystemSettings : Navigation()
+
+        data class OpenIntentAction(val intentAction: IntentAction) : Navigation()
     }
 
     data object ShowBottomSheet : Effect()
@@ -182,6 +188,7 @@ class HomeViewModel(
         when (event) {
             is Event.Init -> {
                 getUserNameViaMainPidDocument()
+                handleIntentAction(event.intentAction)
             }
 
             is Event.AuthenticateCard.AuthenticatePressed -> showBottomSheet(
@@ -387,6 +394,7 @@ class HomeViewModel(
     }
 
     private fun navigateToQrScan() {
+
         setEffect {
             Effect.Navigation.SwitchScreen(
                 screenRoute = generateComposableNavigationLink(
@@ -439,6 +447,15 @@ class HomeViewModel(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private fun handleIntentAction(intentAction: IntentAction?) {
+        intentAction?.let {
+            getOrCreatePresentationScope()
+            setEffect {
+                Effect.Navigation.OpenIntentAction(it)
             }
         }
     }

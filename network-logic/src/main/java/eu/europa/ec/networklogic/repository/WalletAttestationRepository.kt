@@ -30,7 +30,7 @@ interface WalletAttestationRepository {
     ): Result<String>
 }
 
-class WalletAttestationRepositoryImpl(
+class WalletAttestationApiImpl(
     private val httpClient: HttpClient
 ) : WalletAttestationRepository {
 

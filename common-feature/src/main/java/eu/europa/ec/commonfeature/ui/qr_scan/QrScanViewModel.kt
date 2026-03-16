@@ -18,6 +18,7 @@ package eu.europa.ec.commonfeature.ui.qr_scan
 
 import android.content.Context
 import androidx.lifecycle.viewModelScope
+import eu.europa.ec.businesslogic.extension.toUri
 import eu.europa.ec.businesslogic.validator.Form
 import eu.europa.ec.businesslogic.validator.Rule
 import eu.europa.ec.commonfeature.config.IssuanceFlowType
@@ -33,6 +34,7 @@ import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.uilogic.config.ConfigNavigation
 import eu.europa.ec.uilogic.config.NavigationType
+import eu.europa.ec.uilogic.extension.openUrl
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
@@ -46,6 +48,25 @@ import eu.europa.ec.uilogic.serializer.UiSerializer
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.annotation.InjectedParam
+
+sealed interface QrPayload {
+    val rawValue: String
+
+    data class FidoDeviceToCloud(override val rawValue: String) : QrPayload
+    data class StandardWebUri(override val rawValue: String) : QrPayload
+    data class Unknown(override val rawValue: String) : QrPayload
+
+    companion object {
+        private const val FIDO_SCHEMA_PREFIX = "FIDO:"
+
+        fun parse(qrContent: String): QrPayload {
+            return when {
+                qrContent.startsWith(FIDO_SCHEMA_PREFIX, ignoreCase = true) -> FidoDeviceToCloud(qrContent)
+                else -> StandardWebUri(qrContent)
+            }
+        }
+    }
+}
 
 private const val MAX_ALLOWED_FAILED_SCANS = 5
 
@@ -73,6 +94,8 @@ sealed class Effect : ViewSideEffect {
         data class SwitchScreen(val screenRoute: String) : Navigation()
         data object Pop : Navigation()
         data object GoToAppSettings : Navigation()
+
+        data class OpenExternalUrl(val url: String) : Navigation()
     }
 }
 
@@ -124,39 +147,42 @@ class QrScanViewModel(
             }
 
             is Event.GoToAppSettings -> setEffect { Effect.Navigation.GoToAppSettings }
+
         }
     }
 
     private fun handleScannedQr(context: Context, scannedQr: String) {
         viewModelScope.launch {
             val currentState = viewState.value
+            val payload = QrPayload.parse(scannedQr)
 
-            // Validate the scanned QR code
-            val urlIsValid = validateForm(
-                form = Form(
-                    inputs = mapOf(
-                        listOf(
-                            Rule.ValidateUrl(
-                                errorMessage = "",
-                                shouldValidateSchema = true,
-                                shouldValidateHost = false,
-                                shouldValidatePath = false,
-                                shouldValidateQuery = true,
-                            )
-                        ) to scannedQr
+            val isPayloadValid = when (payload) {
+                is QrPayload.FidoDeviceToCloud -> true // Aprovação liminar por esquema nativo
+                is QrPayload.StandardWebUri -> validateForm(
+                    form = Form(
+                        inputs = mapOf(
+                            listOf(
+                                Rule.ValidateUrl(
+                                    errorMessage = "",
+                                    shouldValidateSchema = true,
+                                    shouldValidateHost = false,
+                                    shouldValidatePath = false,
+                                    shouldValidateQuery = false
+                                )
+                            ) to payload.rawValue
+                        )
                     )
                 )
-            )
+                is QrPayload.Unknown -> false
+            }
 
-            // Handle valid QR code
-            if (urlIsValid) {
+            if (isPayloadValid) {
                 calculateNextStep(
                     context = context,
                     qrScanFlow = currentState.qrScannedConfig.qrScanFlow,
-                    scanResult = scannedQr
+                    payload = payload
                 )
             } else {
-                // Increment failed attempts
                 val updatedFailedAttempts = currentState.failedScanAttempts + 1
                 val maxFailedAttemptsExceeded = updatedFailedAttempts > MAX_ALLOWED_FAILED_SCANS
 
@@ -178,23 +204,16 @@ class QrScanViewModel(
         return validationResult.isValid
     }
 
-    private fun calculateNextStep(
-        context: Context,
-        qrScanFlow: QrScanFlow,
-        scanResult: String,
-    ) {
+    private fun calculateNextStep(context: Context, qrScanFlow: QrScanFlow, payload: QrPayload) {
         when (qrScanFlow) {
-            is QrScanFlow.Presentation -> navigateToPresentationRequest(scanResult)
+            is QrScanFlow.Presentation -> navigateToPresentationRequest(payload)
             is QrScanFlow.Issuance -> {
                 val issuanceFlowType = qrScanFlow.issuanceFlowType ?: IssuanceFlowType.NoDocument
-                navigateToDocumentOffer(
-                    scanResult = scanResult,
-                    issuanceFlowType = issuanceFlowType
-                )
-            }QrScanFlow.Signature -> navigateToRqesSdk(context, scanResult)
+                navigateToDocumentOffer(scanResult = payload.rawValue, issuanceFlowType = issuanceFlowType)
+            }
+            is QrScanFlow.Signature -> navigateToRqesSdk(context, payload.rawValue)
         }
     }
-
     private fun calculateInformativeText(
         qrScanFlow: QrScanFlow,
     ): String {
@@ -207,27 +226,34 @@ class QrScanViewModel(
         }
     }
 
-    private fun navigateToPresentationRequest(scanResult: String) {
-        setEffect {
-            getOrCreatePresentationScope()
-            Effect.Navigation.SwitchScreen(
-                screenRoute = generateComposableNavigationLink(
-                    screen = PresentationScreens.PresentationRequest,
-                    arguments = generateComposableArguments(
-                        mapOf(
-                            RequestUriConfig.serializedKeyName to uiSerializer.toBase64(
-                                RequestUriConfig(
-                                    PresentationMode.OpenId4Vp(
-                                        uri = scanResult,
-                                        initiatorRoute = DashboardScreens.Dashboard.screenRoute
+    private fun navigateToPresentationRequest(payload: QrPayload) {
+        when (payload) {
+            is QrPayload.FidoDeviceToCloud -> {
+                setEffect { Effect.Navigation.OpenExternalUrl(payload.rawValue) }
+            }
+            is QrPayload.StandardWebUri, is QrPayload.Unknown -> {
+                getOrCreatePresentationScope()
+                setEffect {
+                    Effect.Navigation.SwitchScreen(
+                        screenRoute = generateComposableNavigationLink(
+                            screen = PresentationScreens.PresentationRequest,
+                            arguments = generateComposableArguments(
+                                mapOf(
+                                    RequestUriConfig.serializedKeyName to uiSerializer.toBase64(
+                                        RequestUriConfig(
+                                            PresentationMode.OpenId4Vp(
+                                                uri = payload.rawValue,
+                                                initiatorRoute = DashboardScreens.Dashboard.screenRoute
+                                            )
+                                        ),
+                                        RequestUriConfig.Parser
                                     )
-                                ),
-                                RequestUriConfig.Parser
+                                )
                             )
                         )
                     )
-                )
-            )
+                }
+            }
         }
     }
 

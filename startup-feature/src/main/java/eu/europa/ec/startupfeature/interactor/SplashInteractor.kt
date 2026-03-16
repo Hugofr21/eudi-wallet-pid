@@ -23,7 +23,6 @@ import eu.europa.ec.commonfeature.config.IssuanceUiConfig
 import eu.europa.ec.commonfeature.config.OnBackNavigationConfig
 import eu.europa.ec.commonfeature.interactor.QuickPinInteractor
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
-import eu.europa.ec.corelogic.controller.WalletLotlController
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.uilogic.config.ConfigNavigation
@@ -45,7 +44,6 @@ class SplashInteractorImpl(
     private val uiSerializer: UiSerializer,
     private val resourceProvider: ResourceProvider,
     private val walletCoreDocumentsController: WalletCoreDocumentsController,
-    private val walletLotlController: WalletLotlController
 ) : SplashInteractor {
 
     private val hasDocuments: Boolean
@@ -63,7 +61,6 @@ class SplashInteractorImpl(
     }
 
     private fun getUserConsentRoute(): String {
-        walletLotlController.init()
         return ConsentUserScreens.Welcome.screenRoute
     }
 

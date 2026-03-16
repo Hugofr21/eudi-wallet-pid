@@ -16,6 +16,7 @@
 
 package eu.europa.ec.commonfeature.config
 
+import android.content.Intent
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import eu.europa.ec.corelogic.controller.PresentationControllerConfig
@@ -26,14 +27,18 @@ import eu.europa.ec.uilogic.serializer.adapter.SerializableTypeAdapter
 sealed interface PresentationMode {
     data class OpenId4Vp(val uri: String, val initiatorRoute: String) : PresentationMode
     data class Ble(val initiatorRoute: String) : PresentationMode
-
     data class QrCodeMdoc(val initiatorRoute: String) : PresentationMode
-    
+
+    data object DocumentPresentationForAPI : PresentationMode
 }
 
 data class RequestUriConfig(
-    val mode: PresentationMode
+    val presentationMode: PresentationMode
 ) : UiSerializable {
+
+    @Deprecated("Use presentationMode instead", ReplaceWith("presentationMode"))
+    val mode: PresentationMode get() = presentationMode
+
 
     companion object Parser : UiSerializableParser {
         override val serializedKeyName = "requestUriConfig"
@@ -48,12 +53,18 @@ data class RequestUriConfig(
 }
 
 fun RequestUriConfig.toDomainConfig(): PresentationControllerConfig {
-    return when (mode) {
-        is PresentationMode.Ble -> PresentationControllerConfig.Ble(mode.initiatorRoute)
-        is PresentationMode.QrCodeMdoc -> PresentationControllerConfig.QrCodeMdoc(mode.initiatorRoute)
+    return when (presentationMode) {
+        is PresentationMode.Ble -> PresentationControllerConfig.Ble(presentationMode.initiatorRoute)
+
+        is PresentationMode.QrCodeMdoc -> PresentationControllerConfig.QrCodeMdoc(presentationMode.initiatorRoute)
+
         is PresentationMode.OpenId4Vp -> PresentationControllerConfig.OpenId4VP(
-            mode.uri,
-            mode.initiatorRoute
+            presentationMode.uri,
+            presentationMode.initiatorRoute
+        )
+        is PresentationMode.DocumentPresentationForAPI -> PresentationControllerConfig.DocumentPresentationForAPI(
+            "",
+            null
         )
     }
 }

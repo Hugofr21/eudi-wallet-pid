@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import eu.europa.ec.commonfeature.util.navigation.handleIntentAction
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.AppIconAndText
 import eu.europa.ec.uilogic.component.AppIconAndTextDataUi
@@ -179,7 +180,7 @@ fun HomeScreen(
     }
 
     OneTimeLaunchedEffect {
-        viewModel.setEvent(Event.Init)
+        viewModel.setEvent(Event.Init(intentAction = null))
     }
 }
 
@@ -358,6 +359,13 @@ private fun handleNavigationEffect(
 
         is Effect.Navigation.OnAppSettings -> context.openAppSettings()
         is Effect.Navigation.OnSystemSettings -> context.openBleSettings()
+
+        is Effect.Navigation.OpenIntentAction -> {
+            handleIntentAction(
+                navController,
+                navigationEffect.intentAction
+            )
+        }
     }
 }
 

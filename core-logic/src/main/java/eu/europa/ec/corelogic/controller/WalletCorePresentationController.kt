@@ -17,6 +17,7 @@
 package eu.europa.ec.corelogic.controller
 
 
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
 import eu.europa.ec.businesslogic.extension.addOrReplace
@@ -53,12 +54,14 @@ import org.koin.core.annotation.Scope
 import org.koin.core.annotation.Scoped
 import java.net.URI
 
-
 sealed class PresentationControllerConfig(val initiatorRoute: String) {
     data class OpenId4VP(val uri: String, val initiator: String) :
         PresentationControllerConfig(initiator)
     data class Ble(val initiator: String) : PresentationControllerConfig(initiator)
     data class QrCodeMdoc(val initiator: String) : PresentationControllerConfig(initiator)
+
+    data class DocumentPresentationForAPI(val initiator: String, val intent: Intent?) : PresentationControllerConfig(initiator)
+
 }
 
 sealed class TransferEventPartialState {
@@ -195,6 +198,12 @@ interface WalletCorePresentationController {
      * @return flow that emits the create, sent, receive states
      * */
     fun observeSentDocumentsRequest(): Flow<WalletCorePartialState>
+
+    /**
+     * Starts DCAPI presentation flow with the provided intent
+     * @param intent The DCAPI intent from the credential request
+     * */
+    fun startDCAPIPresentation(intent: Intent)
 }
 
 @Scope(WalletPresentationScope::class)
@@ -471,6 +480,12 @@ class WalletCorePresentationControllerImpl(
             )
         }
 
+
+
+    override fun startDCAPIPresentation(intent: Intent) {
+        eudiWallet.startDCAPIPresentation(intent)
+    }
+
     override fun updateRequestedDocuments(disclosedDocuments: MutableList<DisclosedDocument>?) {
         this.disclosedDocuments = disclosedDocuments
     }
@@ -487,6 +502,10 @@ class WalletCorePresentationControllerImpl(
         eudiWallet.addTransferEventListener(listener)
         if (config is PresentationControllerConfig.OpenId4VP) {
             eudiWallet.startRemotePresentation(config.uri.toUri())
+        }
+
+        if (config is PresentationControllerConfig.DocumentPresentationForAPI) {
+            config.intent?.let { eudiWallet.startDCAPIPresentation(it) }
         }
     }
 
