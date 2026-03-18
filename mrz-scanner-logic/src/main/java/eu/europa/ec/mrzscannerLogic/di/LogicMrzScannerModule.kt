@@ -1,6 +1,7 @@
 package eu.europa.ec.mrzscannerLogic.di
 
 import android.hardware.SensorManager
+import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.mrzscannerLogic.controller.LivenessDetectionFaceController
 import eu.europa.ec.mrzscannerLogic.controller.LivenessDetectionFaceControllerImpl
@@ -123,9 +124,13 @@ fun provideMrzScanController(
 @Single
 fun provideLivenessDetectionsFaceController(
     cameraFrontService: CameraFrontService,
-    logController: LogController
+    logController: LogController,
+    resourceProvider: ResourceProvider,
+    configLogic: ConfigLogic
 ): LivenessDetectionFaceController =
     LivenessDetectionFaceControllerImpl(
         cameraFrontService = cameraFrontService,
         logController = logController,
+        context = resourceProvider,
+        configLogic = configLogic
     )

@@ -4,17 +4,14 @@ import android.view.MotionEvent
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.CameraState
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
-import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import eu.europa.ec.businesslogic.controller.log.LogController
-import eu.europa.ec.businesslogic.controller.log.LogControllerImpl
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,23 +19,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-
 interface CameraFrontService {
     fun start(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
-        analysisUseCase: ImageAnalysis
+        analysisUseCase: ImageAnalysis,
+        previewUseCase: Preview
     )
     fun stop()
     fun isRunning(): Boolean
     fun setupTapToFocus(previewView: PreviewView, enabled: Boolean)
 }
 
-
 class CameraFrontServiceImpl(
     private val resourceProvider: ResourceProvider,
     private val logController: LogController
-): CameraFrontService{
+): CameraFrontService {
 
     companion object {
         private const val TAG = "FrontCameraManager"
@@ -50,7 +46,6 @@ class CameraFrontServiceImpl(
     private val _cameraState = MutableStateFlow<CameraState>(CameraState.Idle)
     val cameraState: StateFlow<CameraState> = _cameraState.asStateFlow()
 
-
     sealed class CameraState {
         object Idle : CameraState()
         object Starting : CameraState()
@@ -58,25 +53,35 @@ class CameraFrontServiceImpl(
         data class Error(val exception: Throwable) : CameraState()
     }
 
-
-    override fun start(lifecycleOwner: LifecycleOwner,previewView: PreviewView, analysisUseCase: ImageAnalysis) {
-        val cameraFuture = ProcessCameraProvider.getInstance(resourceProvider.provideContext())
-        cameraFuture.addListener({
-            val cameraProvider = cameraFuture.get()
-            bindPreview(cameraProvider, previewView, analysisUseCase,lifecycleOwner)
-        }, resourceProvider.provideContext().mainExecutor)
-    }
-    private fun bindPreview(
-        provider: ProcessCameraProvider,
+    override fun start(
+        lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
         analysisUseCase: ImageAnalysis,
+        previewUseCase: Preview
+    ) {
+        _cameraState.value = CameraState.Starting
+        ensureExecutorActive()
+
+        val context = resourceProvider.provideContext()
+        val cameraFuture = ProcessCameraProvider.getInstance(context)
+
+        cameraFuture.addListener({
+            try {
+                cameraProvider = cameraFuture.get()
+                bindPreview(cameraProvider!!, analysisUseCase, previewUseCase, lifecycleOwner)
+            } catch (ex: Exception) {
+                _cameraState.value = CameraState.Error(ex)
+                logController.e(TAG, ex)
+            }
+        }, ContextCompat.getMainExecutor(context))
+    }
+
+    private fun bindPreview(
+        provider: ProcessCameraProvider,
+        analysisUseCase: ImageAnalysis,
+        previewUseCase: Preview,
         lifecycleOwner: LifecycleOwner
     ) {
-        val preview = Preview.Builder()
-            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
-            .build()
-            .also { it.setSurfaceProvider(previewView.surfaceProvider) }
-
         val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
 
         try {
@@ -84,10 +89,11 @@ class CameraFrontServiceImpl(
             camera = provider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
-                preview,
+                previewUseCase,
                 analysisUseCase
             )
-            logController.d(TAG, { "Câmara vinculada com sucesso" })
+            _cameraState.value = CameraState.Running
+            logController.d(TAG, { "Front camera linked and operational successfully." })
         } catch (ex: Exception) {
             _cameraState.value = CameraState.Error(ex)
             logController.e(TAG, ex)
@@ -95,12 +101,12 @@ class CameraFrontServiceImpl(
     }
 
     override fun stop() {
-        _cameraState.value = CameraState.Idle
         cameraProvider?.unbindAll()
         cameraExecutor?.shutdown()
         cameraExecutor = null
         camera = null
-        logController.d(TAG, { "Resource of camera stop" })
+        _cameraState.value = CameraState.Idle
+        logController.d(TAG, { "Camera hardware resources suspended and memory freed." })
     }
 
     override fun isRunning(): Boolean = _cameraState.value is CameraState.Running
@@ -133,5 +139,4 @@ class CameraFrontServiceImpl(
             true
         }
     }
-
 }

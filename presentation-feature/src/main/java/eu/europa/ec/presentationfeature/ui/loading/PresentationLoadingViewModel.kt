@@ -17,6 +17,7 @@
 package eu.europa.ec.presentationfeature.ui.loading
 
 import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.viewModelScope
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationResult
 import eu.europa.ec.commonfeature.ui.loading.Effect
@@ -112,6 +113,11 @@ class PresentationLoadingViewModel(
                             }
                         )
                     }
+
+                    is PresentationLoadingObserveResponsePartialState.IntentToSend -> {
+                        onIntentToSend(context, it.intent)
+                    }
+
                 }
             }
         }
@@ -186,5 +192,12 @@ class PresentationLoadingViewModel(
             )
         }
         doNavigation(NavigationType.PushRoute(getNextScreen()))
+    }
+
+    private fun onIntentToSend(context: Context, intent: Intent) {
+        (context as? android.app.Activity)?.let { activity ->
+            activity.setResult(android.app.Activity.RESULT_OK, intent)
+            activity.finish()
+        }
     }
 }

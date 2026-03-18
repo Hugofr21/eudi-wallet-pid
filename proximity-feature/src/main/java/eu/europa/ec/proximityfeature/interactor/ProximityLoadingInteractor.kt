@@ -17,6 +17,7 @@
 package eu.europa.ec.proximityfeature.interactor
 
 import android.content.Context
+import android.content.Intent
 import eu.europa.ec.authenticationlogic.controller.authentication.BiometricsAvailability
 import eu.europa.ec.authenticationlogic.controller.authentication.DeviceAuthenticationResult
 import eu.europa.ec.authenticationlogic.model.biometric.BiometricCrypto
@@ -36,6 +37,9 @@ sealed class ProximityLoadingObserveResponsePartialState {
     data class Failure(val error: String) : ProximityLoadingObserveResponsePartialState()
     data object Success : ProximityLoadingObserveResponsePartialState()
     data object RequestReadyToBeSent : ProximityLoadingObserveResponsePartialState()
+
+    data class IntentToSend(val intent: Intent) : ProximityLoadingObserveResponsePartialState()
+
 }
 
 sealed class ProximityLoadingSendRequestedDocumentPartialState {
@@ -77,6 +81,13 @@ class ProximityLoadingInteractorImpl(
 
                 is WalletCorePartialState.RequestIsReadyToBeSent ->
                     ProximityLoadingObserveResponsePartialState.RequestReadyToBeSent
+
+                is WalletCorePartialState.IntentToSend -> {
+                    ProximityLoadingObserveResponsePartialState.IntentToSend(
+                        response.intent
+                    )
+                }
+
             }
         }
 

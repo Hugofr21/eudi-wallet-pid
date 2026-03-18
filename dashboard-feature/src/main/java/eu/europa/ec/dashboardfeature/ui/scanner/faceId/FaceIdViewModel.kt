@@ -1,13 +1,12 @@
 package eu.europa.ec.dashboardfeature.ui.scanner.faceId
 
+
 import android.graphics.Bitmap
 import org.koin.core.annotation.InjectedParam
-import android.net.Uri
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
 import com.nimbusds.jose.shaded.gson.Gson
-import eu.europa.ec.corelogic.model.toDocumentIdentifier
 import eu.europa.ec.dashboardfeature.interactor.ScannerInteractor
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
@@ -77,12 +76,11 @@ class FaceIdScreenViewModel(
 
     override fun handleEvents(event: Event) {
         when (event) {
-            // CORREÇÃO: Receber os parâmetros do evento
             is Event.InitializeScanner -> handleInitializeScanner(event)
             Event.StopScanning -> stopScanning()
             Event.RetryScanning -> retryScanning()
             Event.GoBack -> setEffect { Effect.Navigation.Pop }
-            Event.ConfirmDocument -> confirmDocument() // Agora confirma a FOTO, não o doc
+            Event.ConfirmDocument -> confirmDocument()
             else -> {}
         }
     }
@@ -137,11 +135,8 @@ class FaceIdScreenViewModel(
                             if (faceBitmap != null) {
                                 handleFaceCaptured(faceBitmap)
                             }
-                            // Nota: Não precisamos de atualizar o isLoading aqui porque
-                            // o handleFaceCaptured já faz isso.
                         }
                         is MrzScanState.Error -> {
-                            // Se der erro, desligamos o loading para mostrar a mensagem
                             setState {
                                 copy(
                                     scanState = scanState,
@@ -199,14 +194,9 @@ class FaceIdScreenViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             setState { copy(isLoading = true) }
-
-            // 1. Converter para Bytes (Para enviar p/ Backend ou CBOR)
+            // CBOR
             val selfieBytes = ImageUtils.bitmapToBytes(selfie)
 
-            // TODO: Aqui você juntaria os dados do 'document' + 'selfieBytes'
-            // e enviaria para o servidor ou guardaria na sessão.
-
-            // 2. Navegar para o fim
             setEffect {
                 Effect.Navigation.SwitchScreen(
                     screenRoute = DashboardScreens.Profile.screenRoute,

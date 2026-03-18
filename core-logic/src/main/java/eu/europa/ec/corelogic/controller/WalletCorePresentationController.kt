@@ -78,7 +78,8 @@ sealed class TransferEventPartialState {
 
     data object ResponseSent : TransferEventPartialState()
     data class Redirect(val uri: URI) : TransferEventPartialState()
-    data object IntentToSend : TransferEventPartialState()
+
+    data class IntentToSend(val intent: Intent) : TransferEventPartialState()
 }
 
 sealed class CheckKeyUnlockPartialState {
@@ -88,6 +89,7 @@ sealed class CheckKeyUnlockPartialState {
     ) : CheckKeyUnlockPartialState()
 
     data object RequestIsReadyToBeSent : CheckKeyUnlockPartialState()
+
 }
 
 sealed class SendRequestedDocumentsPartialState {
@@ -99,6 +101,8 @@ sealed class ResponseReceivedPartialState {
     data object Success : ResponseReceivedPartialState()
     data class Redirect(val uri: URI) : ResponseReceivedPartialState()
     data class Failure(val error: String) : ResponseReceivedPartialState()
+
+    data class IntentToSend(val intent: Intent) : ResponseReceivedPartialState()
 }
 
 sealed class WalletCorePartialState {
@@ -110,6 +114,8 @@ sealed class WalletCorePartialState {
     data object Success : WalletCorePartialState()
     data class Redirect(val uri: URI) : WalletCorePartialState()
     data object RequestIsReadyToBeSent : WalletCorePartialState()
+
+    data class IntentToSend(val intent: Intent) : WalletCorePartialState()
 
 }
 
@@ -305,11 +311,11 @@ class WalletCorePresentationControllerImpl(
                     )
                 )
             },
-            intentToSend = {
+            intentToSend = { intent ->
                 trySendBlocking(
-                    TransferEventPartialState.IntentToSend
+                    TransferEventPartialState.IntentToSend(intent)
                 )
-            },
+            }
         )
 
         addListener(eventListenerWrapper)
@@ -321,7 +327,7 @@ class WalletCorePresentationControllerImpl(
         TransferEventPartialState.Error(
             error = it.localizedMessage ?: resourceProvider.genericErrorMessage()
         )
-    }.shareIn(coroutineScope, SharingStarted.Lazily, 2)
+    }.shareIn(coroutineScope, SharingStarted.Lazily, 2) as SharedFlow<TransferEventPartialState>
 
     override fun startQrEngagement() {
         eudiWallet.startProximityPresentation()
@@ -436,6 +442,11 @@ class WalletCorePresentationControllerImpl(
 
                 is TransferEventPartialState.ResponseSent -> ResponseReceivedPartialState.Success
 
+                is TransferEventPartialState.IntentToSend -> ResponseReceivedPartialState.IntentToSend(
+                    response.intent
+                )
+
+
                 else -> null
             }
         }.safeAsync {
@@ -470,6 +481,10 @@ class WalletCorePresentationControllerImpl(
                     WalletCorePartialState.RequestIsReadyToBeSent
                 }
 
+                is ResponseReceivedPartialState.IntentToSend -> {
+                    WalletCorePartialState.IntentToSend(it.intent)
+                }
+
                 else -> {
                     WalletCorePartialState.Success
                 }
@@ -481,8 +496,8 @@ class WalletCorePresentationControllerImpl(
         }
 
 
-
     override fun startDCAPIPresentation(intent: Intent) {
+        println("eudiWallet.config.dcapiConfig?.enabled: ${eudiWallet.config.dcapiConfig?.enabled}")
         eudiWallet.startDCAPIPresentation(intent)
     }
 

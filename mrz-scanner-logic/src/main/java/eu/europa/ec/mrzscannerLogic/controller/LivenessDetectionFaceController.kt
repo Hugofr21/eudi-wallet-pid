@@ -1,16 +1,22 @@
 package eu.europa.ec.mrzscannerLogic.controller
 
+import android.graphics.Bitmap
 import android.graphics.PointF
 import android.graphics.Rect
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
+import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.mrzscannerLogic.config.FaceAnalyser
+import eu.europa.ec.mrzscannerLogic.config.FaceError
 import eu.europa.ec.mrzscannerLogic.model.FaceGeometry
 import eu.europa.ec.mrzscannerLogic.model.LivenessThresholds
 import eu.europa.ec.mrzscannerLogic.model.ScanType
 import eu.europa.ec.mrzscannerLogic.service.CameraFrontService
+import eu.europa.ec.mrzscannerLogic.utils.ImageUtils.bitmapToJpeg
+import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,14 +27,17 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.concurrent.Executors
+
 
 sealed class LivenessUpdate {
     data class ActiveFrame(
         val challengeState: ChallengeState,
-        val features: FaceFeatures
+        val features: FaceFeatures,
+        val bitmap: Bitmap? = null
     ) : LivenessUpdate()
 
     data class SessionResult(val result: LivenessResult) : LivenessUpdate()
@@ -52,86 +61,68 @@ data class FaceFeatures(
     val imageWidth: Int = 1,
     val imageHeight: Int = 1
 )
+
 enum class Challenge {
-    LOOK_LEFT,
-    LOOK_RIGHT,
-    BLINK,
-    SMILE,
-    OPEN_MOUTH,
-    NOD
+    LOOK_LEFT, LOOK_RIGHT, BLINK, SMILE, OPEN_MOUTH, NOD
 }
 
-/** Current execution state of a single [Challenge]. */
 sealed class ChallengeState {
-    /** No challenge is active; waiting to start. */
     object Idle : ChallengeState()
 
-    /** A challenge has been issued and we are waiting for the correct gesture. */
     data class Pending(
         val challenge: Challenge,
-        val deadlineMs: Long          // System.currentTimeMillis() + timeout
+        val deadlineMs: Long
     ) : ChallengeState()
 
-    /** The gesture was successfully validated within the deadline. */
+    data class Countdown(val seconds: Int) : ChallengeState()
     data class Passed(val challenge: Challenge) : ChallengeState()
 
-    /** The gesture was NOT performed before the deadline elapsed. */
     data class Failed(val challenge: Challenge, val reason: String) : ChallengeState()
 }
 
-/** Overall result of the complete multi-step liveness session. */
 sealed class LivenessResult {
-    /** Still collecting challenge responses. */
     object InProgress : LivenessResult()
 
-    /**
-     * All challenges passed. [capturedJpeg] is the selfie bytes that were
-     * captured silently once liveness was confirmed.
-     */
-    data class Success(val capturedJpeg: ByteArray) : LivenessResult()
+    /** All challenges passed. [capturedJpeg] is the selfie. Never empty on success. */
+    data class Success(val capturedJpeg: ByteArray) : LivenessResult() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
 
-    /** One or more challenges failed or timed-out. */
+            other as Success
+
+            if (!capturedJpeg.contentEquals(other.capturedJpeg)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            return capturedJpeg.contentHashCode()
+        }
+    }
+
     data class Failure(val reason: String) : LivenessResult()
 }
 
-
-interface LivenessDetectionFaceController{
-    /**
-     * Inicia o processo de scanning
-     * @return [LivenessUpdate] Flow de estados do processo
-     */
+interface LivenessDetectionFaceController {
     fun startScanning(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
         scanType: ScanType,
     ): Flow<LivenessUpdate>
 
-    /**
-     * Para o processo de scanning e libera recursos
-     */
     fun stopScanning()
-
-    /**
-     * Verifica se a câmera está disponível no dispositivo
-     */
-    fun isCameraAvailable(): Boolean
-
-    /**
-     * Verifica se o scanning está ativo
-     */
     fun isScanning(): Boolean
-
-    /**
-     * Ativa/desativa tap-to-focus
-     */
-    fun enableTapToFocus(enabled: Boolean)
 }
+
 
 class LivenessDetectionFaceControllerImpl(
     private val cameraFrontService: CameraFrontService,
     private val logController: LogController,
-    private val numberOfChallenges: Int = 3
-): LivenessDetectionFaceController{
+    private val numberOfChallenges: Int = 3,
+    private val context: ResourceProvider,
+    private val configLogic: ConfigLogic
+) : LivenessDetectionFaceController {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var sessionChallenges: List<Challenge> = emptyList()
@@ -145,49 +136,97 @@ class LivenessDetectionFaceControllerImpl(
         extraBufferCapacity = 64,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
+
+    private var lastUpdateMs: Long = 0
     private var baselineYaw: Float? = null
     private var baselinePitch: Float? = null
-    private var blinkConsecCount = 0
     private var eyesWereClosed = false
 
+    /** Most recent camera frame — always fresh when the terminal challenge fires. */
+    @Volatile private var latestFrameBitmap: Bitmap? = null
+
+
+    companion object {
+        private const val LOG_FILE_PATTERN = "eudi-android-wallet-image%g.bin"
+    }
+
+    private val logsDir = File(context.provideContext().filesDir.absolutePath + "/logs")
+    private val tag: String = "EUDI Wallet ${configLogic.appFlavor}-${configLogic.appBuildType}"
 
     override fun startScanning(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
         scanType: ScanType
     ): Flow<LivenessUpdate> {
+        stopScanning()
         reset()
         currentIndex = 0
         sessionChallenges = Challenge.entries.shuffled().take(numberOfChallenges)
 
-        val analyser = FaceAnalyser { geometry, features ->
-            onNewFrame(geometry)
-            val currentState = _challengeState.value
+        val analyser = FaceAnalyser(
+            onFaceDetected = { geometry, features, bitmap ->
+                bitmap?.let { latestFrameBitmap = it }
 
-            _livenessUpdate.tryEmit(LivenessUpdate.ActiveFrame(currentState, features))
-        }
+                onNewFrame(geometry)
+
+                val currentState = _challengeState.value
+                val now = System.currentTimeMillis()
+                if (now - lastUpdateMs > 60) {
+                    _livenessUpdate.tryEmit(
+                        LivenessUpdate.ActiveFrame(currentState, features, bitmap)
+                    )
+                    lastUpdateMs = now
+                }
+            },
+            onError = { errorType ->
+                val currentState = _challengeState.value
+                if (currentState is ChallengeState.Pending) {
+                    val reason = when (errorType) {
+                        FaceError.NO_FACE -> "No faces detected on camera."
+                        FaceError.MULTIPLE_FACES -> "Multiple faces detected. Capture requires uniqueness."
+                    }
+                    val failedState = ChallengeState.Failed(currentState.challenge, reason)
+                    _challengeState.value = failedState
+                    _livenessUpdate.tryEmit(LivenessUpdate.ActiveFrame(failedState, FaceFeatures(), latestFrameBitmap))
+                    sessionJob?.cancel()
+                    scope.launch {
+                        delay(2000)
+                        issueNextChallenge()
+                    }
+                }
+            }
+        )
 
         val analysisUseCase = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also { it.setAnalyzer(Executors.newSingleThreadExecutor(), analyser) }
 
-        cameraFrontService.start(lifecycleOwner, previewView, analysisUseCase)
-        issueNextChallenge()
+        val previewUseCase = Preview.Builder()
+            .build()
+            .also { it.surfaceProvider = previewView.surfaceProvider }
 
+        cameraFrontService.start(lifecycleOwner, previewView, analysisUseCase, previewUseCase)
+
+        issueNextChallenge()
         _livenessUpdate.tryEmit(LivenessUpdate.SessionResult(LivenessResult.InProgress))
 
         return _livenessUpdate.asSharedFlow()
     }
 
-    /**
-     * Must be called for every new camera frame while a session is active.
-     * Thread-safe: may be called from a background analyser thread.
-     */
+
+    override fun stopScanning() {
+        sessionJob?.cancel()
+        cameraFrontService.stop()
+        reset()
+    }
+
+    override fun isScanning(): Boolean = cameraFrontService.isRunning()
+
+
     fun onNewFrame(geometry: FaceGeometry) {
         val state = _challengeState.value
         if (state !is ChallengeState.Pending) return
-
 
         val validated = when (state.challenge) {
             Challenge.LOOK_LEFT  -> checkLookLeft(geometry)
@@ -202,44 +241,45 @@ class LivenessDetectionFaceControllerImpl(
     }
 
 
-    fun reset() {
-        sessionJob?.cancel()
-        _challengeState.value = ChallengeState.Idle
-        _livenessResult.value = LivenessResult.InProgress
-    }
-
-
     private fun issueNextChallenge() {
         if (currentIndex >= sessionChallenges.size) {
-            _livenessResult.value = LivenessResult.Success(ByteArray(0))
+
+            val jpegBytes = latestFrameBitmap
+                ?.let { bitmapToJpeg(it) }
+                ?: ByteArray(0)
+
+            val successResult = LivenessResult.Success(jpegBytes)
+            _livenessResult.value = successResult
             _challengeState.value = ChallengeState.Idle
+
+            _livenessUpdate.tryEmit(LivenessUpdate.SessionResult(successResult))
+
+            cameraFrontService.stop()
             return
         }
 
-        val next = sessionChallenges[currentIndex]
+        val next     = sessionChallenges[currentIndex]
         val deadline = System.currentTimeMillis() + LivenessThresholds.CHALLENGE_TIMEOUT_MS
         _challengeState.value = ChallengeState.Pending(next, deadline)
 
-
-        baselineYaw = null
+        baselineYaw   = null
         baselinePitch = null
-
 
         sessionJob?.cancel()
         sessionJob = scope.launch {
             delay(LivenessThresholds.CHALLENGE_TIMEOUT_MS)
+
             val currentState = _challengeState.value
             if (currentState is ChallengeState.Pending) {
-                val failureResult = LivenessResult.Failure("No movement was detected by the camera. Follow the instructions.")
-                val failedState = ChallengeState.Failed(currentState.challenge, "No movement was detected by the camera. Follow the instructions.")
+                val failedState = ChallengeState.Failed(
+                    currentState.challenge,
+                    "No movement detected. We'll try again."
+                )
                 _challengeState.value = failedState
-
                 _livenessUpdate.tryEmit(LivenessUpdate.ActiveFrame(failedState, FaceFeatures()))
 
-                delay(1000)
-
-                _livenessResult.value = failureResult
-                _livenessUpdate.tryEmit(LivenessUpdate.SessionResult(failureResult))
+                delay(2000)
+                issueNextChallenge()
             }
         }
     }
@@ -254,28 +294,25 @@ class LivenessDetectionFaceControllerImpl(
         }
     }
 
-    override fun stopScanning() {
+
+    fun reset() {
         sessionJob?.cancel()
-        cameraFrontService.stop()
-        reset()
-    }
-    override fun isCameraAvailable(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun isScanning(): Boolean = cameraFrontService.isRunning()
-
-    override fun enableTapToFocus(enabled: Boolean) {
-        TODO("Not yet implemented")
+        _challengeState.value  = ChallengeState.Idle
+        _livenessResult.value  = LivenessResult.InProgress
+        currentIndex           = 0
+        baselineYaw            = null
+        baselinePitch          = null
+        eyesWereClosed         = false
+        lastUpdateMs           = 0
+        latestFrameBitmap      = null
     }
 
-    private fun checkLookLeft(g: FaceGeometry): Boolean {
-        return g.yawDeg > LivenessThresholds.YAW_THRESHOLD_DEG
-    }
 
-    private fun checkLookRight(g: FaceGeometry): Boolean {
-        return g.yawDeg < -LivenessThresholds.YAW_THRESHOLD_DEG
-    }
+    private fun checkLookLeft(g: FaceGeometry) =
+        g.yawDeg > LivenessThresholds.YAW_THRESHOLD_DEG
+
+    private fun checkLookRight(g: FaceGeometry) =
+        g.yawDeg < -LivenessThresholds.YAW_THRESHOLD_DEG
 
     private fun checkNod(g: FaceGeometry): Boolean {
         val base = baselinePitch ?: run { baselinePitch = g.pitchDeg; g.pitchDeg }
@@ -286,41 +323,21 @@ class LivenessDetectionFaceControllerImpl(
      * Blink detection: EAR must fall below threshold for [BLINK_CONSEC_FRAMES]
      * and then recover, OR the ML Kit eye-open probability must drop near zero.
      */
+
     private fun checkBlink(g: FaceGeometry): Boolean {
-        val isClosedGeometrically = g.earLeft < 0.28f && g.earRight < 0.28f
+        val closed = (g.earLeft < 0.28f && g.earRight < 0.28f)
+                || (g.leftEyeOpenProb < 0.3f && g.rightEyeOpenProb < 0.3f)
 
-        val isClosedProbabilistically = g.leftEyeOpenProb < 0.3f && g.rightEyeOpenProb < 0.3f
-
-        val currentlyClosed = isClosedGeometrically || isClosedProbabilistically
-
-        return if (currentlyClosed) {
-            eyesWereClosed = true
-            false
+        return if (closed) {
+            eyesWereClosed = true; false
         } else {
-            if (eyesWereClosed) {
-                eyesWereClosed = false
-                true
-            } else {
-                false
-            }
+            if (eyesWereClosed) { eyesWereClosed = false; true } else false
         }
     }
 
-    /**
-     * Smile Detection (SMILE):
-     * Uses the ML Kit's neural network classification, which assesses the tension
-     * of the zygomatic muscles, regardless of whether the mouth is open or closed.
-     */
-    private fun checkSmile(g: FaceGeometry): Boolean {
-        return g.smileProb > LivenessThresholds.SMILE_PROB_THRESHOLD
-    }
+    private fun checkSmile(g: FaceGeometry) =
+        g.smileProb > LivenessThresholds.SMILE_PROB_THRESHOLD
 
-    /**
-     * Mouth Opening Detection (OPEN_MOUTH):
-     * Uses the geometric calculation of the MAR (Mouth Aspect Ratio) on the internal contours.
-     * Ignores emotional expression and focuses exclusively on the mechanical displacement of the jaw.
-     */
-    private fun checkOpenMouth(g: FaceGeometry): Boolean {
-        return g.mar > LivenessThresholds.MAR_OPEN_THRESHOLD
-    }
+    private fun checkOpenMouth(g: FaceGeometry) =
+        g.mar > LivenessThresholds.MAR_OPEN_THRESHOLD
 }

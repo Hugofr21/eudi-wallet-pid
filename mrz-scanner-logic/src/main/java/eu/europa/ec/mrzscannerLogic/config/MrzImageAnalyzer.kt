@@ -39,9 +39,9 @@ class MrzImageAnalyzer(
     private val textRecognitionService: TextRecognitionService,
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
-    private val throttleMs: Long = 600L, // Processa ~6-7 frames/segundo
-    private val roiBottomFraction: Float = 0.3f, // Foca nos 30% inferiores
-    private val requiredSuccessFrames: Int = 2, // Número mínimo de frames com sucesso para emitir sucesso
+    private val throttleMs: Long = 600L,
+    private val roiBottomFraction: Float = 0.3f,
+    private val requiredSuccessFrames: Int = 2,
     private val antiSpoofingService: AnalyzerGuidelineCardService,
     private val sensorDocumentService: SensorDocumentService
 ) : ImageAnalysis.Analyzer {
