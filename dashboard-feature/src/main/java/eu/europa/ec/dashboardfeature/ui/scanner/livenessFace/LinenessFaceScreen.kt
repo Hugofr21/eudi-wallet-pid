@@ -377,8 +377,6 @@ private fun CountdownOverlay(seconds: Int) {
     }
 }
 
-// ── Live thumbnail ────────────────────────────────────────────────────────────
-
 @Composable
 private fun LiveFacePreview(bitmap: Bitmap?) {
     Box(

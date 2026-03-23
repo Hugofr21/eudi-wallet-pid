@@ -170,6 +170,10 @@ class PresentationRequestViewModel(
                             )
                         }
                     }
+
+                    else -> {
+
+                    }
                 }
             }
         }

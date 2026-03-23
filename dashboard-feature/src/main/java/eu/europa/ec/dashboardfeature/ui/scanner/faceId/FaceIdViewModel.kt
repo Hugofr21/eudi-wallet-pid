@@ -189,7 +189,6 @@ class FaceIdScreenViewModel(
     }
 
     private fun confirmDocument() {
-        // O utilizador gostou da foto e clicou "Continuar"
         val selfie = capturedSelfieBitmap ?: return
 
         viewModelScope.launch(Dispatchers.IO) {

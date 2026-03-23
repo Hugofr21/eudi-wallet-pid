@@ -20,6 +20,10 @@ object DcApiIntentHolder {
         cachedIntent = intent
     }
 
+    fun clearIntent() {
+        cachedIntent = null
+    }
+
     fun retrieveIntent(): Intent? {
         val intent = cachedIntent
         cachedIntent = null

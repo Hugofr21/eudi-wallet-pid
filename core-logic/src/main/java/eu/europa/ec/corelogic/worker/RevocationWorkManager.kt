@@ -153,6 +153,8 @@ class RevocationWorkManager(
             )
         }
 
+
+
         applicationContext.sendBroadcast(messageIntent)
         applicationContext.sendBroadcast(detailsIntent)
     }

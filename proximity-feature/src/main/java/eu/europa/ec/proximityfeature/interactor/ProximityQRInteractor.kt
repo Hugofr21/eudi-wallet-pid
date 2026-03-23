@@ -82,7 +82,7 @@ class ProximityQRInteractorImpl(
                         ProximityQRPartialState.Disconnected
                     }
 
-                    else -> null
+                    else -> ProximityQRPartialState.Error(error = genericErrorMsg)
                 }
             }.collect {
                 emit(it)

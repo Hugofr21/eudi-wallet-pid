@@ -14,13 +14,14 @@ enum class AntiSpoofingCheck {
 
     ARCORE_DEPTH, // 3D depth (ARCore)
 
-    EDGE_SHARPNESS, // NEW: sharpness of card edges
+    EDGE_SHARPNESS, //  sharpness of card edges
 
-    COLOR_CONSISTENCY, // NEW: color uniformity (paper vs polycarbonate)
+    COLOR_CONSISTENCY, // color uniformity (paper vs polycarbonate)
 
-    TEMPORAL_CONSISTENCY, // NEW: frame consistency (detects still images)
+    TEMPORAL_CONSISTENCY, // frame consistency (detects still images)
 
-    PRINT_ARTIFACT, // NEW: CMYK printer artifacts
+    PRINT_ARTIFACT, // CMYK printer artifacts
+    HOMOGRAPHY_PLANARITY,
 
 }
 

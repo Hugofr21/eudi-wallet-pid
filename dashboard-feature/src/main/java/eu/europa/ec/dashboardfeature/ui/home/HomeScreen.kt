@@ -347,6 +347,7 @@ private fun handleNavigationEffect(
         is Effect.Navigation.OnSystemSettings -> context.openBleSettings()
 
         is Effect.Navigation.OpenIntentAction -> {
+            println("[HOMESCREEN] OpenIntentAction")
             handleIntentAction(
                 navController,
                 navigationEffect.intentAction

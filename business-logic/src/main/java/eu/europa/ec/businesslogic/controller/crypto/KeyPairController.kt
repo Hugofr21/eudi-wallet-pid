@@ -11,7 +11,6 @@ import java.security.Signature
 interface KeyPairController{
     suspend fun getPublicKey(alias: String): PublicKey
     suspend fun retrieveOrGenerateECKeyPair(alias: String, userAuthenticationRequired: Boolean): KeyPair
-
     fun hasECKey(alias: String): Boolean
     suspend fun signData(alias: String, data: ByteArray): ByteArray
     fun verifySignature(data: ByteArray, signature: ByteArray, publicKey: PublicKey): Boolean

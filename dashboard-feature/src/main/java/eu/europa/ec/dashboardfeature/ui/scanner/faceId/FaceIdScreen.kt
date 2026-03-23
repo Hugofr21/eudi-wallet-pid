@@ -1,62 +1,63 @@
 package eu.europa.ec.dashboardfeature.ui.scanner.faceId
 
+import android.graphics.Bitmap
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import eu.europa.ec.mrzscannerLogic.model.ScanType
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
+import eu.europa.ec.mrzscannerLogic.model.ScanType
+import eu.europa.ec.resourceslogic.theme.values.success
 
 @Composable
 fun FaceIdScreen(
     navHostController: NavController,
     viewModel: FaceIdScreenViewModel,
 ) {
-    val context = LocalContext.current
+    val context        = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val state by viewModel.viewState.collectAsStateWithLifecycle()
+    val state          by viewModel.viewState.collectAsStateWithLifecycle()
 
     val previewView = remember {
         PreviewView(context).apply {
-            scaleType = PreviewView.ScaleType.FILL_CENTER
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+            scaleType          = PreviewView.ScaleType.FILL_CENTER
         }
     }
 
@@ -65,168 +66,506 @@ fun FaceIdScreen(
             viewModel.setEvent(
                 Event.InitializeScanner(
                     lifecycleOwner = lifecycleOwner,
-                    previewView = previewView,
-                    scanType = ScanType.Face
+                    previewView    = previewView,
+                    scanType       = ScanType.Face
                 )
             )
         }
     }
 
-    // Fundo base branco
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    Scaffold(
+        modifier       = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        FaceIdContent(
+            state        = state,
+            previewView  = previewView,
+            padding      = padding,
+            onClose      = { viewModel.setEvent(Event.GoBack) },
+            onRetry      = { viewModel.setEvent(Event.RetryScanning) },
+            onConfirm    = { viewModel.setEvent(Event.ConfirmDocument) },
+        )
+    }
+}
 
-        // ==========================================================
-        // CENÁRIO A: SUCESSO (FOTO CAPTURADA)
-        // ==========================================================
-        if (state.scanState is MrzScanState.Success) {
-            val successState = state.scanState as MrzScanState.Success
-            val capturedBitmap = successState.capturedImage
+@Composable
+private fun FaceIdContent(
+    state      : State,
+    previewView: PreviewView,
+    padding    : PaddingValues,
+    onClose    : () -> Unit,
+    onRetry    : () -> Unit,
+    onConfirm  : () -> Unit,
+) {
+    val capturedBitmap = (state.scanState as? MrzScanState.Success)?.capturedImage
 
-            if (capturedBitmap != null) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "Foto Capturada",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.Black,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 32.dp)
-                    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(
+            modifier            = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Top bar
+            FaceTopBar(onClose = onClose)
 
-                    // Mostrar a imagem recortada num quadrado/retângulo
-                    Card(
-                        elevation = CardDefaults.cardElevation(8.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.size(300.dp) // Tamanho fixo ou dinâmico
-                    ) {
-                        Image(
-                            bitmap = capturedBitmap.asImageBitmap(),
-                            contentDescription = "Rosto Capturado",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
+            Spacer(Modifier.height(12.dp))
 
-                    Spacer(modifier = Modifier.height(48.dp))
+            // Badge de estado
+            FaceScanStatusBadge(scanState = state.scanState)
 
-                    // Botões de Ação
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Button(
-                            onClick = { viewModel.setEvent(Event.RetryScanning) },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
-                        ) {
-                            Text("Repetir")
-                        }
+            Spacer(Modifier.weight(1f))
 
-                        Button(
-                            onClick = { viewModel.setEvent(Event.ConfirmDocument) },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Confirmar")
-                        }
-                    }
-                }
-            }
+            // Janela da câmara / foto capturada
+            FaceScannerWindow(
+                previewView    = previewView,
+                scanState      = state.scanState,
+                capturedBitmap = capturedBitmap,
+            )
+
+            Spacer(Modifier.weight(1f))
+
+            // Dica inferior
+            FaceBottomHint(scanState = state.scanState)
+
+            Spacer(Modifier.height(20.dp))
         }
 
-        // ==========================================================
-        // CENÁRIO B: SCANNING (CÂMARA COM MÁSCARA BRANCA)
-        // ==========================================================
-        else {
-            // 1. Câmara (fica por trás de tudo)
-            AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
-
-            // 2. Máscara Branca com Buraco Quadrado
-            WhiteSquareOverlay(squareSizePercent = 0.75f)
-
-            // 3. Instruções (Agora texto PRETO porque o fundo é branco)
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 80.dp), // Afastar do topo
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Enquadre o rosto no quadrado",
-                    color = Color.Black, // MUDANÇA IMPORTANTE: Texto Preto
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+        // ── Cartão de resultado ────────────────────────────────────────────
+        AnimatedVisibility(
+            visible  = capturedBitmap != null,
+            enter    = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec  = tween(350, easing = FastOutSlowInEasing)
+            ) + fadeIn(tween(200)),
+            exit     = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(250)) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
+        ) {
+            capturedBitmap?.let { bmp ->
+                FaceResultCard(
+                    bitmap    = bmp,
+                    onConfirm = onConfirm,
+                    onRetry   = onRetry,
                 )
-
-                if (state.scanState is MrzScanState.Processing) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "A processar...",
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
         }
 
-        // Loading Global
+        // ── Loading overlay ────────────────────────────────────────────────
         if (state.isLoading) {
             Box(
-                modifier = Modifier
+                modifier         = Modifier
                     .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.8f)), // Fundo branco translúcido
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.75f)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(
+                    color       = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 2.dp
+                )
             }
         }
     }
 }
 
+// ─── Top Bar ─────────────────────────────────────────────────────────────────
+
 @Composable
-fun WhiteSquareOverlay(
-    modifier: Modifier = Modifier,
-    squareSizePercent: Float = 0.7f // O quadrado ocupa 70% da largura do ecrã
-) {
-    Canvas(modifier = modifier.fillMaxSize()) {
-        // 1. Calcular dimensões do quadrado
-        val sideLength = size.width * squareSizePercent
-        val left = (size.width - sideLength) / 2
-        val top = (size.height - sideLength) / 2 // Centrado verticalmente
-
-        // Ou se quiser mais para cima (tipo foto passe):
-        // val top = size.height * 0.2f
-
-        val squareRect = Rect(left, top, left + sideLength, top + sideLength)
-
-        // 2. Criar o caminho com o "buraco" (EvenOdd rule)
-        val path = Path().apply {
-            // Retângulo do ecrã inteiro
-            addRect(Rect(0f, 0f, size.width, size.height))
-            // Retângulo do quadrado (o buraco)
-            addRect(squareRect)
-            // Esta regra faz com que o segundo retângulo subtraia ao primeiro
-            fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
+private fun FaceTopBar(onClose: () -> Unit) {
+    Row(
+        modifier              = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment     = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onClose) {
+            Icon(Icons.Default.Close, "Fechar", tint = MaterialTheme.colorScheme.onBackground)
         }
 
-        // 3. Desenhar o fundo Branco Sólido (cobre a câmara à volta)
-        drawPath(
-            path = path,
-            color = Color.White // Fundo Branco opaco
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text       = "Verificação Facial",
+                fontWeight = FontWeight.Bold,
+                fontSize   = 16.sp,
+                color      = MaterialTheme.colorScheme.onBackground
+            )
+            Row(
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.success, modifier = Modifier.size(10.dp))
+                Text("Biometria Segura", fontSize = 10.sp, color = MaterialTheme.colorScheme.success, fontWeight = FontWeight.Medium)
+            }
+        }
 
-        // 4. Desenhar a Borda do Quadrado (para o utilizador saber o limite)
-        drawRect(
-            color = Color.Black, // Ou azul/verde
-            topLeft = Offset(left, top),
-            size = androidx.compose.ui.geometry.Size(sideLength, sideLength),
-            style = Stroke(width = 4.dp.toPx())
-        )
+        // Espaço simétrico (sem botão de flash)
+        Spacer(Modifier.size(48.dp))
+    }
+}
 
-        // Opcional: Cantos da mira
-        // (Pode adicionar aqui lógica de cantos se quiser algo mais sofisticado)
+// ─── Badge de estado ──────────────────────────────────────────────────────────
+
+@Composable
+private fun FaceScanStatusBadge(scanState: MrzScanState) {
+    val (text, color) = when (scanState) {
+        is MrzScanState.Processing -> "A detetar rosto…"       to MaterialTheme.colorScheme.primary
+        is MrzScanState.Success    -> "Rosto capturado!"        to MaterialTheme.colorScheme.success
+        is MrzScanState.Error      -> "Erro de captura"         to MaterialTheme.colorScheme.error
+        else                       -> "Pronto para digitalizar" to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Row(
+        modifier              = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(color.copy(alpha = 0.12f))
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Canvas(modifier = Modifier.size(7.dp)) { drawCircle(color = color) }
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = color)
+    }
+}
+
+// ─── Janela de scan ───────────────────────────────────────────────────────────
+
+@Composable
+private fun FaceScannerWindow(
+    previewView   : PreviewView,
+    scanState     : MrzScanState,
+    capturedBitmap: Bitmap?,
+) {
+    val borderColor = when (scanState) {
+        is MrzScanState.Success    -> MaterialTheme.colorScheme.success
+        is MrzScanState.Processing -> MaterialTheme.colorScheme.primary
+        is MrzScanState.Error      -> MaterialTheme.colorScheme.error
+        else                       -> MaterialTheme.colorScheme.outline
+    }
+
+    Column(
+        modifier            = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Etiqueta superior
+        Row(
+            modifier          = Modifier
+                .padding(bottom = 8.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Face,
+                contentDescription = null,
+                tint        = MaterialTheme.colorScheme.primary,
+                modifier    = Modifier.size(14.dp)
+            )
+            Text(
+                "Zona Facial",
+                fontSize   = 11.sp,
+                color      = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        // Viewport — proporção foto de passe (35×45 mm ≈ 0.778)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 60.dp) // mais estreito que o passaporte
+                .aspectRatio(35f / 45f)
+                .clip(RoundedCornerShape(14.dp))
+                .border(2.dp, borderColor, RoundedCornerShape(14.dp))
+        ) {
+            if (capturedBitmap != null) {
+                // Mostrar foto capturada em vez da câmara
+                Image(
+                    bitmap             = capturedBitmap.asImageBitmap(),
+                    contentDescription = "Rosto capturado",
+                    modifier           = Modifier.fillMaxSize(),
+                    contentScale       = ContentScale.Crop
+                )
+            } else {
+                // Câmara ao vivo
+                AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+
+                // Linha de scan animada (só durante a deteção ativa)
+                if (scanState is MrzScanState.Scanning || scanState is MrzScanState.Processing) {
+                    ScanLine()
+                }
+            }
+
+            // Cantos de mira
+            FaceCornerMarkers(borderColor)
+
+            // Overlay de sucesso
+            if (scanState is MrzScanState.Success && capturedBitmap == null) {
+                Box(
+                    modifier         = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.success.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        null,
+                        tint     = MaterialTheme.colorScheme.success,
+                        modifier = Modifier.size(52.dp)
+                    )
+                }
+            }
+
+            // Barra de progresso (processing)
+            if (scanState is MrzScanState.Processing) {
+                LinearProgressIndicator(
+                    modifier   = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .align(Alignment.BottomCenter),
+                    color      = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.Transparent
+                )
+            }
+        }
+
+        // Etiqueta inferior
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text          = "Foto de Passe  •  ICAO  •  35×45 mm",
+            fontSize      = 10.sp,
+            color         = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            fontWeight    = FontWeight.Medium,
+            textAlign     = TextAlign.Center,
+            letterSpacing = 0.4.sp
+        )
+    }
+}
+
+// ─── Linha de scan animada ────────────────────────────────────────────────────
+
+@Composable
+private fun ScanLine() {
+    val infiniteTransition = rememberInfiniteTransition(label = "scanLine")
+    val yFraction by infiniteTransition.animateFloat(
+        initialValue   = 0.08f,
+        targetValue    = 0.92f,
+        animationSpec  = infiniteRepeatable(
+            animation  = tween(durationMillis = 1800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scanLineFraction"
+    )
+
+    val lineColor = MaterialTheme.colorScheme.primary
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val y = size.height * yFraction
+        drawLine(
+            color       = lineColor.copy(alpha = 0.65f),
+            start       = Offset(12f, y),
+            end         = Offset(size.width - 12f, y),
+            strokeWidth = 2f
+        )
+        // Halo difuso por baixo da linha
+        drawLine(
+            color       = lineColor.copy(alpha = 0.15f),
+            start       = Offset(12f, y),
+            end         = Offset(size.width - 12f, y),
+            strokeWidth = 8f
+        )
+    }
+}
+
+// ─── Cantos de mira (ovais) ───────────────────────────────────────────────────
+
+@Composable
+private fun FaceCornerMarkers(color: Color) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val len    = 20.dp.toPx()
+        val stroke = 3.dp.toPx()
+        val pad    = 8.dp.toPx()
+        val w = size.width
+        val h = size.height
+
+        // Canto sup-esq
+        drawLine(color, Offset(pad, pad),           Offset(pad + len, pad),     stroke)
+        drawLine(color, Offset(pad, pad),           Offset(pad, pad + len),     stroke)
+        // Canto sup-dir
+        drawLine(color, Offset(w - pad - len, pad), Offset(w - pad, pad),       stroke)
+        drawLine(color, Offset(w - pad, pad),       Offset(w - pad, pad + len), stroke)
+        // Canto inf-esq
+        drawLine(color, Offset(pad, h - pad),       Offset(pad + len, h - pad), stroke)
+        drawLine(color, Offset(pad, h - pad - len), Offset(pad, h - pad),       stroke)
+        // Canto inf-dir
+        drawLine(color, Offset(w - pad - len, h - pad), Offset(w - pad, h - pad),       stroke)
+        drawLine(color, Offset(w - pad, h - pad - len), Offset(w - pad, h - pad),       stroke)
+    }
+}
+
+// ─── Dica inferior ────────────────────────────────────────────────────────────
+
+@Composable
+private fun FaceBottomHint(scanState: MrzScanState) {
+    val hint = when (scanState) {
+        is MrzScanState.Processing -> "A processar… mantenha-se imóvel"
+        is MrzScanState.Success    -> "Rosto capturado com sucesso"
+        is MrzScanState.Error      -> "Ajuste a posição e tente novamente"
+        else                       -> "Centre o rosto na moldura acima"
+    }
+
+    Row(
+        modifier              = Modifier
+            .padding(horizontal = 32.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            Icons.Default.Info,
+            null,
+            tint     = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(15.dp)
+        )
+        Text(
+            hint,
+            fontSize  = 13.sp,
+            color     = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun FaceResultCard(
+    bitmap   : Bitmap,
+    onConfirm: () -> Unit,
+    onRetry  : () -> Unit,
+) {
+    Card(
+        modifier  = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape     = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            // Cabeçalho
+            Row(
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Miniatura da foto capturada
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, MaterialTheme.colorScheme.success.copy(alpha = 0.4f), CircleShape)
+                ) {
+                    Image(
+                        bitmap             = bitmap.asImageBitmap(),
+                        contentDescription = "Selfie capturada",
+                        modifier           = Modifier.fillMaxSize(),
+                        contentScale       = ContentScale.Crop
+                    )
+                }
+
+                Column {
+                    Text(
+                        "Verificação Facial",
+                        fontWeight = FontWeight.Bold,
+                        fontSize   = 16.sp,
+                        color      = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            null,
+                            tint     = MaterialTheme.colorScheme.success,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            "Rosto detetado automaticamente",
+                            fontSize = 12.sp,
+                            color    = MaterialTheme.colorScheme.success
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(14.dp))
+
+            // Informação sobre a foto
+            Row(
+                modifier              = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Default.PhotoCamera,
+                    null,
+                    tint     = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Column {
+                    Text(
+                        "Foto de passe gerada",
+                        fontSize   = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color      = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Fundo removido  •  Formato ICAO  •  35×45 mm",
+                        fontSize = 11.sp,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            // Botões
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    onClick  = onRetry,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape    = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Refresh, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Repetir", fontSize = 14.sp)
+                }
+                Button(
+                    onClick  = onConfirm,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape    = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Confirmar", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
+        }
     }
 }

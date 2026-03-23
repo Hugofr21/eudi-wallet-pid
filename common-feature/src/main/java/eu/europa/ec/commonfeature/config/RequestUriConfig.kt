@@ -29,7 +29,10 @@ sealed interface PresentationMode {
     data class Ble(val initiatorRoute: String) : PresentationMode
     data class QrCodeMdoc(val initiatorRoute: String) : PresentationMode
 
-    data object DocumentPresentationForAPI : PresentationMode
+    data class DocumentPresentationForAPI(
+        val uri: String,
+        val initiatorRoute: String
+    ) : PresentationMode
 }
 
 data class RequestUriConfig(
@@ -62,9 +65,11 @@ fun RequestUriConfig.toDomainConfig(): PresentationControllerConfig {
             presentationMode.uri,
             presentationMode.initiatorRoute
         )
-        is PresentationMode.DocumentPresentationForAPI -> PresentationControllerConfig.DocumentPresentationForAPI(
-            "",
-            null
-        )
+        is PresentationMode.DocumentPresentationForAPI -> {
+            println("[RequestUriConfig PresentationMode.DocumentPresentationForAPI] toDomainConfig: $presentationMode")
+            PresentationControllerConfig.DocumentPresentationForAPI(
+                "", null
+            )
+        }
     }
 }

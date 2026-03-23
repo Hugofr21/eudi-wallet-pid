@@ -18,7 +18,6 @@ package eu.europa.ec.commonfeature.ui.qr_scan
 
 import android.content.Context
 import androidx.lifecycle.viewModelScope
-import eu.europa.ec.businesslogic.extension.toUri
 import eu.europa.ec.businesslogic.validator.Form
 import eu.europa.ec.businesslogic.validator.Rule
 import eu.europa.ec.commonfeature.config.IssuanceFlowType
@@ -34,7 +33,6 @@ import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.uilogic.config.ConfigNavigation
 import eu.europa.ec.uilogic.config.NavigationType
-import eu.europa.ec.uilogic.extension.openUrl
 import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
@@ -157,7 +155,7 @@ class QrScanViewModel(
             val payload = QrPayload.parse(scannedQr)
 
             val isPayloadValid = when (payload) {
-                is QrPayload.FidoDeviceToCloud -> true // Aprovação liminar por esquema nativo
+                is QrPayload.FidoDeviceToCloud -> true
                 is QrPayload.StandardWebUri -> validateForm(
                     form = Form(
                         inputs = mapOf(
@@ -229,7 +227,30 @@ class QrScanViewModel(
     private fun navigateToPresentationRequest(payload: QrPayload) {
         when (payload) {
             is QrPayload.FidoDeviceToCloud -> {
+                getOrCreatePresentationScope()
+                println("FIDO Device To Cloud: ${payload.rawValue}")
                 setEffect { Effect.Navigation.OpenExternalUrl(payload.rawValue) }
+//                setEffect {
+//                    Effect.Navigation.SwitchScreen(
+//                        screenRoute = generateComposableNavigationLink(
+//                            screen = PresentationScreens.PresentationRequest,
+//                            arguments = generateComposableArguments(
+//                                mapOf(
+//                                    RequestUriConfig.serializedKeyName to uiSerializer.toBase64(
+//                                        RequestUriConfig(
+//                                            PresentationMode.DocumentPresentationForAPI(
+//                                                uri = payload.rawValue,
+//                                                initiatorRoute = DashboardScreens.Dashboard.screenRoute
+//                                            )
+//                                        ),
+//                                        RequestUriConfig.Parser
+//                                    )
+//                                )
+//                            )
+//                        )
+//                    )
+//                }
+
             }
             is QrPayload.StandardWebUri, is QrPayload.Unknown -> {
                 getOrCreatePresentationScope()

@@ -113,7 +113,7 @@ class ProximityRequestInteractorImpl(
                     ProximityRequestInteractorPartialState.Disconnect
                 }
 
-                else -> null
+                else -> ProximityRequestInteractorPartialState.Failure(error = genericErrorMsg)
             }
         }.safeAsync {
             ProximityRequestInteractorPartialState.Failure(

@@ -40,6 +40,9 @@ interface RouterHost {
 
     @Composable
     fun StartFlow(builder: NavGraphBuilder.(NavController) -> Unit)
+    fun popToDashboardDCApiScreen()
+
+
 }
 
 class RouterHostImpl(
@@ -68,6 +71,13 @@ class RouterHostImpl(
                 analyticsController.logScreen(route.firstPart("?"), args.toMapOrEmpty())
             }
         }
+    }
+
+    override fun popToDashboardDCApiScreen() {
+        navController.popBackStack(
+            route = getDashboardScreen().screenRoute,
+            inclusive = false
+        )
     }
 
     override fun userIsLoggedInWithDocuments(): Boolean =

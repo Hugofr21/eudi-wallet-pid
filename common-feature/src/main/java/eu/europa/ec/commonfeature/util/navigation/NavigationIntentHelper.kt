@@ -23,26 +23,26 @@ fun handleIntentAction(
 
         val uiSerializer: UiSerializer by inject(UiSerializer::class.java)
 
-        val config = RequestUriConfig(
-            presentationMode = PresentationMode.DocumentPresentationForAPI
-        )
+//        val config = RequestUriConfig(
+//            presentationMode = PresentationMode.DocumentPresentationForAPI
+//        )
 
-        val arguments = generateComposableArguments(
-            mapOf(
-                RequestUriConfig.serializedKeyName to uiSerializer.toBase64(
-                    config,
-                    RequestUriConfig.Parser
-                ).orEmpty()
-            )
-        )
-
-        val navigationLink = generateComposableNavigationLink(
-            screen = PresentationScreens.PresentationRequest,
-            arguments = arguments
-        )
-
-        navController.navigate(navigationLink) {
-            popUpTo(PresentationScreens.PresentationRequest.screenRoute) { inclusive = true }
-        }
+//        val arguments = generateComposableArguments(
+//            mapOf(
+//                RequestUriConfig.serializedKeyName to uiSerializer.toBase64(
+//                    config,
+//                    RequestUriConfig.Parser
+//                ).orEmpty()
+//            )
+//        )
+//
+//        val navigationLink = generateComposableNavigationLink(
+//            screen = PresentationScreens.PresentationRequest,
+//            arguments = arguments
+//        )
+//
+//        navController.navigate(navigationLink) {
+//            popUpTo(PresentationScreens.PresentationRequest.screenRoute) { inclusive = true }
+//        }
     }
 }

@@ -26,6 +26,8 @@ import eu.europa.ec.eudi.wallet.transfer.openId4vp.ClientIdScheme
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.EncryptionAlgorithm
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.EncryptionMethod
 import eu.europa.ec.eudi.wallet.transfer.openId4vp.Format
+import eu.europa.ec.eudi.wallet.zkp.LongfellowCircuits
+import eu.europa.ec.eudi.wallet.zkp.LongfellowZkSystemRepository
 import eu.europa.ec.resourceslogic.R
 import org.multipaz.crypto.Algorithm
 import kotlin.time.Duration.Companion.seconds
@@ -38,13 +40,25 @@ internal class WalletCoreConfigImpl(
     private var _config: EudiWalletConfig? = null
 
     override val config: EudiWalletConfig
+
         get() {
+            val customAllowList = "{}"
+
             if (_config == null) {
                 _config = EudiWalletConfig {
                     configureDocumentKeyCreation(
                         userAuthenticationRequired = false,
                         userAuthenticationTimeout = 30.seconds, // 30s
                         useStrongBoxForKeys = true
+                    )
+                    configureDCAPI {
+                        withEnabled(true) // Enable DCAPI, by default it is disabled
+//                        withPrivilegedAllowlist(customAllowList)
+                    }
+                    configureZkp(
+                        LongfellowZkSystemRepository(
+                            circuits = LongfellowCircuits.get(context)
+                        ).build()
                     )
                     configureOpenId4Vp {
                         withEncryptionAlgorithms(
@@ -63,7 +77,7 @@ internal class WalletCoreConfigImpl(
                                 EncryptionMethod.A256CBC_HS512,
                                 EncryptionMethod.A192CBC_HS384,
                                 EncryptionMethod.XC20P,
-                                EncryptionMethod.A128GCM
+                                EncryptionMethod.A128GCM,
 
                             )
                         )

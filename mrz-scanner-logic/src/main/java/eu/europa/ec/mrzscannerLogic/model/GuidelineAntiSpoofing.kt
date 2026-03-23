@@ -11,5 +11,6 @@ data class GuidelineAntiSpoofing(
     val checkEdgeSharpness: Boolean = true,
     val checkColorConsistency: Boolean = true,
     val checkTemporalConsistency: Boolean = true,
-    val checkPrintArtifact: Boolean = true
+    val checkPrintArtifact: Boolean = true,
+    val checkHomographyPlanarity: Boolean = true
 )

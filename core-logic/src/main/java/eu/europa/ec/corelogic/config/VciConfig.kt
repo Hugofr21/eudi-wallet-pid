@@ -17,5 +17,5 @@ import eu.europa.ec.eudi.wallet.issue.openid4vci.OpenId4VciManager
 data class VciConfig(
     val config: OpenId4VciManager.Config,
     val order: Int,
-    val type: FormatType
+    val type: FormatType,
 )

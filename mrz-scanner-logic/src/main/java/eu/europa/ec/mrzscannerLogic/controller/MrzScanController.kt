@@ -26,7 +26,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
-
 sealed class MrzScanState {
     object Idle : MrzScanState()
     object Initializing : MrzScanState()
@@ -48,37 +47,16 @@ sealed class MrzScanState {
 }
 
 interface MrzScanController {
-
-    /**
-     * Inicia o processo de scanning
-     * @return Flow de estados do processo
-     */
     fun startScanning(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
         scanType: ScanType,
     ): Flow<MrzScanState>
 
-    /**
-     * Para o processo de scanning e libera recursos
-     */
     fun stopScanning()
-
-    /**
-     * Verifica se a câmera está disponível no dispositivo
-     */
     fun isCameraAvailable(): Boolean
-
-    /**
-     * Verifica se o scanning está ativo
-     */
     fun isScanning(): Boolean
-
-    /**
-     * Ativa/desativa tap-to-focus
-     */
     fun enableTapToFocus(enabled: Boolean)
-
     fun enableTorch(enabled: Boolean)
 }
 
@@ -92,18 +70,15 @@ class MrzScanControllerImpl(
     private val driverLicenseParseService: DriverLicenseParseService,
     private val textRecognitionService: TextRecognitionService
 ) : MrzScanController {
-    private val throttleMs = 150L
-    private val roiBottomFraction = 0.3f
+
+    // 120 ms = ~8 fps. Rápido o suficiente sem sobrecarregar o ML Kit.
+    // Para câmaras mais lentas (dispositivos antigos) pode subir para 200ms.
+    private val throttleMs = 120L
+
     private var tapToFocusEnabled = false
     private var lifecycleOwnerRef: LifecycleOwner? = null
     private var previewViewRef: PreviewView? = null
 
-    /**
-      * 1. Check availability (Simple Delegation)
-      * 2. Create the appropriate Analyzer (Factory Logic)
-      * 3. Starting the Camera Service (SRP: The service knows how to start the hardware)
-      * 4. Configure extra features
-    **/
     override fun startScanning(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
@@ -116,7 +91,7 @@ class MrzScanControllerImpl(
         trySend(MrzScanState.Initializing)
 
         if (!isCameraAvailable()) {
-            trySend(MrzScanState.Error("Câmara não disponível neste dispositivo"))
+            trySend(MrzScanState.Error("Camera not available on this device"))
             close()
             return@callbackFlow
         }
@@ -126,9 +101,7 @@ class MrzScanControllerImpl(
 
             val analyzer = createAnalyzer(scanType, this)
 
-            Log.d("CameraService", "Starting camera service")
-            Log.d("MrzScanControllerImpl", "Controller analyzer ${analyzer.javaClass.simpleName}")
-
+            Log.d("MrzScanControllerImpl", "Analyzer: ${analyzer.javaClass.simpleName}")
 
             cameraService.start(lifecycleOwner, previewView, analyzer)
             cameraService.setupTapToFocus(previewView, tapToFocusEnabled)
@@ -136,7 +109,7 @@ class MrzScanControllerImpl(
             trySend(MrzScanState.Scanning)
 
         } catch (e: Exception) {
-            trySend(MrzScanState.Error("Erro ao iniciar scanning", e))
+            trySend(MrzScanState.Error("Error starting scan", e))
             stopScanning()
         }
 
@@ -147,10 +120,6 @@ class MrzScanControllerImpl(
         }
     }
 
-    /**
-     * Factory Method para criar o analisador correto.
-     * Isto mantém o código de startScanning limpo e coeso.
-     */
     private fun createAnalyzer(
         scanType: ScanType,
         scope: ProducerScope<MrzScanState>
@@ -175,13 +144,13 @@ class MrzScanControllerImpl(
                 scope = CoroutineScope(Dispatchers.Default),
                 dispatcher = Dispatchers.Default,
                 throttleMs = throttleMs,
-                roiBottomFraction = roiBottomFraction
+                requiredSuccessFrames = 1,
+                warmupFrames = 5,
+                maxConsecutiveAntiSpoofFails = 3,
             )
 
-            else -> {
-                throw IllegalArgumentException("Invalid scan type: $scanType")
-            }
-        }
+            else ->  {}
+        } as ImageAnalysis.Analyzer
     }
 
     override fun stopScanning() {
@@ -196,9 +165,7 @@ class MrzScanControllerImpl(
         )
     }
 
-    override fun isScanning(): Boolean {
-        return cameraService.isRunning()
-    }
+    override fun isScanning(): Boolean = cameraService.isRunning()
 
     override fun enableTapToFocus(enabled: Boolean) {
         tapToFocusEnabled = enabled

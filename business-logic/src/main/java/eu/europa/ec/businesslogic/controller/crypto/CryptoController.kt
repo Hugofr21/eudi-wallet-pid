@@ -29,6 +29,18 @@ import javax.crypto.spec.SecretKeySpec
 
 
 interface CryptoController {
+
+    /**
+     * Generates a code verifier for Proof Key for Code Exchange (PKCE).
+     *
+     * This function generates a cryptographically random string that is used as the code
+     * verifier in the PKCE flow. The code verifier is a high-entropy string that is
+     * difficult to guess. It is used to protect against authorization code interception attacks.
+     *
+     * The generated code verifier is a Base64 URL-safe encoded string without padding or wrapping.
+     *
+     * @return A [String] representing the generated code verifier.
+     */
     fun generateCodeVerifier(): String
 
     /**

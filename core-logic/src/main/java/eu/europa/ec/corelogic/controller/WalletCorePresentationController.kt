@@ -522,6 +522,7 @@ class WalletCorePresentationControllerImpl(
         if (config is PresentationControllerConfig.DocumentPresentationForAPI) {
             config.intent?.let { eudiWallet.startDCAPIPresentation(it) }
         }
+
     }
 
     private fun removeListener(listener: EudiWalletListenerWrapper) {

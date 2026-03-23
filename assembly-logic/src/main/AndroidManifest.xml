@@ -123,11 +123,22 @@
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.EUDIWallet"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            tools:ignore="DiscouragedApi"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <intent-filter>
+                <action android:name="androidx.credentials.registry.provider.action.GET_CREDENTIAL" />
+                <action android:name="androidx.identitycredentials.action.GET_CREDENTIALS" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -272,12 +283,6 @@
 
             </intent-filter>
 
-            <intent-filter>
-                <action android:name="androidx.credentials.registry.provider.action.GET_CREDENTIAL" />
-                <action android:name="androidx.identitycredentials.action.GET_CREDENTIALS" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
 
         </activity>
 

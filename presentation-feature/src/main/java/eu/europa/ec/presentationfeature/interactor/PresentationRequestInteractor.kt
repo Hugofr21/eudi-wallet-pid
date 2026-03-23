@@ -17,6 +17,7 @@
 package eu.europa.ec.presentationfeature.interactor
 
 import android.content.Context
+import android.content.Intent
 import eu.europa.ec.businesslogic.extension.safeAsync
 import eu.europa.ec.businesslogic.provider.UuidProvider
 import eu.europa.ec.commonfeature.config.PresentationMode
@@ -28,6 +29,7 @@ import eu.europa.ec.corelogic.controller.PresentationControllerConfig
 import eu.europa.ec.corelogic.controller.TransferEventPartialState
 import eu.europa.ec.corelogic.controller.WalletCoreDocumentsController
 import eu.europa.ec.corelogic.controller.WalletCorePresentationController
+import eu.europa.ec.eudi.wallet.dcapi.DCAPIException
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import eu.europa.ec.uilogic.navigation.helper.DcApiIntentHolder
 import kotlinx.coroutines.flow.Flow
@@ -48,6 +50,8 @@ sealed class PresentationRequestInteractorPartialState {
 
     data class Failure(val error: String) : PresentationRequestInteractorPartialState()
     data object Disconnect : PresentationRequestInteractorPartialState()
+
+    data class FailureDCAPI(val error: Intent) : PresentationRequestInteractorPartialState()
 }
 
 interface PresentationRequestInteractor {
@@ -88,6 +92,7 @@ class PresentationRequestInteractorImpl(
             walletCorePresentationController.startDCAPIPresentation(it)
         }
     }
+
 
     override fun getRequestDocuments(): Flow<PresentationRequestInteractorPartialState> =
         walletCorePresentationController.events.mapNotNull { response ->
@@ -146,7 +151,15 @@ class PresentationRequestInteractorImpl(
 
                 is TransferEventPartialState.Error -> {
                     println("Error received: ${response.error}")
-                    PresentationRequestInteractorPartialState.Failure(error = response.error)
+                    val error = response.error
+
+                    if(error is DCAPIException) {
+                        walletCorePresentationController.stopPresentation()
+                        DcApiIntentHolder.clearIntent()
+                        PresentationRequestInteractorPartialState.FailureDCAPI(error = error.toIntent())
+                    }
+
+                    PresentationRequestInteractorPartialState.Failure(error = error)
                 }
 
                 is TransferEventPartialState.Disconnected -> {

@@ -64,6 +64,7 @@ import com.google.accompanist.permissions.shouldShowRationale
 import eu.europa.ec.businesslogic.extension.toUri
 import eu.europa.ec.commonfeature.ui.qr_scan.component.QrCodeAnalyzer
 import eu.europa.ec.commonfeature.ui.qr_scan.component.qrBorderCanvas
+import eu.europa.ec.commonfeature.util.navigation.handleIntentAction
 import eu.europa.ec.resourceslogic.R
 import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.ErrorInfo
@@ -134,6 +135,7 @@ private fun handleNavigationEffect(
         is Effect.Navigation.GoToAppSettings -> context.openAppSettings()
 
         is Effect.Navigation.OpenExternalUrl -> {
+            println("QrScanScreen: url='${navigationEffect.url}'")
             context.openUrl(navigationEffect.url.toUri())
             // Return to previous screen since the URL will be handled externally
             navController.popBackStack()

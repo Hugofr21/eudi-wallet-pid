@@ -11,8 +11,10 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,14 +23,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.PathFillType
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,20 +39,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import eu.europa.ec.dashboardfeature.ui.scanner.utils.Translate.translateSecurity
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
 import eu.europa.ec.mrzscannerLogic.model.AntiSpoofingCheck
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
 import eu.europa.ec.mrzscannerLogic.model.ScanType
 import eu.europa.ec.uilogic.extension.openAppSettings
 
+private val ColorSuccess = Color(0xFF10B981)
+private val ColorWarning = Color(0xFFF59E0B)
+private val ColorError   = Color(0xFFEF4444)
+
 @Composable
 fun IdentificationDocumentScreen(
     navHostController: NavController,
     viewModel: IdentificationDocumentViewModel,
 ) {
-    val context = LocalContext.current
-    val state by viewModel.viewState.collectAsStateWithLifecycle()
-    val effects = viewModel.effect
+    val context        = LocalContext.current
+    val state          by viewModel.viewState.collectAsStateWithLifecycle()
+    val effects        = viewModel.effect
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
@@ -69,9 +71,9 @@ fun IdentificationDocumentScreen(
     LaunchedEffect(effects) {
         effects.collect { effect ->
             when (effect) {
-                is Effect.Navigation.Pop -> navHostController.popBackStack()
+                is Effect.Navigation.Pop           -> navHostController.popBackStack()
                 is Effect.Navigation.OnAppSettings -> context.openAppSettings()
-                is Effect.Navigation.SwitchScreen -> navHostController.navigate(effect.screenRoute) {
+                is Effect.Navigation.SwitchScreen  -> navHostController.navigate(effect.screenRoute) {
                     popUpTo(effect.popUpToScreenRoute) { inclusive = effect.inclusive }
                 }
                 else -> {}
@@ -80,30 +82,32 @@ fun IdentificationDocumentScreen(
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = Color.White
-    ) { paddingValues ->
+        modifier       = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
         when (state.isCameraAvailability) {
             CameraAvailability.NO_PERMISSION -> RequiredPermissionsAsk { viewModel.setEvent(it) }
-            CameraAvailability.AVAILABLE -> AutomaticScannerContent(state, viewModel, paddingValues)
-            else -> LoadingScreen()
+            CameraAvailability.AVAILABLE     -> AutomaticScannerContent(state, viewModel, padding)
+            else                             -> LoadingScreen()
         }
     }
 }
 
+// ─── Conteúdo principal ───────────────────────────────────────────────────────
+
 @Composable
 private fun AutomaticScannerContent(
-    state: State,
-    viewModel: IdentificationDocumentViewModel,
-    paddingValues: PaddingValues
+    state        : State,
+    viewModel    : IdentificationDocumentViewModel,
+    paddingValues: PaddingValues,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    val context = LocalContext.current
+    val context        = LocalContext.current
 
     val previewView = remember {
         PreviewView(context).apply {
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-            scaleType = PreviewView.ScaleType.FILL_CENTER
+            scaleType          = PreviewView.ScaleType.FILL_CENTER
         }
     }
 
@@ -111,8 +115,8 @@ private fun AutomaticScannerContent(
         viewModel.setEvent(
             Event.InitializeScanner(
                 lifecycleOwner = lifecycleOwner,
-                previewView = previewView,
-                scanType = ScanType.Document
+                previewView    = previewView,
+                scanType       = ScanType.Document
             )
         )
     }
@@ -121,36 +125,43 @@ private fun AutomaticScannerContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        AndroidView(
-            factory = { previewView },
-            modifier = Modifier.fillMaxSize()
-        )
-
-        ScannerMaskOverlay(scanState = state.scanState)
-
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier            = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             TopBar(
-                isFlashOn = state.isFlashOn,
-                onClose = { viewModel.setEvent(Event.GoBack) },
+                isFlashOn     = state.isFlashOn,
+                onClose       = { viewModel.setEvent(Event.GoBack) },
                 onToggleFlash = { viewModel.setEvent(Event.ToggleFlash) }
             )
-            Spacer(modifier = Modifier.height(40.dp))
-            InstructionText()
+
+            Spacer(Modifier.height(12.dp))
+
+            ScanStatusBadge(state.scanState)
+
+            Spacer(Modifier.weight(1f))
+
+            PassportScannerWindow(previewView = previewView, scanState = state.scanState)
+
+            Spacer(Modifier.weight(1f))
+
+            BottomHint(state.scanState)
+
+            Spacer(Modifier.height(20.dp))
         }
 
+        // Alerta de erro / segurança
         AnimatedVisibility(
-            visible = !state.isScanFrozen.not() &&
+            visible  = !state.isScanFrozen.not() &&
                     state.scannedDocument == null &&
-                    (state.scanState is MrzScanState.Error ||
-                            state.scanState is MrzScanState.SecurityCheckFailed),
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit  = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                    (state.scanState is MrzScanState.Error || state.scanState is MrzScanState.SecurityCheckFailed),
+            enter    = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit     = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .padding(16.dp)
         ) {
             FloatingErrorAlert(
                 scanState = state.scanState,
@@ -158,19 +169,22 @@ private fun AutomaticScannerContent(
             )
         }
 
+        // Cartão de resultado
         AnimatedVisibility(
-            visible = state.scannedDocument != null,
-            enter = slideInVertically(
+            visible  = state.scannedDocument != null,
+            enter    = slideInVertically(
                 initialOffsetY = { it },
-                animationSpec = tween(350, easing = FastOutSlowInEasing)
+                animationSpec  = tween(350, easing = FastOutSlowInEasing)
             ) + fadeIn(tween(200)),
-            exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(250)) + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
+            exit     = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(250)) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
         ) {
             state.scannedDocument?.let { doc ->
                 AutomaticResultCard(
-                    document = doc,
-                    onConfirm = { viewModel.setEvent(Event.ConfirmDocument) },
+                    document      = doc,
+                    onConfirm     = { viewModel.setEvent(Event.ConfirmDocument) },
                     onScanAnother = { viewModel.setEvent(Event.RetryScanning) }
                 )
             }
@@ -178,264 +192,298 @@ private fun AutomaticScannerContent(
     }
 }
 
-@Composable
-private fun ScannerMaskOverlay(scanState: MrzScanState) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val boxWidth = size.width - 48.dp.toPx()
-            val boxHeight = 130.dp.toPx()
-            val boxTopLeft = Offset(
-                x = (size.width - boxWidth) / 2f,
-                y = (size.height - boxHeight) / 2f
-            )
-            val cornerRadius = CornerRadius(8.dp.toPx())
-
-            val maskPath = Path().apply {
-                addRect(androidx.compose.ui.geometry.Rect(Offset.Zero, size))
-                addRoundRect(
-                    androidx.compose.ui.geometry.RoundRect(
-                        rect = androidx.compose.ui.geometry.Rect(boxTopLeft, androidx.compose.ui.geometry.Size(boxWidth, boxHeight)),
-                        cornerRadius = cornerRadius
-                    )
-                )
-                fillType = PathFillType.EvenOdd
-            }
-
-            drawPath(path = maskPath, color = Color.White)
-
-            val strokeWidth = 1.5.dp.toPx()
-            val dashColor = Color(0xFF9E9E9E)
-
-            drawRoundRect(
-                color = dashColor,
-                topLeft = boxTopLeft,
-                size = androidx.compose.ui.geometry.Size(boxWidth, boxHeight),
-                cornerRadius = cornerRadius,
-                style = Stroke(
-                    width = strokeWidth,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f))
-                )
-            )
-
-            val cornerLen = 20.dp.toPx()
-            val cornerStroke = 4.dp.toPx()
-            val blue = Color(0xFF1976D2)
-
-            drawLine(blue, boxTopLeft, boxTopLeft.copy(x = boxTopLeft.x + cornerLen), cornerStroke)
-            drawLine(blue, boxTopLeft, boxTopLeft.copy(y = boxTopLeft.y + cornerLen), cornerStroke)
-
-            val topRight = boxTopLeft.copy(x = boxTopLeft.x + boxWidth)
-            drawLine(blue, topRight, topRight.copy(x = topRight.x - cornerLen), cornerStroke)
-            drawLine(blue, topRight, topRight.copy(y = topRight.y + cornerLen), cornerStroke)
-
-            val bottomLeft = boxTopLeft.copy(y = boxTopLeft.y + boxHeight)
-            drawLine(blue, bottomLeft, bottomLeft.copy(x = bottomLeft.x + cornerLen), cornerStroke)
-            drawLine(blue, bottomLeft, bottomLeft.copy(y = bottomLeft.y - cornerLen), cornerStroke)
-
-            val bottomRight = Offset(boxTopLeft.x + boxWidth, boxTopLeft.y + boxHeight)
-            drawLine(blue, bottomRight, bottomRight.copy(x = bottomRight.x - cornerLen), cornerStroke)
-            drawLine(blue, bottomRight, bottomRight.copy(y = bottomRight.y - cornerLen), cornerStroke)
-        }
-
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(70.dp))
-            Icon(
-                imageVector = Icons.Default.DocumentScanner,
-                contentDescription = null,
-                tint = Color(0xFF757575),
-                modifier = Modifier.size(28.dp)
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = when (scanState) {
-                    is MrzScanState.Processing -> "Reading document… ${(scanState.confidence * 100).toInt()}%"
-                    else -> "Aguardando leitura da MRZ"
-                },
-                color = Color(0xFF757575),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
+// ─── Top Bar ─────────────────────────────────────────────────────────────────
 
 @Composable
 private fun TopBar(
-    isFlashOn: Boolean,
-    onClose: () -> Unit,
+    isFlashOn    : Boolean,
+    onClose      : () -> Unit,
     onToggleFlash: () -> Unit,
-    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier
+        modifier              = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment     = Alignment.CenterVertically
     ) {
         IconButton(onClick = onClose) {
-            Icon(Icons.Default.Close, contentDescription = "Fechar", tint = Color.Black)
+            Icon(Icons.Default.Close, "Fechar", tint = MaterialTheme.colorScheme.onBackground)
         }
-        Text(
-            text = "Leitor de Passaporte",
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
-            color = Color.Black
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text       = "Leitor de Passaporte",
+                fontWeight = FontWeight.Bold,
+                fontSize   = 16.sp,
+                color      = MaterialTheme.colorScheme.onBackground
+            )
+            Row(
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Icon(Icons.Default.Lock, null, tint = ColorSuccess, modifier = Modifier.size(10.dp))
+                Text("Leitura Segura", fontSize = 10.sp, color = ColorSuccess, fontWeight = FontWeight.Medium)
+            }
+        }
         IconButton(onClick = onToggleFlash) {
             Icon(
-                imageVector = if (isFlashOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                imageVector        = if (isFlashOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
                 contentDescription = if (isFlashOn) "Flash On" else "Flash Off",
-                tint = Color.Black
+                tint               = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
+// ─── Badge de estado ─────────────────────────────────────────────────────────
+
 @Composable
-private fun InstructionText() {
+private fun ScanStatusBadge(scanState: MrzScanState) {
+    val (text, color) = when (scanState) {
+        is MrzScanState.Processing          -> "A extrair dados…"        to MaterialTheme.colorScheme.primary
+        is MrzScanState.Success             -> "Documento lido!"         to ColorSuccess
+        is MrzScanState.Error               -> "Erro de leitura"         to ColorError
+        is MrzScanState.SecurityCheckFailed -> "Verificação falhou"      to ColorWarning
+        else                                -> "Pronto para digitalizar" to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Row(
+        modifier              = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(color.copy(alpha = 0.12f))
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Canvas(modifier = Modifier.size(7.dp)) { drawCircle(color = color) }
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = color)
+    }
+}
+
+// ─── Janela da câmara (proporção Passaporte) ──────────────────────────────────
+
+@Composable
+private fun PassportScannerWindow(previewView: PreviewView, scanState: MrzScanState) {
+    val borderColor = when (scanState) {
+        is MrzScanState.Success             -> ColorSuccess
+        is MrzScanState.Processing          -> MaterialTheme.colorScheme.primary
+        is MrzScanState.Error               -> ColorError
+        is MrzScanState.SecurityCheckFailed -> ColorWarning
+        else                                -> MaterialTheme.colorScheme.outline
+    }
+
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp),
+        modifier            = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Etiqueta superior
+        Row(
+            modifier          = Modifier
+                .padding(bottom = 8.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(Icons.Default.CropFree, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+            Text("Zona MRZ", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
+        }
+
+        // Viewport da câmara — proporção passaporte (ID-3: 125×88mm ≈ 1.42)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .aspectRatio(1.42f)
+                .clip(RoundedCornerShape(14.dp))
+                .border(2.dp, borderColor, RoundedCornerShape(14.dp))
+        ) {
+            AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+
+            // Cantos de mira
+            CornerMarkers(borderColor)
+
+            // Overlay de sucesso
+            if (scanState is MrzScanState.Success) {
+                Box(
+                    modifier         = Modifier
+                        .fillMaxSize()
+                        .background(ColorSuccess.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.CheckCircle, null, tint = ColorSuccess, modifier = Modifier.size(52.dp))
+                }
+            }
+
+            // Barra de progresso
+            if (scanState is MrzScanState.Processing) {
+                LinearProgressIndicator(
+                    progress   = scanState.confidence,
+                    modifier   = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .align(Alignment.BottomCenter),
+                    color      = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.Transparent
+                )
+            }
+        }
+
+        // Etiqueta inferior
+        Spacer(Modifier.height(8.dp))
         Text(
-            text = "Posicione a Zona Legível por Máquina (MRZ) dentro da área",
-            color = Color(0xFF333333),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            lineHeight = 22.sp
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "Certifique-se de que o documento esteja bem iluminado e todo o texto da zona MRZ esteja visível para uma leitura precisa.",
-            color = Color(0xFF666666),
-            fontSize = 14.sp,
-            textAlign = TextAlign.Center,
-            lineHeight = 20.sp
+            text          = "Passaporte  •  ID-3  •  ICAO Doc 9303",
+            fontSize      = 10.sp,
+            color         = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            fontWeight    = FontWeight.Medium,
+            textAlign     = TextAlign.Center,
+            letterSpacing = 0.4.sp
         )
     }
 }
 
 @Composable
+private fun CornerMarkers(color: Color) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val len = 20.dp.toPx(); val stroke = 3.dp.toPx(); val pad = 8.dp.toPx()
+        val w = size.width;     val h = size.height
+        drawLine(color, Offset(pad, pad),           Offset(pad + len, pad),     stroke)
+        drawLine(color, Offset(pad, pad),           Offset(pad, pad + len),     stroke)
+        drawLine(color, Offset(w - pad - len, pad), Offset(w - pad, pad),       stroke)
+        drawLine(color, Offset(w - pad, pad),       Offset(w - pad, pad + len), stroke)
+        drawLine(color, Offset(pad, h - pad),       Offset(pad + len, h - pad), stroke)
+        drawLine(color, Offset(pad, h - pad - len), Offset(pad, h - pad),       stroke)
+        drawLine(color, Offset(w - pad - len, h - pad), Offset(w - pad, h - pad),       stroke)
+        drawLine(color, Offset(w - pad, h - pad - len), Offset(w - pad, h - pad),       stroke)
+    }
+}
+
+// ─── Dica inferior ───────────────────────────────────────────────────────────
+
+@Composable
+private fun BottomHint(scanState: MrzScanState) {
+    val hint = when (scanState) {
+        is MrzScanState.Processing          -> "A processar… mantenha o documento firme"
+        is MrzScanState.Success             -> "Leitura concluída com sucesso"
+        is MrzScanState.Error               -> "Ajuste o documento e tente novamente"
+        is MrzScanState.SecurityCheckFailed -> "Utilize o documento físico original"
+        else                                -> "Alinhe a zona MRZ com a moldura acima"
+    }
+    Row(
+        modifier              = Modifier
+            .padding(horizontal = 32.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+        Text(hint, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+    }
+}
+
+// ─── Cartão de Resultado ─────────────────────────────────────────────────────
+
+@Composable
 private fun AutomaticResultCard(
-    document: MrzDocument,
-    onConfirm: () -> Unit,
-    onScanAnother: () -> Unit
+    document     : MrzDocument,
+    onConfirm    : () -> Unit,
+    onScanAnother: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RectangleShape,
-        color = Color.White,
-        shadowElevation = 24.dp
+    val docTypeLabel = when (document) {
+        is MrzDocument.Passport       -> "Passaporte"
+        is MrzDocument.IdCard         -> "Cartão de Identidade"
+        is MrzDocument.DrivingLicense -> "Carta de Condução"
+    }
+
+    Card(
+        modifier  = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape     = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(8.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(top = 20.dp, bottom = 32.dp)
+                .padding(20.dp)
         ) {
+            // Cabeçalho
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Column {
-                    Text(
-                        text = when (document) {
-                            is MrzDocument.Passport       -> "Passport"
-                            is MrzDocument.IdCard         -> "Identity Card"
-                            is MrzDocument.DrivingLicense -> "Driving Licence"
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = when (document) {
-                            is MrzDocument.Passport       -> "Detected automatically"
-                            is MrzDocument.IdCard         -> "Detected automatically"
-                            is MrzDocument.DrivingLicense -> "Detected automatically"
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
+                Box(
+                    modifier         = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(ColorSuccess.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.CheckCircle, null, tint = ColorSuccess, modifier = Modifier.size(24.dp))
                 }
-                Icon(
-                    Icons.Default.CheckCircle, null,
-                    tint = Color(0xFF4CAF50),
-                    modifier = Modifier.size(32.dp)
-                )
+                Column {
+                    Text(docTypeLabel, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Detetado automaticamente", fontSize = 12.sp, color = ColorSuccess)
+                }
             }
 
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 14.dp),
-                color = Color(0xFFE0E0E0),
-                thickness = 1.dp
-            )
+            Spacer(Modifier.height(14.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(14.dp))
 
+            // Campos do documento
             when (document) {
                 is MrzDocument.Passport -> {
-                    DocumentField("Full Name", "${document.givenNames} ${document.surname}")
-                    DocumentField("Document №", document.documentNumber)
-                    DocumentField("Country", document.issuingCountry)
-                    DocumentField("Nationality", document.nationality)
+                    DocField("NOME COMPLETO",  "${document.givenNames} ${document.surname}")
+                    DocField("Nº DOCUMENTO",   document.documentNumber)
+                    DocField("PAÍS EMISSOR",   document.issuingCountry)
+                    DocField("NACIONALIDADE",  document.nationality)
                     if (document.personalNumber.isNotBlank())
-                        DocumentField("Personal №", document.personalNumber)
-                    DocumentField("Date of Birth", document.dateOfBirth)
-                    document.expiryDate?.let { DocumentField("Expiry", it) }
-                    DocumentField("Sex", document.sex)
+                        DocField("Nº PESSOAL", document.personalNumber)
+                    DocField("DATA NASC.",     document.dateOfBirth)
+                    document.expiryDate?.let { DocField("VALIDADE", it) }
+                    DocField("SEXO",           document.sex)
                 }
                 is MrzDocument.IdCard -> {
-                    DocumentField("Full Name", "${document.givenNames} ${document.surname}")
-                    DocumentField("Document №", document.documentNumber)
-                    DocumentField("Nationality", document.nationality)
-                    DocumentField("Date of Birth", document.dateOfBirth)
-                    document.expiryDate?.let { DocumentField("Expiry", it) }
-                    DocumentField("Sex", document.sex)
+                    DocField("NOME COMPLETO",  "${document.givenNames} ${document.surname}")
+                    DocField("Nº DOCUMENTO",   document.documentNumber)
+                    DocField("NACIONALIDADE",  document.nationality)
+                    DocField("DATA NASC.",     document.dateOfBirth)
+                    document.expiryDate?.let { DocField("VALIDADE", it) }
+                    DocField("SEXO",           document.sex)
                 }
                 is MrzDocument.DrivingLicense -> {
-                    DocumentField("Full Name", "${document.givenNames} ${document.surname}")
-                    DocumentField("Licence №", document.documentNumber)
+                    DocField("NOME COMPLETO",  "${document.givenNames} ${document.surname}")
+                    DocField("Nº CARTA",       document.documentNumber)
                     if (document.licenseCategories.isNotBlank())
-                        DocumentField("Categories", document.licenseCategories)
+                        DocField("CATEGORIAS", document.licenseCategories)
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(18.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
-                    onClick = onScanAnother,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp)
+                    onClick  = onScanAnother,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape    = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.Refresh, null, Modifier.size(18.dp))
+                    Icon(Icons.Default.Refresh, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Scan Again")
+                    Text("Repetir", fontSize = 14.sp)
                 }
                 Button(
-                    onClick = onConfirm,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
+                    onClick  = onConfirm,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape    = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.Check, null, Modifier.size(18.dp))
+                    Icon(Icons.Default.Check, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Confirm")
+                    Text("Confirmar", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
         }
@@ -443,28 +491,30 @@ private fun AutomaticResultCard(
 }
 
 @Composable
-private fun DocumentField(label: String, value: String) {
+private fun DocField(label: String, value: String) {
     if (value.isBlank()) return
     Row(
-        modifier = Modifier
+        modifier              = Modifier
             .fillMaxWidth()
             .padding(vertical = 5.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment     = Alignment.CenterVertically
     ) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
-            modifier = Modifier.weight(0.4f)
+            text      = label,
+            fontSize  = 9.sp,
+            color     = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.8.sp,
+            modifier  = Modifier.weight(0.4f)
         )
         Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = Color.Black,
-            modifier = Modifier.weight(0.6f),
-            textAlign = TextAlign.End
+            text       = value,
+            fontSize   = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color      = MaterialTheme.colorScheme.onSurface,
+            modifier   = Modifier.weight(0.6f),
+            textAlign  = TextAlign.End
         )
     }
 }
@@ -472,146 +522,93 @@ private fun DocumentField(label: String, value: String) {
 @Composable
 private fun FloatingErrorAlert(scanState: MrzScanState, onDismiss: () -> Unit) {
     val message = when (scanState) {
-        is MrzScanState.SecurityCheckFailed -> translateSecurityToEnglish(scanState)
-        is MrzScanState.Error -> scanState.message
-        else -> "Por favor, tente novamente."
+        is MrzScanState.SecurityCheckFailed -> translateSecurity(scanState)
+        is MrzScanState.Error               -> scanState.message
+        else                                -> "Por favor, tente novamente."
     }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFF39C12),
-        shadowElevation = 4.dp
+    Card(
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(12.dp),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        elevation = CardDefaults.cardElevation(6.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+            modifier          = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.ErrorOutline,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
-            )
+            Icon(Icons.Default.ErrorOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Erro na leitura",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    fontSize = 15.sp
-                )
-                Text(
-                    text = message,
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp
-                )
+                Text("Erro na leitura", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer, fontSize = 14.sp)
+                Text(message, color = MaterialTheme.colorScheme.onErrorContainer, fontSize = 12.sp, lineHeight = 18.sp)
             }
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Dismiss",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
+            IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(16.dp))
             }
         }
     }
 }
 
+// ─── Loading ──────────────────────────────────────────────────────────────────
+
 @Composable
-private fun LoadingScreen(message: String = "Iniciando scanner...") {
+private fun LoadingScreen(message: String = "A carregar…") {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier         = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(color = Color.Black)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(message, color = Color.Black)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
+            Spacer(Modifier.height(14.dp))
+            Text(message, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
-private fun translateSecurityToEnglish(state: MrzScanState.SecurityCheckFailed): String {
-    val scoreMatch = Regex("Score: ([0-9.]+)").find(state.reason)
-    val scoreText = scoreMatch?.groups?.get(1)?.value ?: "0.0"
-    if (state.failedChecks.isEmpty()) return "Security validation failed. Score: $scoreText"
-    val specificReason = when (state.failedChecks.first()) {
-        AntiSpoofingCheck.MOIRE_PATTERN        -> "Screen detected. Use the original physical document."
-        AntiSpoofingCheck.SPECULAR_REFLECTION  -> "Paper detected. Avoid photocopies or reflections."
-        AntiSpoofingCheck.GYROSCOPE            -> "Tilt the phone slightly to validate the hologram."
-        AntiSpoofingCheck.ACCELEROMETER        -> "Hold the document steady. Avoid bending."
-        AntiSpoofingCheck.IMAGE_QUALITY        -> "Improve environmental lighting."
-        AntiSpoofingCheck.ARCORE_DEPTH         -> "Move camera closer to validate spatial depth."
-        AntiSpoofingCheck.PRINT_ARTIFACT       -> "Printed copy detected. Use the original document."
-        AntiSpoofingCheck.TEMPORAL_CONSISTENCY -> "Keep the document still while scanning."
-        AntiSpoofingCheck.COLOR_CONSISTENCY    -> "Unusual color pattern detected. Use the original."
-        AntiSpoofingCheck.EDGE_SHARPNESS       -> "Document edges not clear. Improve focus."
+// ─── Permissões ──────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+private fun RequiredPermissionsAsk(onEventSend: (Event) -> Unit) {
+    val showDenied    = remember { mutableStateOf(false) }
+    val permsState    = rememberMultiplePermissionsState(listOf(Manifest.permission.CAMERA)) { results ->
+        if (results.values.all { it }) onEventSend(Event.OnPermissionStateChanged(CameraAvailability.AVAILABLE))
+        else showDenied.value = true
     }
-    return "$specificReason\nSecurity Score: $scoreText"
+
+    LaunchedEffect(Unit) {
+        if (!permsState.allPermissionsGranted) permsState.launchMultiplePermissionRequest()
+        else onEventSend(Event.OnPermissionStateChanged(CameraAvailability.AVAILABLE))
+    }
+
+    if (showDenied.value) {
+        PermissionDeniedMessage { onEventSend(Event.OpenAppSettings) }
+    } else {
+        LoadingScreen("A solicitar permissão…")
+    }
 }
 
 @Composable
 private fun PermissionDeniedMessage(onOpenSettings: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Card(modifier = Modifier.padding(24.dp)) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier            = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(Icons.Default.NoPhotography, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(16.dp))
-                Text("Permission denied", style = MaterialTheme.typography.headlineSmall)
+                Text("Permissão negada", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(8.dp))
-                Text("Access to the camera is required.", textAlign = TextAlign.Center)
+                Text("O acesso à câmara é necessário para digitalizar documentos.", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
-                    Text("Open Settings")
+                    Text("Abrir Definições")
                 }
             }
         }
-    }
-}
-
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-private fun RequiredPermissionsAsk(
-    onEventSend: (Event) -> Unit
-) {
-    val permissions = listOf(Manifest.permission.CAMERA)
-    val showDenied = remember { mutableStateOf(false) }
-
-    val permissionsState = rememberMultiplePermissionsState(permissions) { results ->
-        if (results.values.all { it }) {
-            onEventSend(Event.OnPermissionStateChanged(CameraAvailability.AVAILABLE))
-        } else {
-            showDenied.value = true
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        if (!permissionsState.allPermissionsGranted) {
-            permissionsState.launchMultiplePermissionRequest()
-        } else {
-            onEventSend(Event.OnPermissionStateChanged(CameraAvailability.AVAILABLE))
-        }
-    }
-
-    if (showDenied.value) {
-        PermissionDeniedMessage {
-            onEventSend(Event.OpenAppSettings)
-        }
-    } else {
-        LoadingScreen("Requesting permission...")
     }
 }

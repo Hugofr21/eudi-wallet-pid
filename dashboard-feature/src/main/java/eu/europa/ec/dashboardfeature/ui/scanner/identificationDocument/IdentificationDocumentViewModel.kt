@@ -17,14 +17,14 @@ import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import eu.europa.ec.uilogic.serializer.UiSerializer
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
-
 
 enum class CameraAvailability {
     AVAILABLE, NO_PERMISSION, DISABLED, UNKNOWN
 }
-
 
 data class State(
     val isLoading: Boolean = false,
@@ -36,6 +36,7 @@ data class State(
     val isFlashOn: Boolean = false,
     val isScanFrozen: Boolean = false,
 ) : ViewState
+
 sealed class Event : ViewEvent {
     object GoBack : Event()
     data class InitializeScanner(
@@ -47,17 +48,14 @@ sealed class Event : ViewEvent {
     object StartScanning : Event()
     object StopScanning : Event()
     object RetryScanning : Event()
-
     object ToggleFlash : Event()
 
     data class OnPermissionStateChanged(val availability: CameraAvailability) : Event()
-
     data class OnScanResult(val document: MrzDocument) : Event()
     data class OnScanError(
         val failedChecks: List<AntiSpoofingCheck>? = null,
         val message: String
     ) : Event()
-
 
     object TriggerManualCapture : Event()
     object ShowHelp : Event()
@@ -77,9 +75,7 @@ sealed class Effect : ViewSideEffect {
 
         data object OnAppSettings : Navigation()
         data object OnSystemSettings : Navigation()
-
     }
-
 
     sealed class ShowDialog : Effect() {
         object Help : ShowDialog()
@@ -94,16 +90,17 @@ class IdentificationDocumentViewModel(
 
     private var lifecycleOwner: LifecycleOwner? = null
     private var previewView: PreviewView? = null
-    private var scanningJob: kotlinx.coroutines.Job? = null
+    private var scanningJob: Job? = null
 
-    override fun setInitialState(): State {
-        return State(
-            isLoading = false,
-            isCameraAvailability = null,
-            scanState = MrzScanState.Idle,
-            isPermissionChecked = false,
-        )
-    }
+    // Job separado para o timer de unfreeze — cancelável independentemente do scan
+    private var unfreezeJob: Job? = null
+
+    override fun setInitialState() = State(
+        isLoading = false,
+        isCameraAvailability = null,
+        scanState = MrzScanState.Idle,
+        isPermissionChecked = false,
+    )
 
     init {
         checkInitialPermissions()
@@ -111,22 +108,19 @@ class IdentificationDocumentViewModel(
 
     override fun handleEvents(event: Event) {
         when (event) {
-            is Event.InitializeScanner -> handleInitializeScanner(event)
-            Event.StartScanning -> startScanning()
-            Event.StopScanning -> stopScanning()
-            Event.RetryScanning -> retryScanning()
-            Event.GoBack -> setEffect { Effect.Navigation.Pop }
-
+            is Event.InitializeScanner    -> handleInitializeScanner(event)
+            Event.StartScanning           -> startScanning()
+            Event.StopScanning            -> stopScanning()
+            Event.RetryScanning           -> retryScanning()
+            Event.GoBack                  -> setEffect { Effect.Navigation.Pop }
             is Event.OnPermissionStateChanged -> handlePermissionChanged(event)
-            Event.CheckPermissions -> checkInitialPermissions()
-
-            is Event.OnScanResult -> handleScanResult(event)
-            is Event.OnScanError -> handleScanError(event)
-
-            Event.TriggerManualCapture -> triggerManualCapture()
-            Event.ShowHelp -> showHelpDialog()
-            Event.ConfirmDocument -> confirmDocumentFromState()
-            Event.OpenAppSettings -> setEffect { Effect.Navigation.OnAppSettings }
+            Event.CheckPermissions        -> checkInitialPermissions()
+            is Event.OnScanResult         -> handleScanResult(event)
+            is Event.OnScanError          -> handleScanError(event)
+            Event.TriggerManualCapture    -> triggerManualCapture()
+            Event.ShowHelp                -> showHelpDialog()
+            Event.ConfirmDocument         -> confirmDocumentFromState()
+            Event.OpenAppSettings         -> setEffect { Effect.Navigation.OnAppSettings }
             is Event.ToggleFlash -> {
                 val newState = !viewState.value.isFlashOn
                 setState { copy(isFlashOn = newState) }
@@ -135,69 +129,38 @@ class IdentificationDocumentViewModel(
         }
     }
 
-    // ============================================
-    // Verificação de Permissões
-    // ============================================
+    // ── Permissões ────────────────────────────────────────────────────────────
 
     private fun checkInitialPermissions() {
         viewModelScope.launch {
-            // Marcar que já verificou
             setState { copy(isPermissionChecked = true) }
-
             when {
-                !scannerInteractor.hasCameraPermission() -> {
+                !scannerInteractor.hasCameraPermission() ->
                     setState { copy(isCameraAvailability = CameraAvailability.NO_PERMISSION) }
-                }
-                !scannerInteractor.isCameraAvailable() -> {
+                !scannerInteractor.isCameraAvailable() ->
                     setState { copy(isCameraAvailability = CameraAvailability.DISABLED) }
-                }
-                else -> {
-                    // MUDANÇA: Se tem permissão, marcar como AVAILABLE imediatamente
+                else ->
                     setState { copy(isCameraAvailability = CameraAvailability.AVAILABLE) }
-                }
             }
         }
     }
 
-    // ============================================
-    // Inicialização do Scanner
-    // ============================================
+    // ── Inicialização ─────────────────────────────────────────────────────────
 
     private fun handleInitializeScanner(event: Event.InitializeScanner) {
         viewModelScope.launch {
             setState { copy(isLoading = true) }
-
             try {
-                // Armazenar referências
                 lifecycleOwner = event.lifecycleOwner
-                previewView = event.previewView
+                previewView    = event.previewView
 
-                // Verificar disponibilidade
                 when {
-                    !scannerInteractor.hasCameraPermission() -> {
-                        setState {
-                            copy(
-                                isCameraAvailability = CameraAvailability.NO_PERMISSION,
-                                isLoading = false
-                            )
-                        }
-                    }
-                    !scannerInteractor.isCameraAvailable() -> {
-                        setState {
-                            copy(
-                                isCameraAvailability = CameraAvailability.DISABLED,
-                                isLoading = false
-                            )
-                        }
-                    }
+                    !scannerInteractor.hasCameraPermission() ->
+                        setState { copy(isCameraAvailability = CameraAvailability.NO_PERMISSION, isLoading = false) }
+                    !scannerInteractor.isCameraAvailable() ->
+                        setState { copy(isCameraAvailability = CameraAvailability.DISABLED, isLoading = false) }
                     else -> {
-                        setState {
-                            copy(
-                                isCameraAvailability = CameraAvailability.AVAILABLE,
-                                isLoading = false
-                            )
-                        }
-                        // IMPORTANTE: Iniciar scanning automático
+                        setState { copy(isCameraAvailability = CameraAvailability.AVAILABLE, isLoading = false) }
                         startScanning()
                     }
                 }
@@ -214,30 +177,14 @@ class IdentificationDocumentViewModel(
     }
 
     private fun handlePermissionChanged(event: Event.OnPermissionStateChanged) {
-        setState {
-            copy(
-                isCameraAvailability = event.availability,
-                isPermissionChecked = true
-            )
-        }
-
-        // Se permissão foi concedida e ainda não inicializou, esperar pela PreviewView
-        // O InitializeScanner vai ser chamado pelo LaunchedEffect da UI
+        setState { copy(isCameraAvailability = event.availability, isPermissionChecked = true) }
     }
 
-    // ============================================
-    // Controle de Scanning CONTÍNUO
-    // ============================================
+    // ── Controlo de scanning ──────────────────────────────────────────────────
 
     private fun startScanning() {
-        val owner = lifecycleOwner ?: run {
-            setState { copy(scanState = MrzScanState.Error("Câmera não inicializada")) }
-            return
-        }
-        val preview = previewView ?: run {
-            setState { copy(scanState = MrzScanState.Error("PreviewView não disponível")) }
-            return
-        }
+        val owner   = lifecycleOwner ?: run { setState { copy(scanState = MrzScanState.Error("Câmera não inicializada")) }; return }
+        val preview = previewView    ?: run { setState { copy(scanState = MrzScanState.Error("PreviewView não disponível")) }; return }
 
         scanningJob?.cancel()
 
@@ -246,67 +193,50 @@ class IdentificationDocumentViewModel(
                 scannerInteractor.startScanning(owner, preview, ScanType.Document)
                     .collect { scanState ->
 
-                        // ★ FIX ALERTA: se o scan está "frozen" (erro ou sucesso mostrado),
-                        // ignorar todos os frames seguintes — o scanner continua a correr
-                        // em background mas a UI não é afetada
+                        // Se o scan está frozen aguardando confirmação do utilizador, ignorar
                         if (viewState.value.isScanFrozen) return@collect
 
                         when (scanState) {
                             is MrzScanState.Success -> {
                                 val doc = scanState.document
                                 if (doc != null) {
-                                    // ★ FIX CARD: congelar + guardar documento
-                                    // NÃO chamar confirmDocument() aqui — o utilizador
-                                    // clica "Confirm" no card para navegar
                                     setState {
                                         copy(
-                                            scanState = scanState,
+                                            scanState       = scanState,
                                             scannedDocument = doc,
-                                            errorMessage = null,
-                                            isScanFrozen = true   // ← para o stream visual
+                                            errorMessage    = null,
+                                            isScanFrozen    = true
                                         )
                                     }
-                                    // ★ NÃO chamar confirmDocument() aqui
                                 } else {
-                                    setState {
-                                        copy(
-                                            scanState = MrzScanState.Error("Documento não reconhecido"),
-                                            errorMessage = "Documento não reconhecido",
-                                            isScanFrozen = true
-                                        )
-                                    }
+                                    freezeTemporarily(
+                                        newScanState = MrzScanState.Error("Documento não reconhecido"),
+                                        message      = "Documento não reconhecido",
+                                        // Erro sem documento: desbloqueia rápido
+                                        durationMs   = 1_500L
+                                    )
                                 }
                             }
 
                             is MrzScanState.SecurityCheckFailed -> {
-                                // ★ FIX ALERTA: congelar por 3 segundos depois descongelar
-                                // para o utilizador ver a mensagem antes do próximo frame
-                                setState {
-                                    copy(
-                                        scanState = scanState,
-                                        errorMessage = scanState.reason,
-                                        isScanFrozen = true   // ← bloqueia frames seguintes
-                                    )
-                                }
-                                // Descongelar após 3s para retomar scanning automático
-                                viewModelScope.launch {
-                                    kotlinx.coroutines.delay(3_000)
-                                    setState { copy(isScanFrozen = false, errorMessage = null) }
-                                }
+                                // SecurityCheckFailed: mostra aviso mas desbloqueia RÁPIDO (1.5s).
+                                // O analyzer já tem debounce interno (3 falhas seguidas), por isso
+                                // quando chega aqui é genuinamente suspeito — mas não deve bloquear
+                                // mais do que 1-2 segundos, para não frustrar documentos reais com
+                                // reflexo momentâneo.
+                                freezeTemporarily(
+                                    newScanState = scanState,
+                                    message      = scanState.reason,
+                                    durationMs   = 1_500L
+                                )
                             }
 
                             is MrzScanState.Error -> {
-                                setState {
-                                    copy(
-                                        scanState = scanState,
-                                        errorMessage = scanState.message,
-                                        isScanFrozen = true
-                                    )
-                                }
-                                viewModelScope.launch {
-                                    kotlinx.coroutines.delay(3_000)
-                                    setState { copy(isScanFrozen = false, errorMessage = null) }
-                                }
+                                freezeTemporarily(
+                                    newScanState = scanState,
+                                    message      = scanState.message,
+                                    durationMs   = 1_500L
+                                )
                             }
 
                             else -> setState { copy(scanState = scanState) }
@@ -316,7 +246,7 @@ class IdentificationDocumentViewModel(
                 if (e is kotlinx.coroutines.CancellationException) return@launch
                 setState {
                     copy(
-                        scanState = MrzScanState.Error("Erro ao iniciar scanning"),
+                        scanState    = MrzScanState.Error("Erro ao iniciar scanning"),
                         errorMessage = e.message
                     )
                 }
@@ -324,23 +254,46 @@ class IdentificationDocumentViewModel(
         }
     }
 
+    /**
+     * Congela a UI por [durationMs] milissegundos e depois retoma automaticamente.
+     * Cancela qualquer timer anterior para evitar sobreposições.
+     */
+    private fun freezeTemporarily(
+        newScanState: MrzScanState,
+        message: String?,
+        durationMs: Long
+    ) {
+        setState {
+            copy(
+                scanState    = newScanState,
+                errorMessage = message,
+                isScanFrozen = true
+            )
+        }
+        unfreezeJob?.cancel()
+        unfreezeJob = viewModelScope.launch {
+            delay(durationMs)
+            setState { copy(isScanFrozen = false, errorMessage = null) }
+        }
+    }
 
     private fun retryScanning() {
+        unfreezeJob?.cancel()
         scanningJob?.cancel()
         scanningJob = null
         setState {
             copy(
                 scannedDocument = null,
-                scanState = MrzScanState.Scanning,
-                errorMessage = null,
-                isScanFrozen = false
+                scanState       = MrzScanState.Scanning,
+                errorMessage    = null,
+                isScanFrozen    = false
             )
         }
         startScanning()
     }
 
-
     private fun stopScanning() {
+        unfreezeJob?.cancel()
         scanningJob?.cancel()
         scanningJob = null
         scannerInteractor.stopScanning()
@@ -349,22 +302,21 @@ class IdentificationDocumentViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        unfreezeJob?.cancel()
         scanningJob?.cancel()
         scannerInteractor.stopScanning()
         lifecycleOwner = null
-        previewView = null
+        previewView    = null
     }
 
-    // ============================================
-    // Tratamento de Resultados
-    // ============================================
+    // ── Resultados ────────────────────────────────────────────────────────────
 
     private fun handleScanResult(event: Event.OnScanResult) {
         setState {
             copy(
                 scannedDocument = event.document,
-                scanState = MrzScanState.Success(event.document),
-                errorMessage = null
+                scanState       = MrzScanState.Success(event.document),
+                errorMessage    = null
             )
         }
     }
@@ -373,7 +325,7 @@ class IdentificationDocumentViewModel(
         setState {
             copy(
                 errorMessage = event.message,
-                scanState = MrzScanState.Error(event.message)
+                scanState    = MrzScanState.Error(event.message)
             )
         }
     }
@@ -399,13 +351,10 @@ class IdentificationDocumentViewModel(
         setEffect {
             Effect.Navigation.SwitchScreen(
                 screenRoute = generateComposableNavigationLink(
-                    screen = DashboardScreens.FaceIdDetails,
-                    arguments = generateComposableArguments(
-                        mapOf("documentId" to jsonDoc)
-                    )
+                    screen    = DashboardScreens.FaceIdDetails,
+                    arguments = generateComposableArguments(mapOf("documentId" to jsonDoc))
                 )
             )
         }
     }
-
 }
