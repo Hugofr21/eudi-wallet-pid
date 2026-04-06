@@ -34,7 +34,6 @@ data class MrzDate(
         }
 
         private fun parse(raw: String, isExpiry: Boolean): MrzDate {
-            // 1. Limpeza de OCR (Numérica)
             val clean = raw.replace('O', '0')
                 .replace('o', '0')
                 .replace('I', '1')
@@ -42,7 +41,6 @@ data class MrzDate(
                 .replace('S', '5')
                 .replace('B', '8')
                 .replace('Z', '2')
-                // Garante apenas dígitos
                 .filter { it.isDigit() }
 
             if (clean.length != 6) {
@@ -53,15 +51,9 @@ data class MrzDate(
             val mm = clean.substring(2, 4).toInt()
             val dd = clean.substring(4, 6).toInt()
 
-            // 2. Cálculo do Século
             val fullYear = if (isExpiry) {
-                // Validade: Se YY < 60 assumimos 20YY. Se > 60 assumimos 19YY (documento antigo expirado)
-                // Ajuste este threshold conforme necessário (atualmente 2060)
                 if (yy < 60) 2000 + yy else 1900 + yy
             } else {
-                // Nascimento:
-                // Se o ano YY é maior que o ano atual (ex: estamos em 25, data é 90), é 1990.
-                // Se o ano YY é menor/igual (ex: data é 10), é 2010.
                 if (yy > currentYear2Digits) 1900 + yy else 2000 + yy
             }
 

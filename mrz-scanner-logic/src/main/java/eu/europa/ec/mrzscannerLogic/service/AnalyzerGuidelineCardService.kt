@@ -106,9 +106,6 @@ class AnalyzerGuidelineCardServiceImpl(
         )
     }
 
-    // =========================================================================
-    // SCORE PONDERADO
-    // =========================================================================
 
     private fun computeWeightedScore(results: List<CheckResult>): Float {
         if (results.isEmpty()) return 1f
@@ -119,10 +116,6 @@ class AnalyzerGuidelineCardServiceImpl(
         }
         return if (wTotal > 0) wSum / wTotal else 1f
     }
-
-    // =========================================================================
-    // CLASSIFICADOR DE ATAQUE
-    // =========================================================================
 
     private fun classifyAttackType(checks: List<CheckResult>, score: Float): AntiSpoofingReport.AttackType {
         if (score >= 0.65f) return AntiSpoofingReport.AttackType.REAL_CARD

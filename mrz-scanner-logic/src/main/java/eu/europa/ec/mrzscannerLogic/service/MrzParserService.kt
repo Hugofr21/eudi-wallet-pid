@@ -27,7 +27,6 @@ interface MrzParserService {
 
 class MrzParserServiceImpl(
     private val checksumService: ChecksumValidationService,
-    private val correctionService: OcrCorrectionService
 ):MrzParserService {
 
 

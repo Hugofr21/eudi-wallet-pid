@@ -27,7 +27,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Analyzer otimizado para deteção AUTOMÁTICA e CONTÍNUA de documentos MRZ.
- *
+ *  O analisador tem com obejcto cria dois tipo de leitor  DE icao PAR PASSPORT que comceça ifornaçao com <<
+ *  O segundo leitor de passpor usdo ORC  e ROI apra tamanho leitir pcarta conduçao para capataçai de texto dos cartoes
  * Correções principais:
  * - Período de warmup: primeiros [warmupFrames] frames ignoram anti-spoofing (sensores
  *   ainda estão a calibrar e qualquer leitura seria instável).
@@ -66,22 +67,14 @@ class MrzImageAnalyzer(
         checkMoirePattern = true,
         checkGyroscope = true,
         checkAccelerometer = true,
-        // Threshold mais permissivo: documentos físicos reais sob iluminação
-        // ambiente normal têm scores entre 0.55–0.75. Valores acima de 0.75
-        // são para ambiente de laboratório.
-        threshold = 0.55f
+        threshold = 0.75f
     )
 
     private val isProcessing = AtomicBoolean(false)
     @Volatile private var lastProcessTime = 0L
 
-    // Contador de frames totais processados (para warmup)
     private val frameCount = AtomicInteger(0)
-
-    // Falhas de anti-spoofing consecutivas (reset quando passa)
     private var consecutiveAntiSpoofFails = 0
-
-    // Sucessos MRZ consecutivos (para requiredSuccessFrames > 1)
     private var consecutiveSuccessCount = 0
     private var lastDetectedDocument: MrzDocument? = null
 
@@ -119,7 +112,6 @@ class MrzImageAnalyzer(
 
         scope.launch(dispatcher) {
             try {
-                // ── 1. Anti-spoofing (com warmup e debounce) ──────────────────────────
                 val isInWarmup = currentFrame <= warmupFrames
 
                 if (!isInWarmup) {
@@ -165,7 +157,6 @@ class MrzImageAnalyzer(
                     Log.d("MrzAnalyzer", "Warmup frame $currentFrame/$warmupFrames — a saltar anti-spoofing")
                 }
 
-                // ── 2. OCR ────────────────────────────────────────────────────────────
                 val inputImage = InputImage.fromBitmap(croppedBitmap, 0)
                 val textResult = textRecognitionService.recognizeText(inputImage, 0)
 

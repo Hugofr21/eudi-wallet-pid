@@ -17,9 +17,9 @@ class DriverLicenseParseServiceImpl : DriverLicenseParseService {
         "4b" to Regex("(?i)^[4A&6]\\s*[bB86][.,]+"),
         "4c" to Regex("(?i)^[4A&]\\s*[cC][.,]+"),
         "4d" to Regex("(?i)^[4A&]\\s*[dD0][.,]+"),
-        "5" to Regex("^(5|S|s)[.,\\s]+"),
-        "8" to Regex("^(8|B)[.,\\s]+"),
-        "9" to Regex("^(9|g)[.,\\s]+")
+        "5" to Regex("^(5)[.,\\s]+"),
+        "8" to Regex("^(8)[.,\\s]+"),
+        "9" to Regex("^(9)[.,\\s]+")
     )
 
     override fun parse(textResult: Text): MrzParseResult {
@@ -136,55 +136,105 @@ class DriverLicenseParseServiceImpl : DriverLicenseParseService {
         return raw.replace(Regex("^[12Ili][.,\\s]+"), "").trim()
     }
 
+    /**
+     * Formato oficial IMT: XX-NNNNNN D
+     *   XX     = 2 letras maiúsculas (código da conservatória)
+     *   NNNNNN = 5 ou 6 dígitos
+     *   D      = 1 dígito verificador (separado por espaço)
+     *
+     * Exemplos válidos: AA-123456 7 / PR-12345 6 / BR-654321 0
+     */
     private fun fixLicenseNumber(raw: String): String {
         if (raw.isBlank()) return ""
 
-        var clean = raw.uppercase()
-            .replace("5.", "")
-            .replace("-", "")
-            .replace(" ", "")
+        // 1. Limpeza básica: remove o prefixo "5." que o OCR lê do campo 5
+        val cleaned = raw
+            .uppercase()
+            .replace(Regex("^5[.,\\s]+"), "")
             .replace(".", "")
             .trim()
 
-        if (clean.length < 8) return raw
-        if (clean.length > 9) clean = clean.substring(0, 9)
+        // 2. Tenta primeiro corresponder ao formato já correto (ou quase)
+        //    Aceita variações OCR no hífen: traço, espaço, nada
+        val formatRegex = Regex(
+            "^([A-Z]{2})" +          // prefixo: 2 letras
+                    "[\\-\\s]?" +            // hífen opcional (pode ter caído no OCR)
+                    "(\\d{5,6})" +           // corpo: 5 ou 6 dígitos
+                    "[\\s]?" +               // espaço opcional antes do dígito verificador
+                    "(\\d)$"                 // dígito verificador
+        )
 
-        val prefix = clean.substring(0, 2).map {
-            when (it) {
-                '1', '|', '!' -> 'I'
-                '5' -> 'S'
-                '8' -> 'B'
-                '0' -> 'O'
-                else -> it
+        formatRegex.find(cleaned)?.let { match ->
+            val prefix = match.groupValues[1]
+            val body   = match.groupValues[2]
+            val check  = match.groupValues[3]
+            return "$prefix-$body $check"
+        }
+
+        // 3. Se não corresponde ainda, tenta corrigir confusões OCR comuns
+        //    antes de tentar de novo
+        val corrected = correctOcrConfusions(cleaned)
+        formatRegex.find(corrected)?.let { match ->
+            val prefix = match.groupValues[1]
+            val body   = match.groupValues[2]
+            val check  = match.groupValues[3]
+            return "$prefix-$body $check"
+        }
+
+        // 4. Não foi possível normalizar — devolve o cleaned sem destruir
+        return cleaned
+    }
+
+    /**
+     * Corrige apenas as confusões OCR típicas, separando prefixo (letras)
+     * do corpo (dígitos) sem assumir qual é o prefixo.
+     *
+     * Regra: os primeiros 2 chars devem ser LETRAS, o resto DÍGITOS + verificador.
+     */
+    private fun correctOcrConfusions(input: String): String {
+        // Remove hífen e espaços para trabalhar em bruto
+        val bare = input.replace("-", "").replace(" ", "")
+
+        if (bare.length < 8) return input   // curto demais para normalizar
+
+        // Corrige os 2 chars do prefixo: dígitos que parecem letras
+        val prefixFixed = bare.substring(0, 2).map { c ->
+            when (c) {
+                '0'      -> 'O'
+                '1', '!' -> 'I'
+                '5'      -> 'S'
+                '8'      -> 'B'
+                else     -> c
             }
         }.joinToString("")
 
-        // Normalização forte para Portugal (L-Lisboa)
-        var finalPrefix = prefix
-        if (prefix == "BR" || prefix == "IR" || prefix == "1R") finalPrefix = "L"
+        // Corrige o corpo (posições 2..end-1): letras que parecem dígitos
+        val bodyRaw   = bare.substring(2, bare.length - 1)
+        val checkChar = bare.last()
 
-        val body = clean.substring(2).map {
-            when (it) {
+        val bodyFixed = bodyRaw.map { c ->
+            when (c) {
                 'O', 'D', 'Q' -> '0'
                 'I', 'L', '|' -> '1'
-                'Z' -> '2'
-                'E' -> '3'
-                'A' -> '4'
-                'S' -> '5'
-                'G' -> '6'
-                'T' -> '7'
-                'B' -> '8'
-                else -> it
+                'Z'            -> '2'
+                'E'            -> '3'
+                'A'            -> '4'
+                'S'            -> '5'
+                'G'            -> '6'
+                'T'            -> '7'
+                'B'            -> '8'
+                else           -> c
             }
         }.joinToString("")
 
-        return if (body.length >= 7) {
-            val mainNum = body.substring(0, 6)
-            val checkDigit = body.substring(6, 7)
-            "$finalPrefix-$mainNum $checkDigit"
-        } else {
-            "$finalPrefix-$body"
+        val checkFixed = when (checkChar) {
+            'O', 'D' -> '0'
+            'I', 'L' -> '1'
+            'Z'      -> '2'
+            else     -> checkChar
         }
+
+        return "$prefixFixed-$bodyFixed $checkFixed"
     }
 
     private fun splitBirthDateAndPlace(text: String): Pair<String?, String?> {
@@ -240,9 +290,18 @@ class DriverLicenseParseServiceImpl : DriverLicenseParseService {
      * Updated to support common commas in PT formatting (e.g., "B1, B").
      */
     private fun findCategoriesFallback(fullText: String): String? {
-        val regex = Regex("\\b(AM|A1|A2|A|B1|B|C1|C|D1|D|BE|CE|DE)\\b")
-        val matches = regex.findAll(fullText).map { it.value }.distinct().toList()
-        return if (matches.isNotEmpty()) matches.joinToString(", ") else null
+        // Só aceita se houver pelo menos 2 categorias juntas, ou B1/A1/etc (com número)
+        // Evita apanhar "B" ou "A" isolados que são iniciais de nomes
+        val groupRegex = Regex(
+            "\\b(AM|A1|A2|B1|C1|D1|BE|CE|DE|A|B|C|D)\\b" +
+                    "(?:[,\\s/]+\\b(AM|A1|A2|B1|C1|D1|BE|CE|DE|A|B|C|D)\\b)+"
+        )
+        val match = groupRegex.find(fullText) ?: return null
+
+        // Extrai todas as categorias do grupo encontrado
+        val singleRegex = Regex("\\b(AM|A1|A2|B1|C1|D1|BE|CE|DE|A|B|C|D)\\b")
+        return singleRegex.findAll(match.value).map { it.value }.distinct().joinToString(", ")
+            .ifBlank { null }
     }
 
     private fun String.sanitizeName(): String = this.replace(Regex("[^A-Za-zÀ-ÖØ-öø-ÿ\\s-]"), "").trim()

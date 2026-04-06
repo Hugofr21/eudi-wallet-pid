@@ -1,6 +1,6 @@
 package eu.europa.ec.mrzscannerLogic.di
 
-import android.hardware.SensorManager
+
 import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.controller.log.LogController
 import eu.europa.ec.mrzscannerLogic.controller.LivenessDetectionFaceController
@@ -21,8 +21,6 @@ import eu.europa.ec.mrzscannerLogic.service.FaceService
 import eu.europa.ec.mrzscannerLogic.service.FaceServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.MrzParserService
 import eu.europa.ec.mrzscannerLogic.service.MrzParserServiceImpl
-import eu.europa.ec.mrzscannerLogic.service.OcrCorrectionService
-import eu.europa.ec.mrzscannerLogic.service.OcrCorrectionServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.SensorDocumentService
 import eu.europa.ec.mrzscannerLogic.service.SensorDocumentServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.TextRecognitionService
@@ -50,13 +48,6 @@ fun provideCameraFrontService(
     logController: LogController
 ): CameraFrontService =
     CameraFrontServiceImpl(resourceProvider, logController)
-
-
-
-@Single
-fun provideOcrCorrectionService(): OcrCorrectionService =
-    OcrCorrectionServiceImpl()
-
 @Single
 fun provideChecksumValidationService(): ChecksumValidationService =
     ChecksumValidationServiceImpl()
@@ -64,11 +55,9 @@ fun provideChecksumValidationService(): ChecksumValidationService =
 @Single
 fun provideMrzParserService(
     checksumService: ChecksumValidationService,
-    correctionService: OcrCorrectionService
 ): MrzParserService =
     MrzParserServiceImpl(
         checksumService = checksumService,
-        correctionService = correctionService
     )
 
 @Single
