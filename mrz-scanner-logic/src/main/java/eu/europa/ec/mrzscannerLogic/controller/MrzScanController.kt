@@ -21,6 +21,7 @@ import eu.europa.ec.mrzscannerLogic.service.TextRecognitionService
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -71,13 +72,13 @@ class MrzScanControllerImpl(
     private val textRecognitionService: TextRecognitionService
 ) : MrzScanController {
 
-    // 120 ms = ~8 fps. Rápido o suficiente sem sobrecarregar o ML Kit.
-    // Para câmaras mais lentas (dispositivos antigos) pode subir para 200ms.
     private val throttleMs = 120L
-
     private var tapToFocusEnabled = false
     private var lifecycleOwnerRef: LifecycleOwner? = null
     private var previewViewRef: PreviewView? = null
+
+    // Escopo gerenciado para garantir o encerramento correto dos analisadores.
+    private var analyzerScope: CoroutineScope? = null
 
     override fun startScanning(
         lifecycleOwner: LifecycleOwner,
@@ -97,9 +98,13 @@ class MrzScanControllerImpl(
         }
 
         try {
-            sensorDocumentService.start(needsRotation = true, needsAccel = true)
 
-            val analyzer = createAnalyzer(scanType, this)
+            sensorDocumentService.reset()
+            analyzerGuidelineCardService.reset()
+
+            sensorDocumentService.start(needsRotation = true, needsAccel = true)
+            analyzerScope = CoroutineScope(Dispatchers.Default)
+            val analyzer = createAnalyzer(scanType, this, analyzerScope!!)
 
             Log.d("MrzScanControllerImpl", "Analyzer: ${analyzer.javaClass.simpleName}")
 
@@ -122,26 +127,27 @@ class MrzScanControllerImpl(
 
     private fun createAnalyzer(
         scanType: ScanType,
-        scope: ProducerScope<MrzScanState>
+        resultScope: ProducerScope<MrzScanState>,
+        managedScope: CoroutineScope
     ): ImageAnalysis.Analyzer {
         return when (scanType) {
             is ScanType.Face -> FaceCardImageAnalyzer(
-                resultFlow = scope,
+                resultFlow = resultScope,
                 faceService = faceService,
                 antiSpoofingService = analyzerGuidelineCardService,
                 sensorDocumentService = sensorDocumentService,
-                scope = CoroutineScope(Dispatchers.Default),
+                scope = managedScope,
                 dispatcher = Dispatchers.Default
             )
 
             is ScanType.Document -> MrzImageAnalyzer(
-                resultFlow = scope,
+                resultFlow = resultScope,
                 parserService = parserService,
                 driverLicenseParser = driverLicenseParseService,
                 textRecognitionService = textRecognitionService,
                 antiSpoofingService = analyzerGuidelineCardService,
                 sensorDocumentService = sensorDocumentService,
-                scope = CoroutineScope(Dispatchers.Default),
+                scope = managedScope,
                 dispatcher = Dispatchers.Default,
                 throttleMs = throttleMs,
                 requiredSuccessFrames = 1,
@@ -149,7 +155,7 @@ class MrzScanControllerImpl(
                 maxConsecutiveAntiSpoofFails = 3,
             )
 
-            else ->  {}
+            else -> throw IllegalArgumentException("Unsupported ScanType")
         } as ImageAnalysis.Analyzer
     }
 
@@ -157,6 +163,8 @@ class MrzScanControllerImpl(
         cameraService.stop()
         sensorDocumentService.stop()
         textRecognitionService.release()
+        analyzerScope?.cancel()
+        analyzerScope = null
     }
 
     override fun isCameraAvailable(): Boolean {

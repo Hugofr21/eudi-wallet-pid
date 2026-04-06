@@ -24,6 +24,8 @@ interface AnalyzerGuidelineCardService {
         accelerometerData: FloatArray? = null
     ): AntiSpoofingReport
     fun release()
+
+    fun reset()
 }
 
 class AnalyzerGuidelineCardServiceImpl(
@@ -834,6 +836,19 @@ class AnalyzerGuidelineCardServiceImpl(
         frameHashHistory.clear()
         moireEnergyWindow.clear()
         previousBitmapForOVI      = null
+        previousRotationMatrix    = null
+        previousGradientCentroids = null
+        zeroSpecularFrames        = 0
+    }
+
+    override fun reset() {
+        accelerometerHistory.clear()
+        frameHashHistory.clear()
+        moireEnergyWindow.clear()
+
+        previousBitmapForOVI?.takeIf { !it.isRecycled }?.recycle()
+        previousBitmapForOVI = null
+
         previousRotationMatrix    = null
         previousGradientCentroids = null
         zeroSpecularFrames        = 0

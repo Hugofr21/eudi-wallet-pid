@@ -17,21 +17,24 @@ interface SensorDocumentService {
     val actual: SensorSnapshot
     fun start(needsRotation: Boolean, needsAccel: Boolean)
     fun stop()
+    fun reset()
 }
 
 class SensorDocumentServiceImpl(
     private val log: LogController,
     private val resourceProvider: ResourceProvider,
+) : SensorDocumentService, SensorEventListener {
 
-    ) : SensorDocumentService, SensorEventListener {
     private val sensorManager: SensorManager by lazy {
         resourceProvider.provideContext().getSystemService(Context.SENSOR_SERVICE) as SensorManager
     }
+
     private val _sensorFlow = MutableStateFlow(SensorSnapshot())
     override val sensorFlow: StateFlow<SensorSnapshot> = _sensorFlow.asStateFlow()
 
     private val bufferRotationMatrix = FloatArray(9) { if (it % 4 == 0) 1f else 0f }
     private val bufferAccelerometer = FloatArray(3)
+
     @Volatile private var lastTimestampMs: Long = 0L
     private var isRunning = false
 
@@ -59,13 +62,27 @@ class SensorDocumentServiceImpl(
         }
     }
 
+    override fun reset() {
+        stop()
+
+        for (i in bufferRotationMatrix.indices) {
+            bufferRotationMatrix[i] = if (i % 4 == 0) 1f else 0f
+        }
+
+        for (i in bufferAccelerometer.indices) {
+            bufferAccelerometer[i] = 0f
+        }
+
+        lastTimestampMs = 0L
+        _sensorFlow.value = SensorSnapshot()
+    }
+
     override fun stop() {
         if (!isRunning) return
         sensorManager.unregisterListener(this)
         isRunning = false
         lastTimestampMs = 0L
     }
-
 
     override fun onSensorChanged(event: SensorEvent) {
         lastTimestampMs = System.currentTimeMillis()
@@ -80,6 +97,8 @@ class SensorDocumentServiceImpl(
                 bufferAccelerometer[2] = event.values[2]
             }
         }
+
+        _sensorFlow.value = actual
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
