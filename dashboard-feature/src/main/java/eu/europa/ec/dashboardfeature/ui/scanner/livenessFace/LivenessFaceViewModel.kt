@@ -20,9 +20,9 @@ import eu.europa.ec.uilogic.navigation.DashboardScreens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewModelScope
+import eu.europa.ec.dashboardfeature.ui.scanner.utils.Challenge.toInstruction
+import eu.europa.ec.dashboardfeature.ui.scanner.utils.Challenge.toLabel
 import org.koin.android.annotation.KoinViewModel
-
-// ── State ─────────────────────────────────────────────────────────────────────
 
 data class State(
     val isLoading: Boolean = false,
@@ -33,8 +33,9 @@ data class State(
     val faceFeatures: FaceFeatures? = null,
     val countdownSeconds: Int? = null,
     val errorMessage: String? = null,
-    val currentChallengeMessage: String = "A preparar câmara…",
-    val completedChallenges: List<String> = emptyList()
+    val currentChallengeMessage: String = "Preparing camera…",
+    val completedChallenges: List<String> = emptyList(),
+    val savedSelfiePath: String? = null
 ) : ViewState
 
 
@@ -64,7 +65,6 @@ sealed class Effect : ViewSideEffect {
     }
 }
 
-// ── ViewModel ─────────────────────────────────────────────────────────────────
 
 @KoinViewModel
 class LivenessFaceViewModel(
@@ -88,15 +88,13 @@ class LivenessFaceViewModel(
         }
     }
 
-    // ── Scanner lifecycle ─────────────────────────────────────────────────────
-
     private fun handleInitializeScanner(event: Event.InitializeScanner) {
         passedChallengeLabels.clear()
         setState {
             copy(
                 isLoading = true,
                 completedChallenges = emptyList(),
-                currentChallengeMessage = "A iniciar câmara…"
+                currentChallengeMessage = "Starting camera…"
             )
         }
         viewModelScope.launch {
@@ -111,12 +109,9 @@ class LivenessFaceViewModel(
         }
     }
 
-    // ── Liveness update dispatcher ────────────────────────────────────────────
-
     private fun handleLivenessUpdate(update: LivenessUpdate) {
         when (update) {
             is LivenessUpdate.ActiveFrame -> {
-                // Forward both bitmap and face contour features for live overlay rendering
                 setState {
                     copy(
                         previewBitmap = update.bitmap ?: previewBitmap,
@@ -132,7 +127,7 @@ class LivenessFaceViewModel(
     private fun handleChallengeState(challengeState: ChallengeState) {
         when (challengeState) {
             ChallengeState.Idle -> setState {
-                copy(isLoading = false, currentChallengeMessage = "A processar…")
+                copy(isLoading = false, currentChallengeMessage = "Preparing…")
             }
 
             is ChallengeState.Pending -> setState {
@@ -171,6 +166,11 @@ class LivenessFaceViewModel(
     private fun handleSessionResult(result: LivenessResult) {
         when (result) {
             is LivenessResult.Success -> {
+                val jpeg = result.capturedJpeg
+                val path = if (jpeg.isNotEmpty()) {
+                    livenessInteractor.saveCapturedSelfie(jpeg)
+                } else null
+
                 val bitmap = result.capturedJpeg
                     .takeIf { it.isNotEmpty() }
                     ?.let { ImageUtils.bytesToBitmap(it) }
@@ -182,12 +182,11 @@ class LivenessFaceViewModel(
                             isLoading = false,
                             isSessionComplete = true,
                             capturedBitmap = bitmap,
+                            savedSelfiePath  = path,
                             errorMessage = null
                         )
                     }
                 } else {
-                    // FIX: JPEG empty → still mark complete so FaceIdCaptureErrorPanel shows
-                    // instead of falling back to the scanning panel
                     setState {
                         copy(
                             isLoading = false,
@@ -207,8 +206,6 @@ class LivenessFaceViewModel(
         }
     }
 
-    // ── State resets ──────────────────────────────────────────────────────────
-
     private fun resetScreenState() {
         capturedSelfieBitmap = null
         passedChallengeLabels.clear()
@@ -223,7 +220,7 @@ class LivenessFaceViewModel(
                 countdownSeconds = null,
                 errorMessage = null,
                 completedChallenges = emptyList(),
-                currentChallengeMessage = "A preparar câmara…"
+                currentChallengeMessage = "Preparing camera…"
             )
         }
     }
@@ -258,7 +255,8 @@ class LivenessFaceViewModel(
             setState { copy(isLoading = true) }
             @Suppress("UNUSED_VARIABLE")
             val selfieBytes = ImageUtils.bitmapToBytes(selfie)
-            // FIX: navigation was commented out in original
+            val saved = livenessInteractor.saveCapturedSelfie(selfieBytes)
+
             setEffect {
                 Effect.Navigation.SwitchScreen(
                     screenRoute = DashboardScreens.Profile.screenRoute,
@@ -267,24 +265,5 @@ class LivenessFaceViewModel(
                 )
             }
         }
-    }
-
-
-    private fun Challenge.toLabel(): String = when (this) {
-        Challenge.LOOK_LEFT  -> "Olhou para a esquerda"
-        Challenge.LOOK_RIGHT -> "Olhou para a direita"
-        Challenge.BLINK      -> "Piscou os olhos"
-        Challenge.SMILE      -> "Sorriu"
-        Challenge.OPEN_MOUTH -> "Abriu a boca"
-        Challenge.NOD        -> "Acenou com a cabeça"
-    }
-
-    private fun Challenge.toInstruction(): String = when (this) {
-        Challenge.LOOK_LEFT  -> "Olhe para a esquerda"
-        Challenge.LOOK_RIGHT -> "Olhe para a direita"
-        Challenge.BLINK      -> "Pisque os olhos"
-        Challenge.SMILE      -> "Sorria"
-        Challenge.OPEN_MOUTH -> "Abra a boca"
-        Challenge.NOD        -> "Acene com a cabeça"
     }
 }

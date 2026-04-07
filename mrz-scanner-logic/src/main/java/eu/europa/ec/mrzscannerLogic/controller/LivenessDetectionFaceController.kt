@@ -113,6 +113,10 @@ interface LivenessDetectionFaceController {
 
     fun stopScanning()
     fun isScanning(): Boolean
+    fun saveSelfie(jpegBytes: ByteArray): String?
+    fun getSelfieBytes(): ByteArray?
+    fun clearSelfie()
+
 }
 
 
@@ -142,13 +146,10 @@ class LivenessDetectionFaceControllerImpl(
     private var baselinePitch: Float? = null
     private var eyesWereClosed = false
 
-    /** Most recent camera frame — always fresh when the terminal challenge fires. */
     @Volatile private var latestFrameBitmap: Bitmap? = null
 
-
-    companion object {
-        private const val LOG_FILE_PATTERN = "eudi-android-wallet-image%g.bin"
-    }
+    private val selfieFile: File
+        get() = File(context.provideContext().filesDir, "pending_selfie.jpg")
 
     private val logsDir = File(context.provideContext().filesDir.absolutePath + "/logs")
     private val tag: String = "EUDI Wallet ${configLogic.appFlavor}-${configLogic.appBuildType}"
@@ -223,6 +224,27 @@ class LivenessDetectionFaceControllerImpl(
 
     override fun isScanning(): Boolean = cameraFrontService.isRunning()
 
+
+    override fun saveSelfie(jpegBytes: ByteArray): String? {
+        return try {
+            selfieFile.writeBytes(jpegBytes)
+            selfieFile.absolutePath
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    override fun getSelfieBytes(): ByteArray? {
+        return try {
+            if (selfieFile.exists()) selfieFile.readBytes() else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    override fun clearSelfie() {
+        if (selfieFile.exists()) selfieFile.delete()
+    }
 
     fun onNewFrame(geometry: FaceGeometry) {
         val state = _challengeState.value

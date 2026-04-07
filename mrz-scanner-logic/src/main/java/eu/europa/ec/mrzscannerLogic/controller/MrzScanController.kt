@@ -76,9 +76,39 @@ class MrzScanControllerImpl(
     private var tapToFocusEnabled = false
     private var lifecycleOwnerRef: LifecycleOwner? = null
     private var previewViewRef: PreviewView? = null
-
-    // Escopo gerenciado para garantir o encerramento correto dos analisadores.
     private var analyzerScope: CoroutineScope? = null
+
+     /*
+      * Objective:
+      * Implement an Android instance to initialize the camera and analyze a frame-processing pipeline using
+      * ImageAnalysis (CameraX) integrated with ML Kit, enabling automatic reading and extraction of data
+      * from identification documents.
+      *
+      * Technical context:
+      * The system must operate through continuous frame analysis captured by the camera, processing frames
+      * via an ImageAnalyzer integrated with ML Kit (e.g., OCR and/or document detection), in order to detect,
+      * classify, and interpret relevant information present on physical ID cards.
+      *
+      * Supported document types:
+      * The pipeline must be capable of recognizing and processing, at minimum, the following documents:
+      * - Identity Card (ID Card)
+      * - Driving License
+      * - Citizen Card
+      *
+      * Standards compliance:
+      * Document processing must follow the formats and requirements defined by international standards,
+      * namely ISO/IEC 18013-7 (Mobile Driving Licence / mDL and associated data models) and other applicable
+      * ISO standards related to civil identification and credential interoperability.
+      *
+      * Data requirements and validation:
+      * The system must support the extraction of specific identifiers and attributes (e.g., PID, ARF, or
+      * other regulated identifiers), allowing the determination of which mandatory attributes must be
+      * collected depending on the credential type and the required verification profile.
+      *
+      * The pipeline must validate the minimum required fields (mandatory attributes) imposed by applicable
+      * legislation or by verification entities, ensuring that only strictly necessary data is collected and
+      * processed, in compliance with data minimization and credential validation requirements.
+      */
 
     override fun startScanning(
         lifecycleOwner: LifecycleOwner,

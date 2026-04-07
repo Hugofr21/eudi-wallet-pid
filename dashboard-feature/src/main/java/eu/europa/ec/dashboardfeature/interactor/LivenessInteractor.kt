@@ -7,6 +7,7 @@ import eu.europa.ec.mrzscannerLogic.controller.LivenessResult
 import eu.europa.ec.mrzscannerLogic.controller.LivenessUpdate
 import eu.europa.ec.mrzscannerLogic.model.ScanType
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 
 interface LivenessInteractor {
     fun startLiveness(
@@ -17,6 +18,9 @@ interface LivenessInteractor {
 
     fun stop()
     fun isScanning(): Boolean
+    fun saveCapturedSelfie(jpegBytes: ByteArray): String?
+    fun getLastSelfiePath(): String?
+    fun clearSavedSelfie()
 }
 
 class LivenessInteractorImpl(
@@ -36,4 +40,14 @@ class LivenessInteractorImpl(
     }
 
     override fun isScanning(): Boolean = livenessController.isScanning()
+
+    override fun saveCapturedSelfie(jpegBytes: ByteArray): String? =
+        livenessController.saveSelfie(jpegBytes)
+
+    override fun getLastSelfiePath(): String? {
+        val bytes = livenessController.getSelfieBytes()
+        return if (bytes != null) "pending_selfie.jpg" else null
+    }
+
+    override fun clearSavedSelfie() = livenessController.clearSelfie()
 }

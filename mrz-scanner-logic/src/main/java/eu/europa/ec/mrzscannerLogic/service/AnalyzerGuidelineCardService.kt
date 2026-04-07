@@ -482,21 +482,55 @@ class AnalyzerGuidelineCardServiceImpl(
         }
     }
 
-    // =========================================================================
-    // TÉCNICA 6 — Homografia Planar (v5b — implementação corrigida)
-    //
-    // PROBLEMA na v5: previousCorners era calculado de bitmap.width/height,
-    // que são constantes entre frames → dx=0, dy=0, reprojError=0 sempre.
-    //
-    // FIX v5b: rastreio de centróides de gradiente por quadrante.
-    // Divide a imagem em 4 quadrantes e calcula o centróide ponderado pelo
-    // módulo do gradiente em cada quadrante (apenas píxeis com gradiente > 20).
-    //
-    // Para cartão rígido: os 4 centróides transladam em conjunto de forma
-    // consistente — erro de reprojeção < 2px.
-    // Para papel dobrado: pelo menos um centróide desloca-se de forma
-    // inconsistente com a translação global — erro > 6–12px.
-    // =========================================================================
+    /**
+     *
+     * TÉCNICA 6 — Homografia Planar
+     *
+     * Contexto técnico:
+     * Esta técnica foi concebida para distinguir comportamento de movimento rígido
+     * (ex.: cartão/plástico) versus deformação não rígida (ex.: papel dobrado),
+     * através da consistência geométrica entre frames sucessivos.
+     *
+     * Problema identificado na versão v5:
+     * A implementação anterior calculava "previousCorners" diretamente a partir de
+     * bitmap.width e bitmap.height. Como essas dimensões são invariantes entre
+     * frames, o deslocamento estimado (dx, dy) permanecia sempre igual a zero.
+     * Consequentemente, o erro de reprojeção ("reprojError") tornava-se trivialmente
+     * nulo, invalidando completamente a métrica de decisão.
+     *
+     * Correção introduzida na versão v5b:
+     * A versão v5b substitui o modelo incorreto por rastreio baseado em centróides
+     * de gradiente distribuídos espacialmente. A imagem é segmentada em quatro
+     * quadrantes (superior esquerdo, superior direito, inferior esquerdo, inferior
+     * direito). Em cada quadrante, calcula-se o centróide ponderado pelo módulo do
+     * gradiente, considerando apenas píxeis cujo gradiente exceda um limiar mínimo
+     * (gradiente > 20).
+     *
+     * Justificativa técnica:
+     * O módulo do gradiente atua como proxy de bordas e regiões com textura
+     * significativa, fornecendo pontos estáveis e relevantes para rastreio. Ao
+     * calcular centróides por quadrante, garante-se distribuição espacial mínima
+     * dos pontos de referência, evitando colapso em um único agrupamento local.
+     *
+     * Critério de decisão:
+     * Em um objeto rígido (cartão), os quatro centróides devem deslocar-se de forma
+     * aproximadamente consistente, obedecendo a uma transformação global próxima
+     * de translação/homografia, resultando em erro médio de reprojeção tipicamente
+     * inferior a 2 pixels.
+     *
+     * Em um objeto deformável (papel dobrado), a deformação local rompe a coerência
+     * do deslocamento global: ao menos um centróide apresenta movimento inconsistente
+     * em relação aos demais, elevando o erro de reprojeção para valores acima de
+     * 6–12 pixels.
+     *
+     * Observação crítica:
+     * Embora o termo "homografia planar" seja utilizado como referência conceitual,
+     * a implementação descrita não estima explicitamente uma matriz de homografia 3x3.
+     * O método aplica, na prática, uma heurística de consistência de deslocamento
+     * baseada em centróides de gradiente, o que é válido como critério empírico,
+     * mas não corresponde a uma estimação formal de homografia via DLT/RANSAC.
+     * =========================================================================
+     */
 
     private fun checkHomographyPlanarity(bitmap: Bitmap): Pair<Float, String?> {
         val w = bitmap.width; val h = bitmap.height

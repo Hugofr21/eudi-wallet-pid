@@ -137,11 +137,6 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     addConfigField("AGE_OPENID4VP_SCHEME", avOpenid4VpScheme)
                     addConfigField("ASP_OPENID4VP_SCHEME", aspScheme)
                     addConfigField("LISSI_SCHEME", lissiScheme)
-//                    addConfigField("LISSI_SCHEME2", lissiScheme2)
-//                    addConfigField(
-//                        "ISSUE_AUTHORIZATION_AV_DEEPLINK",
-//                        "$avOpenid4VpScheme://$openId4VciAuthorizationHost"
-//                    )
 
                     // Digital Credential API
                     addConfigField("AUTH_WEB_FIDO_SCHEME", authWebFidoScheme)
