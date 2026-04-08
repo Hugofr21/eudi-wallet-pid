@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -262,18 +261,7 @@ class LivenessDetectionFaceControllerImpl(
 
     private fun issueNextChallenge() {
         if (currentIndex >= sessionChallenges.size) {
-
-            val jpegBytes = latestFrameBitmap
-                ?.let { bitmapToJpeg(it) }
-                ?: ByteArray(0)
-
-            val successResult = LivenessResult.Success(jpegBytes)
-            _livenessResult.value = successResult
-            _challengeState.value = ChallengeState.Idle
-
-            _livenessUpdate.tryEmit(LivenessUpdate.SessionResult(successResult))
-
-            cameraFrontService.stop()
+            initiateFinalCaptureSequence()
             return
         }
 
@@ -300,6 +288,34 @@ class LivenessDetectionFaceControllerImpl(
                 delay(2000)
                 issueNextChallenge()
             }
+        }
+    }
+
+    private fun initiateFinalCaptureSequence() {
+        sessionJob?.cancel()
+        sessionJob = scope.launch {
+            for (secondsLeft in 3 downTo 1) {
+                _challengeState.value = ChallengeState.Countdown(secondsLeft)
+                delay(1000)
+            }
+
+            val currentBitmap = latestFrameBitmap
+            if (currentBitmap == null) {
+                val failureResult = LivenessResult.Failure("Failed to extract final logical frame.")
+                _livenessResult.value = failureResult
+                _livenessUpdate.tryEmit(LivenessUpdate.SessionResult(failureResult))
+                cameraFrontService.stop()
+                return@launch
+            }
+
+            val jpegBytes = bitmapToJpeg(currentBitmap)
+            val successResult = LivenessResult.Success(jpegBytes)
+
+            _livenessResult.value = successResult
+            _challengeState.value = ChallengeState.Idle
+            _livenessUpdate.tryEmit(LivenessUpdate.SessionResult(successResult))
+
+            cameraFrontService.stop()
         }
     }
 
