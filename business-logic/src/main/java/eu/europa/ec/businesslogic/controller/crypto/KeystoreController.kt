@@ -192,7 +192,6 @@ class KeystoreControllerImpl(
             }
         }
 
-        // Try to use StrongBox (Secure Element)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val pm = context.packageManager
             val hasStrongBox = pm.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)

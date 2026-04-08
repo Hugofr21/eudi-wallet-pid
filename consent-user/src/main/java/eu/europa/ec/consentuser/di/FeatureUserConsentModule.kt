@@ -23,6 +23,9 @@ import eu.europa.ec.consentuser.interactor.BackupRestoreInteractor
 import eu.europa.ec.consentuser.interactor.BackupRestoreInteractorImpl
 import eu.europa.ec.consentuser.interactor.ConsentInteractor
 import eu.europa.ec.consentuser.interactor.ConsentInteractorImpl
+import eu.europa.ec.consentuser.interactor.ImageCaptureInteractor
+import eu.europa.ec.consentuser.interactor.ImageCaptureInteractorImpl
+import eu.europa.ec.mrzscannerLogic.controller.LivenessDetectionFaceController
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
@@ -30,6 +33,12 @@ import org.koin.core.annotation.Module
 @Module
 @ComponentScan("eu.europa.ec.consentuser")
 class FeatureConsentUserModule
+
+@Factory
+fun provideConsentInteractor(
+    liveness : LivenessDetectionFaceController
+): ImageCaptureInteractor = ImageCaptureInteractorImpl(liveness)
+
 
 @Factory
 fun provideConsentInteractor(): ConsentInteractor = ConsentInteractorImpl()

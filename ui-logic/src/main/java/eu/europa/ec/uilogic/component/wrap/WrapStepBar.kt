@@ -17,22 +17,31 @@
 package eu.europa.ec.uilogic.component.wrap
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,10 +49,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -70,110 +81,146 @@ private val labelTextStyle: TextStyle
 
 private const val inactiveTextColorAlpha = 0.35f
 
-
 @Composable
 fun WrapStepBar(currentStep: Int, steps: List<String>, modifier: Modifier = Modifier) {
-    val textMeasurer = rememberTextMeasurer()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
-    val startIndex = calculateStartIndex(currentStep, steps, textMeasurer)
+    LaunchedEffect(currentStep) {
+        coroutineScope.launch {
+            val target = (currentStep - 1).coerceAtLeast(0)
+            listState.animateScrollToItem(target)
+        }
+    }
 
-    // Substituir a shape utilizada anteriormente por uma forma rectangular (0.dp)
-    ElevatedCard(
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(0.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = SIZE_EXTRA_SMALL.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.background,
-        ),
+        color = MaterialTheme.colorScheme.background,
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
     ) {
-        Box {
-            Indicator(currentStep, listState)
-
-            LazyRow(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clipToBounds(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                userScrollEnabled = true
-            ) {
-                itemsIndexed(steps) { index, text ->
-                    Label(
-                        text = text,
-                        index = index,
-                        currentStep = currentStep
+        LazyRow(
+            state = listState,
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            userScrollEnabled = true,
+            contentPadding = PaddingValues(horizontal = 8.dp)
+        ) {
+            itemsIndexed(steps) { index, text ->
+                if (index > 0) {
+                    Box(
+                        modifier = Modifier
+                            .width(24.dp)
+                            .height(1.dp)
+                            .background(
+                                if (index <= currentStep)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.outlineVariant
+                            )
                     )
                 }
+
+                StepItem(
+                    index = index,
+                    label = text,
+                    state = when {
+                        index < currentStep  -> StepState.DONE
+                        index == currentStep -> StepState.ACTIVE
+                        else                 -> StepState.PENDING
+                    }
+                )
             }
         }
     }
-
-    scrollToTheStartIndex(startIndex, coroutineScope, listState)
 }
 
-@Composable
-private fun Indicator(
-    currentStep: Int,
-    listState: LazyListState
-) {
-    val density = LocalDensity.current
-    val itemInfo = listState.layoutInfo.visibleItemsInfo.find { it.index == currentStep }
-    if (itemInfo != null) {
-        val offsetDp = with(density) { (itemInfo.offset).toDp() }
-        val widthDp = with(density) { (itemInfo.size).toDp() }
+private enum class StepState { DONE, ACTIVE, PENDING }
 
-        val indicatorHeight: Dp = 36.dp
+@Composable
+private fun StepItem(index: Int, label: String, state: StepState) {
+    val primary   = MaterialTheme.colorScheme.primary
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
+    val success   = Color(0xFF1D9E75)
+    val onSuccess = Color(0xFF04342C)
+    val outline   = MaterialTheme.colorScheme.outlineVariant
+
+    val circleColor = when (state) {
+        StepState.DONE    -> success
+        StepState.ACTIVE  -> primary
+        StepState.PENDING -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val circleContent = when (state) {
+        StepState.DONE    -> onSuccess
+        StepState.ACTIVE  -> onPrimary
+        StepState.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val labelColor = when (state) {
+        StepState.ACTIVE  -> primary
+        StepState.DONE    -> MaterialTheme.colorScheme.onSurfaceVariant
+        StepState.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+    }
+    val barColor = when (state) {
+        StepState.DONE, StepState.ACTIVE -> primary
+        StepState.PENDING                -> outline
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
+    ) {
 
         Box(
-            Modifier
-                .offset(x = offsetDp)
-                .width(widthDp)
-                .height(indicatorHeight)
-                .padding(vertical = 4.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(2.dp)
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(24.dp)
+                .background(circleColor, CircleShape)
+                .then(
+                    if (state == StepState.ACTIVE)
+                        Modifier.border(3.dp, primary.copy(alpha = 0.18f), CircleShape)
+                    else Modifier
                 )
+        ) {
+            if (state == StepState.DONE) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = circleContent,
+                    modifier = Modifier.size(13.dp)
+                )
+            } else {
+                Text(
+                    text = "${index + 1}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = circleContent,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(5.dp))
+
+        // Label
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = labelColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            fontWeight = if (state == StepState.ACTIVE) FontWeight.Medium else FontWeight.Normal
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Barra indicadora por baixo
+        Box(
+            modifier = Modifier
+                .width(48.dp)
+                .height(2.dp)
+                .background(barColor, RoundedCornerShape(1.dp))
         )
     }
 }
-
-
-@Composable
-private fun scrollToTheStartIndex(
-    startIndex: Int,
-    coroutineScope: CoroutineScope,
-    listState: LazyListState
-) {
-    LaunchedEffect(startIndex) {
-        coroutineScope.launch {
-            listState.scrollToItem(startIndex)
-        }
-    }
-}
-
-@Composable
-private fun calculateStartIndex(
-    currentStep: Int,
-    steps: List<String>,
-    textMeasurer: TextMeasurer
-): Int {
-    if (currentStep == 0) {
-        return 0
-    } else if (currentStep < steps.size - 2) {
-        return currentStep - 1
-    }
-
-    // only for the last two steps we calculate the start index in a fancy way
-    // taking into account the screen and font size
-    var startIndex = calculateStartIndexForTrailingItems(currentStep, steps, textMeasurer)
-
-    return startIndex
-}
-
 @Composable
 private fun calculateStartIndexForTrailingItems(
     currentStep: Int,

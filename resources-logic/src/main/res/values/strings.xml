@@ -569,6 +569,17 @@
     <string name="digital_credentials_screen_sign_card_title">Securely sign and manage your digital credentials.</string>
     <string name="quick_pin_too_weak_error">The PIN is too simple. Use a more secure combination.</string>
     <string name="issuance_add_document_pid_combined">Digital identity provider</string>
+    <string name="user_consent_step_5_title">Image Capture</string>
+    <string name="capture_retry_button">Repeat</string>
+    <string name="capture_error_title">The image could not be captured.</string>
+    <string name="capture_error_subtitle">\"Make sure your face is well lit and within the circle, then try again.</string>
+    <string name="capture_current_challenge_label">Current challenge</string>
+    <string name="capture_instruction_light">Ensure good lighting, avoid bright light behind you.</string>
+    <string name="capture_instruction_face">Remove sunglasses or hats.</string>
+    <string name="capture_instruction_follow">Follow these instructions: blink, smile, turn your head…</string>
+    <string name="capture_photo_captured_title">Face captured</string>
+    <string name="capture_photo_captured_subtitle">Liveness and face anti-spoofing detection: the backbone of secure face recognition</string>
+    <string name="capture_liveness_confirmed">Next</string>
 
     <!-- Logs Screen -->
 </resources>

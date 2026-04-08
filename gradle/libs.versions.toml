@@ -93,6 +93,8 @@ lifecycleRuntimeKtx = "2.10.0"
 monitor = "1.8.0"
 foundation = "1.10.4"
 uiGraphics = "1.10.4"
+cameraViewVersion = "1.6.0"
+runtime = "1.10.6"
 
 [libraries]
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
@@ -224,6 +226,8 @@ androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graph
 androidx-monitor = { group = "androidx.test", name = "monitor", version.ref = "monitor" }
 androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
+androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraViewVersion" }
+androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

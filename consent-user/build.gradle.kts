@@ -22,8 +22,11 @@ dependencies {
     implementation(project(LibraryModule.UiLogic.path))
     implementation(project(LibraryModule.ResourcesLogic.path))
     implementation(project(LibraryModule.BackupLogic.path))
+    implementation(project(LibraryModule.MrzScannerLogic.path))
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.documentfile)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.runtime)
 
 }
 

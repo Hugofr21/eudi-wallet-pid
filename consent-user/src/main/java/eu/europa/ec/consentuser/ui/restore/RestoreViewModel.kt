@@ -9,6 +9,7 @@ import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.CommonScreens
+import eu.europa.ec.uilogic.navigation.ConsentUserScreens
 import eu.europa.ec.uilogic.navigation.helper.generateComposableArguments
 import eu.europa.ec.uilogic.navigation.helper.generateComposableNavigationLink
 import kotlinx.coroutines.launch
@@ -60,7 +61,7 @@ class RestoreViewModel(
     override fun handleEvents(event: Event) {
         when (event) {
             Event.GoNext -> {
-                val nextRoute = getQuickPinConfig()
+                val nextRoute = getImageCaptureLayout()
                 setEffect { Effect.Navigation.SwitchScreen(nextRoute) }
             }
             Event.GoBack -> setEffect { Effect.Navigation.Pop }
@@ -128,11 +129,14 @@ class RestoreViewModel(
         return valid
     }
 
-    private fun getQuickPinConfig(): String =
-        generateComposableNavigationLink(
-            screen = CommonScreens.QuickPin,
-            arguments = generateComposableArguments(mapOf("pinFlow" to PinFlow.CREATE))
-        )
+    private fun getImageCaptureLayout(): String {
+        return ConsentUserScreens.ImageCapture.screenRoute
+    }
+//    private fun getQuickPinConfig(): String =
+//        generateComposableNavigationLink(
+//            screen = CommonScreens.QuickPin,
+//            arguments = generateComposableArguments(mapOf("pinFlow" to PinFlow.CREATE))
+//        )
 
     private fun perRestore(selectedUri: Uri?, passPhrase: List<String>) {
         if (selectedUri == null) {

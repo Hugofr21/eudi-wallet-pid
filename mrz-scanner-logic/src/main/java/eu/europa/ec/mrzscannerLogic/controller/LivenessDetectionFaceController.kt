@@ -149,10 +149,7 @@ class LivenessDetectionFaceControllerImpl(
     @Volatile private var latestFrameBitmap: Bitmap? = null
 
     private val selfieFile: File
-        get() = File(context.provideContext().filesDir, "pending_selfie.jpg")
-
-    private val logsDir = File(context.provideContext().filesDir.absolutePath + "/logs")
-    private val tag: String = "EUDI Wallet ${configLogic.appFlavor}-${configLogic.appBuildType}"
+        get() = File(context.provideContext().filesDir, "auto_self.jpg")
 
     override fun startScanning(
         lifecycleOwner: LifecycleOwner,

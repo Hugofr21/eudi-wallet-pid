@@ -193,7 +193,7 @@ private fun FaceIdScanningPanel(
             Spacer(modifier = Modifier.size(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Desafio atual",
+                    text = "Current challenge",
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.Gray
                 )
@@ -313,7 +313,6 @@ fun FaceContoursOverlay(
     }
 }
 
-// ── Circle overlay ────────────────────────────────────────────────────────────
 
 @Composable
 fun FaceCircleOverlay(modifier: Modifier = Modifier) {
@@ -347,7 +346,6 @@ fun FaceCircleOverlay(modifier: Modifier = Modifier) {
     }
 }
 
-// ── Countdown overlay ─────────────────────────────────────────────────────────
 
 @Composable
 private fun CountdownOverlay(seconds: Int) {
@@ -388,7 +386,7 @@ private fun LiveFacePreview(bitmap: Bitmap?) {
         if (bitmap != null) {
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = "Pré-visualização do rosto",
+                contentDescription = "Face preview",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.size(72.dp).clip(CircleShape)
             )
@@ -403,8 +401,6 @@ private fun LiveFacePreview(bitmap: Bitmap?) {
     }
 }
 
-// ── Instructions panel ────────────────────────────────────────────────────────
-
 @Composable
 private fun FaceIdInstructionsPanel(onProceed: () -> Unit) {
     Column(
@@ -416,7 +412,7 @@ private fun FaceIdInstructionsPanel(onProceed: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Verificação Biométrica",
+            text = "Biometric Verification",
             style = MaterialTheme.typography.headlineMedium,
             color = Color.Black,
             fontWeight = FontWeight.Bold,
@@ -424,20 +420,20 @@ private fun FaceIdInstructionsPanel(onProceed: () -> Unit) {
             modifier = Modifier.padding(bottom = 8.dp)
         )
         Text(
-            text = "Para confirmar a sua identidade, execute alguns gestos simples em frente à câmara frontal.",
+            text = "To confirm your identity, perform a few simple gestures in front of the front camera.",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 40.dp)
         )
-        InstructionRow(Icons.Default.LightMode,    "Garanta boa iluminação — evite luz forte por trás de si.")
+        InstructionRow(Icons.Default.LightMode,    "Ensure good lighting, avoid bright light behind you.")
         Spacer(modifier = Modifier.height(16.dp))
-        InstructionRow(Icons.Default.Face,         "Remova óculos escuros ou chapéus.")
+        InstructionRow(Icons.Default.Face,         "Remove sunglasses or hats.")
         Spacer(modifier = Modifier.height(16.dp))
-        InstructionRow(Icons.Default.RemoveRedEye, "Siga as instruções: piscar os olhos, sorrir, virar a cabeça…")
+        InstructionRow(Icons.Default.RemoveRedEye, "Follow these instructions: blink, smile, turn your head…")
         Spacer(modifier = Modifier.height(48.dp))
         Button(onClick = onProceed, modifier = Modifier.fillMaxWidth()) {
-            Text("Iniciar Verificação")
+            Text("Start Scan")
         }
     }
 }
@@ -474,15 +470,15 @@ private fun FaceIdCaptureErrorPanel(onRetry: () -> Unit) {
         Icon(imageVector = Icons.Default.Face, contentDescription = null,
             tint = Color(0xFFB00020),
             modifier = Modifier.size(64.dp).padding(bottom = 16.dp))
-        Text(text = "Não foi possível capturar a imagem",
+        Text(text = "The image could not be captured.",
             style = MaterialTheme.typography.titleLarge, color = Color.Black,
             fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 12.dp))
-        Text(text = "Certifique-se de que o rosto está bem iluminado e dentro do círculo, depois tente novamente.",
+        Text(text = "Make sure your face is well lit and within the circle, then try again.",
             style = MaterialTheme.typography.bodyMedium, color = Color.Gray,
             textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 40.dp))
         Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
-            Text("Tentar novamente")
+            Text("Try again")
         }
     }
 }
@@ -501,7 +497,7 @@ private fun FaceIdConfirmationPanel(
         Box(modifier = Modifier.fillMaxWidth().weight(0.70f)) {
             Image(
                 bitmap = capturedBitmap.asImageBitmap(),
-                contentDescription = "Rosto capturado",
+                contentDescription = "Face captured",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
@@ -519,7 +515,7 @@ private fun FaceIdConfirmationPanel(
                     Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null,
                         tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.size(8.dp))
-                    Text(text = "Liveness confirmado",
+                    Text(text = "Liveness confirm",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White, fontWeight = FontWeight.Medium)
                 }
@@ -535,11 +531,11 @@ private fun FaceIdConfirmationPanel(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "Foto capturada",
+                Text(text = "Face captured",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold, color = Color.Black)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "O seu rosto é claramente visível? Se não, repita.",
+                Text(text = "Is your face clearly visible? If not, repeat.",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray, textAlign = TextAlign.Center)
             }
@@ -550,12 +546,12 @@ private fun FaceIdConfirmationPanel(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFF0F0F0), contentColor = Color.DarkGray),
                     shape = RoundedCornerShape(12.dp)) {
-                    Text("Repetir", fontWeight = FontWeight.Medium)
+                    Text("Repeat", fontWeight = FontWeight.Medium)
                 }
                 Button(onClick = onConfirm,
                     modifier = Modifier.weight(2f).height(50.dp),
                     shape = RoundedCornerShape(12.dp)) {
-                    Text("Confirmar identidade", fontWeight = FontWeight.Medium)
+                    Text("Confirm identity", fontWeight = FontWeight.Medium)
                 }
             }
         }

@@ -317,7 +317,6 @@ private fun PassportScannerWindow(previewView: PreviewView, scanState: MrzScanSt
                 }
             }
 
-            // Barra de progresso
             if (scanState is MrzScanState.Processing) {
                 LinearProgressIndicator(
                     progress   = scanState.confidence,
@@ -360,8 +359,6 @@ private fun CornerMarkers(color: Color) {
     }
 }
 
-// ─── Dica inferior ───────────────────────────────────────────────────────────
-
 @Composable
 private fun BottomHint(scanState: MrzScanState) {
     val hint = when (scanState) {
@@ -384,8 +381,6 @@ private fun BottomHint(scanState: MrzScanState) {
         Text(hint, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
     }
 }
-
-// ─── Cartão de Resultado ─────────────────────────────────────────────────────
 
 @Composable
 private fun AutomaticResultCard(
@@ -549,8 +544,6 @@ private fun FloatingErrorAlert(scanState: MrzScanState, onDismiss: () -> Unit) {
         }
     }
 }
-
-// ─── Loading ──────────────────────────────────────────────────────────────────
 
 @Composable
 private fun LoadingScreen(message: String = "A carregar…") {

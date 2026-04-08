@@ -28,6 +28,7 @@ sealed class ConsentUserScreens {
     data object Consent : Screen(name = "CONSENT")
     data object Verification : Screen(name = "VERIFICATION")
     data object Restore : Screen(name = "CONSENT_RESTORE")
+    data object ImageCapture : Screen(name = "IMAGE_CAPTURE")
 }
 
 
