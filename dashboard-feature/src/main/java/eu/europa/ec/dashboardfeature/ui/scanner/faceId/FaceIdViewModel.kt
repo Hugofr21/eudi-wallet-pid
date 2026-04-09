@@ -88,7 +88,6 @@ class FaceIdScreenViewModel(
 
 
     private fun loadDocument() {
-        // Recupera o documento da memória/cache usando o ID
         val document = Gson().fromJson(documentId, MrzDocument::class.java)
         if (document != null) {
             this.document = document
@@ -101,7 +100,6 @@ class FaceIdScreenViewModel(
             }
 
         } else {
-            // Erro fatal: Documento não encontrado
             setState { copy(errorMessage = "Documento não encontrado") }
         }
     }
@@ -126,7 +124,6 @@ class FaceIdScreenViewModel(
         val preview = previewView ?: return
 
         viewModelScope.launch {
-            // Inicia o Scan de Rosto
             scannerInteractor.startScanning(owner, preview, ScanType.Face)
                 .collect { scanState ->
                     when (scanState) {

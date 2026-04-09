@@ -89,7 +89,6 @@ fun DriverLicenseScreen(
     }
 }
 
-// ─── Permissões ──────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -106,7 +105,6 @@ private fun RequiredPermissionsAsk(onEventSend: (Event) -> Unit) {
     LoadingScreen()
 }
 
-// ─── Router ──────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -297,7 +295,6 @@ private fun AutomaticScannerContent(
             Spacer(Modifier.height(20.dp))
         }
 
-        // Cartão de resultado
         AnimatedVisibility(
             visible  = state.scannedDocument != null,
             enter    = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -353,8 +350,6 @@ private fun ScanStatusBadge(scanState: MrzScanState) {
     }
 }
 
-// ─── Janela da câmara ────────────────────────────────────────────────────────
-
 @Composable
 private fun ScannerWindow(previewView: PreviewView, scanState: MrzScanState) {
     val borderColor = when (scanState) {
@@ -369,7 +364,7 @@ private fun ScannerWindow(previewView: PreviewView, scanState: MrzScanState) {
         modifier            = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Etiqueta superior
+
         Row(
             modifier          = Modifier
                 .padding(bottom = 8.dp)
@@ -383,7 +378,7 @@ private fun ScannerWindow(previewView: PreviewView, scanState: MrzScanState) {
             Text("Zona MRZ", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
         }
 
-        // Viewport da câmara — proporção ID-1 (85.60 × 53.98 mm)
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -394,17 +389,15 @@ private fun ScannerWindow(previewView: PreviewView, scanState: MrzScanState) {
         ) {
             AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
 
-            // Vinheta lateral subtil
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val v = Color.Black.copy(alpha = 0.15f)
                 drawRect(v, topLeft = Offset(0f, 0f),                  size = Size(size.width * 0.05f, size.height))
                 drawRect(v, topLeft = Offset(size.width * 0.95f, 0f),  size = Size(size.width * 0.05f, size.height))
             }
 
-            // Cantos de mira
+
             CornerMarkers(borderColor)
 
-            // Overlay de sucesso
             if (scanState is MrzScanState.Success) {
                 Box(
                     modifier         = Modifier
@@ -416,7 +409,6 @@ private fun ScannerWindow(previewView: PreviewView, scanState: MrzScanState) {
                 }
             }
 
-            // Barra de progresso
             if (scanState is MrzScanState.Processing) {
                 LinearProgressIndicator(
                     progress   = scanState.confidence,
@@ -433,7 +425,7 @@ private fun ScannerWindow(previewView: PreviewView, scanState: MrzScanState) {
 
         Spacer(Modifier.height(8.dp))
         Text(
-            text          = "Carta de Condução  •  ID-1  •  ISO/IEC 7810",
+            text          = "Driving License • ID-1 • ISO/IEC 7810",
             fontSize      = 10.sp,
             color         = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             fontWeight    = FontWeight.Medium,
@@ -463,12 +455,14 @@ private fun CornerMarkers(color: Color) {
 @Composable
 private fun BottomHint(scanState: MrzScanState) {
     val hint = when (scanState) {
-        is MrzScanState.Processing          -> "A processar… mantenha o documento firme"
-        is MrzScanState.Success             -> "Leitura concluída com sucesso"
-        is MrzScanState.Error               -> "Ajuste o documento e tente novamente"
-        is MrzScanState.SecurityCheckFailed -> "Utilize o documento físico original"
-        else                                -> "Alinhe a zona MRZ com a moldura acima"
+        is MrzScanState.Processing -> "Processing… hold the document steady"
+        is MrzScanState.Success -> "Scan completed successfully"
+        is MrzScanState.Error -> "Adjust the document and try again"
+        is MrzScanState.SecurityCheckFailed -> "Use the original physical document"
+        else -> "Align the MRZ zone with the frame above"
+
     }
+
     Row(
         modifier              = Modifier
             .padding(horizontal = 32.dp)
@@ -554,12 +548,12 @@ private fun DrivingLicenseResultCard(
 
             if (document is MrzDocument.DrivingLicense) {
                 Row(Modifier.fillMaxWidth()) {
-                    Box(Modifier.weight(1f)) { DLField("APELIDO", document.surname) }
+                    Box(Modifier.weight(1f)) { DLField("SURNAME", document.surname) }
                     Spacer(Modifier.width(12.dp))
-                    Box(Modifier.weight(1f)) { DLField("NOME", document.givenNames) }
+                    Box(Modifier.weight(1f)) { DLField("NAME", document.givenNames) }
                 }
                 Spacer(Modifier.height(8.dp))
-                DLField("CATEGORIAS", document.licenseCategories)
+                DLField("CATEGORIES", document.licenseCategories)
             }
 
             Spacer(Modifier.height(18.dp))
@@ -570,14 +564,14 @@ private fun DrivingLicenseResultCard(
                     modifier = Modifier.weight(1f).height(44.dp),
                     shape    = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Repetir", fontSize = 14.sp)
+                    Text("Repeat", fontSize = 14.sp)
                 }
                 Button(
                     onClick  = onConfirm,
                     modifier = Modifier.weight(1f).height(44.dp),
                     shape    = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Confirmar", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Confirm", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
         }
@@ -624,7 +618,7 @@ private fun FloatingErrorAlert(scanState: MrzScanState, onDismiss: () -> Unit) {
             Icon(Icons.Default.ErrorOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Aviso de Leitura", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer, fontSize = 14.sp)
+                Text("Reading Notice", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer, fontSize = 14.sp)
                 Text(message, color = MaterialTheme.colorScheme.onErrorContainer, fontSize = 12.sp, lineHeight = 18.sp)
             }
             IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {

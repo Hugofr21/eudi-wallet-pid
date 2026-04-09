@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
 import eu.europa.ec.dashboardfeature.interactor.LivenessInteractor
-import eu.europa.ec.mrzscannerLogic.controller.Challenge
 import eu.europa.ec.mrzscannerLogic.controller.FaceFeatures
 import eu.europa.ec.mrzscannerLogic.controller.ChallengeState
 import eu.europa.ec.mrzscannerLogic.controller.ChallengeState.Countdown
@@ -20,8 +19,10 @@ import eu.europa.ec.uilogic.navigation.DashboardScreens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewModelScope
+import eu.europa.ec.dashboardfeature.interactor.PersonInteractorGetUserNamePidDocumentPartialState
 import eu.europa.ec.dashboardfeature.ui.scanner.utils.Challenge.toInstruction
 import eu.europa.ec.dashboardfeature.ui.scanner.utils.Challenge.toLabel
+import eu.europa.ec.mrzscannerLogic.service.FaceVerificationResult
 import org.koin.android.annotation.KoinViewModel
 
 data class State(
@@ -35,7 +36,9 @@ data class State(
     val errorMessage: String? = null,
     val currentChallengeMessage: String = "Preparing camera…",
     val completedChallenges: List<String> = emptyList(),
-    val savedSelfiePath: String? = null
+    val savedSelfiePath: String? = null,
+    val showVerificationLabel: FaceVerificationResult? = null,
+    val verifiedPersonName: String? = null,
 ) : ViewState
 
 
@@ -166,42 +169,29 @@ class LivenessFaceViewModel(
     private fun handleSessionResult(result: LivenessResult) {
         when (result) {
             is LivenessResult.Success -> {
-                val jpeg = result.capturedJpeg
-                val path = if (jpeg.isNotEmpty()) {
-                    livenessInteractor.saveCapturedSelfie(jpeg)
-                } else null
+                val jpeg   = result.capturedJpeg
+                val path   = if (jpeg.isNotEmpty()) livenessInteractor.saveCapturedSelfie(jpeg) else null
+                val bitmap = jpeg.takeIf { it.isNotEmpty() }?.let { ImageUtils.bytesToBitmap(it) }
+                capturedSelfieBitmap = bitmap
 
-                val bitmap = result.capturedJpeg
-                    .takeIf { it.isNotEmpty() }
-                    ?.let { ImageUtils.bytesToBitmap(it) }
+                val vr = result.verification
 
-                if (bitmap != null) {
-                    capturedSelfieBitmap = bitmap
-                    setState {
-                        copy(
-                            isLoading = false,
-                            isSessionComplete = true,
-                            capturedBitmap = bitmap,
-                            savedSelfiePath  = path,
-                            errorMessage = null
-                        )
-                    }
-                } else {
-                    setState {
-                        copy(
-                            isLoading = false,
-                            isSessionComplete = true,
-                            capturedBitmap = null,
-                            errorMessage = null
-                        )
-                    }
+                setState {
+                    copy(
+                        isLoading             = false,
+                        isSessionComplete     = true,
+                        capturedBitmap        = bitmap,
+                        savedSelfiePath       = path,
+                        errorMessage          = null,
+                        showVerificationLabel = vr
+                    )
+                }
+
+                if (vr != null && vr.isVerified) {
+                    fetchVerifiedPersonName()
                 }
             }
-
-            is LivenessResult.Failure -> setState {
-                copy(isLoading = false, errorMessage = result.reason)
-            }
-
+            is LivenessResult.Failure -> setState { copy(isLoading = false, errorMessage = result.reason) }
             LivenessResult.InProgress -> setState { copy(isLoading = false) }
         }
     }
@@ -220,7 +210,8 @@ class LivenessFaceViewModel(
                 countdownSeconds = null,
                 errorMessage = null,
                 completedChallenges = emptyList(),
-                currentChallengeMessage = "Preparing camera…"
+                currentChallengeMessage = "Preparing camera…",
+                verifiedPersonName = null
             )
         }
     }
@@ -240,7 +231,8 @@ class LivenessFaceViewModel(
                 countdownSeconds = null,
                 errorMessage = null,
                 completedChallenges = emptyList(),
-                currentChallengeMessage = "A preparar câmara…"
+                currentChallengeMessage = "Preparing camera…",
+                verifiedPersonName = null
             )
         }
     }
@@ -263,6 +255,21 @@ class LivenessFaceViewModel(
                     popUpToScreenRoute = DashboardScreens.Profile.screenRoute,
                     inclusive = true
                 )
+            }
+        }
+    }
+
+    private fun fetchVerifiedPersonName() {
+        viewModelScope.launch {
+            livenessInteractor.getUserNameViaMainPidDocument().collect { state ->
+                when (state) {
+                    is PersonInteractorGetUserNamePidDocumentPartialState.Success -> {
+                        setState { copy(verifiedPersonName = state.userFirstName.ifBlank { null }) }
+                    }
+                    is PersonInteractorGetUserNamePidDocumentPartialState.Failure -> {
+                        setState { copy(verifiedPersonName = "UNKNOWN") }
+                    }
+                }
             }
         }
     }

@@ -93,8 +93,6 @@ fun IdentificationDocumentScreen(
     }
 }
 
-// ─── Conteúdo principal ───────────────────────────────────────────────────────
-
 @Composable
 private fun AutomaticScannerContent(
     state        : State,
@@ -152,7 +150,6 @@ private fun AutomaticScannerContent(
             Spacer(Modifier.height(20.dp))
         }
 
-        // Alerta de erro / segurança
         AnimatedVisibility(
             visible  = !state.isScanFrozen.not() &&
                     state.scannedDocument == null &&
@@ -169,7 +166,6 @@ private fun AutomaticScannerContent(
             )
         }
 
-        // Cartão de resultado
         AnimatedVisibility(
             visible  = state.scannedDocument != null,
             enter    = slideInVertically(
@@ -192,8 +188,6 @@ private fun AutomaticScannerContent(
     }
 }
 
-// ─── Top Bar ─────────────────────────────────────────────────────────────────
-
 @Composable
 private fun TopBar(
     isFlashOn    : Boolean,
@@ -208,11 +202,11 @@ private fun TopBar(
         verticalAlignment     = Alignment.CenterVertically
     ) {
         IconButton(onClick = onClose) {
-            Icon(Icons.Default.Close, "Fechar", tint = MaterialTheme.colorScheme.onBackground)
+            Icon(Icons.Default.Close, "Close", tint = MaterialTheme.colorScheme.onBackground)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text       = "Leitor de Passaporte",
+                text       = "Passport Reader",
                 fontWeight = FontWeight.Bold,
                 fontSize   = 16.sp,
                 color      = MaterialTheme.colorScheme.onBackground
@@ -222,7 +216,7 @@ private fun TopBar(
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Icon(Icons.Default.Lock, null, tint = ColorSuccess, modifier = Modifier.size(10.dp))
-                Text("Leitura Segura", fontSize = 10.sp, color = ColorSuccess, fontWeight = FontWeight.Medium)
+                Text("Security reading", fontSize = 10.sp, color = ColorSuccess, fontWeight = FontWeight.Medium)
             }
         }
         IconButton(onClick = onToggleFlash) {
@@ -235,16 +229,15 @@ private fun TopBar(
     }
 }
 
-// ─── Badge de estado ─────────────────────────────────────────────────────────
-
 @Composable
 private fun ScanStatusBadge(scanState: MrzScanState) {
-    val (text, color) = when (scanState) {
-        is MrzScanState.Processing          -> "A extrair dados…"        to MaterialTheme.colorScheme.primary
-        is MrzScanState.Success             -> "Documento lido!"         to ColorSuccess
-        is MrzScanState.Error               -> "Erro de leitura"         to ColorError
-        is MrzScanState.SecurityCheckFailed -> "Verificação falhou"      to ColorWarning
-        else                                -> "Pronto para digitalizar" to MaterialTheme.colorScheme.onSurfaceVariant
+    val(text, color) = when (scanState) {
+        is MrzScanState.Processing -> "Extracting data…" to MaterialTheme.colorScheme.primary
+        is MrzScanState.Success -> "Document read!" to ColorSuccess
+        is MrzScanState.Error -> "Read error" to ColorError
+        is MrzScanState.SecurityCheckFailed -> "Verification failed" to ColorWarning
+        else -> "Ready to scan" to MaterialTheme.colorScheme.onSurfaceVariant
+
     }
 
     Row(
@@ -261,8 +254,6 @@ private fun ScanStatusBadge(scanState: MrzScanState) {
     }
 }
 
-// ─── Janela da câmara (proporção Passaporte) ──────────────────────────────────
-
 @Composable
 private fun PassportScannerWindow(previewView: PreviewView, scanState: MrzScanState) {
     val borderColor = when (scanState) {
@@ -277,7 +268,7 @@ private fun PassportScannerWindow(previewView: PreviewView, scanState: MrzScanSt
         modifier            = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Etiqueta superior
+
         Row(
             modifier          = Modifier
                 .padding(bottom = 8.dp)
@@ -291,7 +282,7 @@ private fun PassportScannerWindow(previewView: PreviewView, scanState: MrzScanSt
             Text("Zona MRZ", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
         }
 
-        // Viewport da câmara — proporção passaporte (ID-3: 125×88mm ≈ 1.42)
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -301,11 +292,7 @@ private fun PassportScannerWindow(previewView: PreviewView, scanState: MrzScanSt
                 .border(2.dp, borderColor, RoundedCornerShape(14.dp))
         ) {
             AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
-
-            // Cantos de mira
             CornerMarkers(borderColor)
-
-            // Overlay de sucesso
             if (scanState is MrzScanState.Success) {
                 Box(
                     modifier         = Modifier
@@ -330,10 +317,9 @@ private fun PassportScannerWindow(previewView: PreviewView, scanState: MrzScanSt
             }
         }
 
-        // Etiqueta inferior
         Spacer(Modifier.height(8.dp))
         Text(
-            text          = "Passaporte  •  ID-3  •  ICAO Doc 9303",
+            text          = "Passport • ID-3 • ICAO Doc 9303",
             fontSize      = 10.sp,
             color         = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             fontWeight    = FontWeight.Medium,
@@ -362,12 +348,14 @@ private fun CornerMarkers(color: Color) {
 @Composable
 private fun BottomHint(scanState: MrzScanState) {
     val hint = when (scanState) {
-        is MrzScanState.Processing          -> "A processar… mantenha o documento firme"
-        is MrzScanState.Success             -> "Leitura concluída com sucesso"
-        is MrzScanState.Error               -> "Ajuste o documento e tente novamente"
-        is MrzScanState.SecurityCheckFailed -> "Utilize o documento físico original"
-        else                                -> "Alinhe a zona MRZ com a moldura acima"
+        is MrzScanState.Processing -> "Processing… hold the document steady"
+        is MrzScanState.Success -> "Scan completed successfully"
+        is MrzScanState.Error -> "Adjust the document and try again"
+        is MrzScanState.SecurityCheckFailed -> "Use the original physical document"
+        else -> "Align the MRZ zone with the frame above"
+
     }
+
     Row(
         modifier              = Modifier
             .padding(horizontal = 32.dp)
@@ -389,9 +377,9 @@ private fun AutomaticResultCard(
     onScanAnother: () -> Unit,
 ) {
     val docTypeLabel = when (document) {
-        is MrzDocument.Passport       -> "Passaporte"
-        is MrzDocument.IdCard         -> "Cartão de Identidade"
-        is MrzDocument.DrivingLicense -> "Carta de Condução"
+        is MrzDocument.Passport -> "Passport"
+        is MrzDocument.IdCard -> "Identity Card"
+        is MrzDocument.DrivingLicense -> "Driving License"
     }
 
     Card(
@@ -406,7 +394,7 @@ private fun AutomaticResultCard(
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
-            // Cabeçalho
+
             Row(
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -422,7 +410,7 @@ private fun AutomaticResultCard(
                 }
                 Column {
                     Text(docTypeLabel, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
-                    Text("Detetado automaticamente", fontSize = 12.sp, color = ColorSuccess)
+                    Text("Automatically detected", fontSize = 12.sp, color = ColorSuccess)
                 }
             }
 
@@ -430,32 +418,32 @@ private fun AutomaticResultCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(14.dp))
 
-            // Campos do documento
+
             when (document) {
                 is MrzDocument.Passport -> {
-                    DocField("NOME COMPLETO",  "${document.givenNames} ${document.surname}")
-                    DocField("Nº DOCUMENTO",   document.documentNumber)
-                    DocField("PAÍS EMISSOR",   document.issuingCountry)
-                    DocField("NACIONALIDADE",  document.nationality)
+                    DocField("FULL NAME",  "${document.givenNames} ${document.surname}")
+                    DocField("Nº DOCUMENT",   document.documentNumber)
+                    DocField("Issuer",   document.issuingCountry)
+                    DocField("NATIONALITY",  document.nationality)
                     if (document.personalNumber.isNotBlank())
-                        DocField("Nº PESSOAL", document.personalNumber)
-                    DocField("DATA NASC.",     document.dateOfBirth)
-                    document.expiryDate?.let { DocField("VALIDADE", it) }
-                    DocField("SEXO",           document.sex)
+                        DocField("PERSONAL NUMBER", document.personalNumber)
+                    DocField("DATE OF BIRTH",     document.dateOfBirth)
+                    document.expiryDate?.let { DocField("VALIDATE", it) }
+                    DocField("SEX",           document.sex)
                 }
                 is MrzDocument.IdCard -> {
-                    DocField("NOME COMPLETO",  "${document.givenNames} ${document.surname}")
-                    DocField("Nº DOCUMENTO",   document.documentNumber)
-                    DocField("NACIONALIDADE",  document.nationality)
-                    DocField("DATA NASC.",     document.dateOfBirth)
-                    document.expiryDate?.let { DocField("VALIDADE", it) }
-                    DocField("SEXO",           document.sex)
+                    DocField("FULL NAME",  "${document.givenNames} ${document.surname}")
+                    DocField("Nº DOCUMENT",   document.documentNumber)
+                    DocField("NATIONALITY",  document.nationality)
+                    DocField("DATE OF BIRTH",     document.dateOfBirth)
+                    document.expiryDate?.let { DocField("VALIDATE", it) }
+                    DocField("SEX",           document.sex)
                 }
                 is MrzDocument.DrivingLicense -> {
-                    DocField("NOME COMPLETO",  "${document.givenNames} ${document.surname}")
-                    DocField("Nº CARTA",       document.documentNumber)
+                    DocField("FULL NAME",  "${document.givenNames} ${document.surname}")
+                    DocField("LETTER NO.",       document.documentNumber)
                     if (document.licenseCategories.isNotBlank())
-                        DocField("CATEGORIAS", document.licenseCategories)
+                        DocField("CATEGORIES", document.licenseCategories)
                 }
             }
 
@@ -469,7 +457,7 @@ private fun AutomaticResultCard(
                 ) {
                     Icon(Icons.Default.Refresh, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Repetir", fontSize = 14.sp)
+                    Text("Repeat", fontSize = 14.sp)
                 }
                 Button(
                     onClick  = onConfirm,
@@ -478,7 +466,7 @@ private fun AutomaticResultCard(
                 ) {
                     Icon(Icons.Default.Check, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Confirmar", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Confirm", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
         }
@@ -519,7 +507,7 @@ private fun FloatingErrorAlert(scanState: MrzScanState, onDismiss: () -> Unit) {
     val message = when (scanState) {
         is MrzScanState.SecurityCheckFailed -> translateSecurity(scanState)
         is MrzScanState.Error               -> scanState.message
-        else                                -> "Por favor, tente novamente."
+        else                                -> "Please try again."
     }
 
     Card(
@@ -535,7 +523,7 @@ private fun FloatingErrorAlert(scanState: MrzScanState, onDismiss: () -> Unit) {
             Icon(Icons.Default.ErrorOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Erro na leitura", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer, fontSize = 14.sp)
+                Text("Reading error", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer, fontSize = 14.sp)
                 Text(message, color = MaterialTheme.colorScheme.onErrorContainer, fontSize = 12.sp, lineHeight = 18.sp)
             }
             IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
@@ -546,7 +534,7 @@ private fun FloatingErrorAlert(scanState: MrzScanState, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun LoadingScreen(message: String = "A carregar…") {
+private fun LoadingScreen(message: String = "Loading…") {
     Box(
         modifier         = Modifier
             .fillMaxSize()
@@ -560,8 +548,6 @@ private fun LoadingScreen(message: String = "A carregar…") {
         }
     }
 }
-
-// ─── Permissões ──────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -580,7 +566,7 @@ private fun RequiredPermissionsAsk(onEventSend: (Event) -> Unit) {
     if (showDenied.value) {
         PermissionDeniedMessage { onEventSend(Event.OpenAppSettings) }
     } else {
-        LoadingScreen("A solicitar permissão…")
+        LoadingScreen("Permission request…")
     }
 }
 
@@ -594,12 +580,12 @@ private fun PermissionDeniedMessage(onOpenSettings: () -> Unit) {
             ) {
                 Icon(Icons.Default.NoPhotography, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(16.dp))
-                Text("Permissão negada", style = MaterialTheme.typography.headlineSmall)
+                Text("Permission denied", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(8.dp))
-                Text("O acesso à câmara é necessário para digitalizar documentos.", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Access to the camera is required to scan documents.", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
-                    Text("Abrir Definições")
+                    Text("Open Settings")
                 }
             }
         }

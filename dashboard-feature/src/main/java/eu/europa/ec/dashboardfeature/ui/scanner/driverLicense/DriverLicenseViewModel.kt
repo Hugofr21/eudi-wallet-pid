@@ -39,25 +39,19 @@ data class State(
 sealed class Event : ViewEvent {
     object AcknowledgeInstructions : Event()
     object GoBack : Event()
-
-    // Inicialização
     data class InitializeScanner(
         val lifecycleOwner: LifecycleOwner,
         val previewView: PreviewView
     ) : Event()
 
-    // Controle de scanning
     object StartScanning : Event()
     object StopScanning : Event()
     object RetryScanning : Event()
 
-    // Permissões
     data class OnPermissionStateChanged(val availability: CameraAvailability) : Event()
 
-    // Resultados
     data class OnScanResult(val document: MrzDocument) : Event()
 
-    // Ações do usuário
     object TriggerManualCapture : Event()
     data class OnImageSelected(val uri: Uri) : Event()
     object ShowHelp : Event()
@@ -66,7 +60,7 @@ sealed class Event : ViewEvent {
     object CheckPermissions : Event()
 
     data class OnScanError(
-        val failedChecks: List<AntiSpoofingCheck>? = null, // ATUALIZADO PARA SUPORTE ANTI-SPOOFING
+        val failedChecks: List<AntiSpoofingCheck>? = null,
         val message: String
     ) : Event()
 }
@@ -111,7 +105,6 @@ class DriverLicenseScreenViewModel(
     }
 
     init {
-        // Verificar permissões ao inicializar
         checkInitialPermissions()
     }
 
@@ -138,13 +131,8 @@ class DriverLicenseScreenViewModel(
         }
     }
 
-    // ============================================
-    // Verificação de Permissões
-    // ============================================
-
     private fun checkInitialPermissions() {
         viewModelScope.launch {
-            // Marcar que já verificou
             setState { copy(isPermissionChecked = true) }
 
             when {
@@ -155,27 +143,20 @@ class DriverLicenseScreenViewModel(
                     setState { copy(isCameraAvailability = CameraAvailability.DISABLED) }
                 }
                 else -> {
-                    // MUDANÇA: Se tem permissão, marcar como AVAILABLE imediatamente
+
                     setState { copy(isCameraAvailability = CameraAvailability.AVAILABLE) }
                 }
             }
         }
     }
 
-    // ============================================
-    // Inicialização do Scanner
-    // ============================================
-
     private fun handleInitializeScanner(event: Event.InitializeScanner) {
         viewModelScope.launch {
             setState { copy(isLoading = true) }
 
             try {
-                // Armazenar referências
                 lifecycleOwner = event.lifecycleOwner
                 previewView = event.previewView
-
-                // Verificar disponibilidade
                 when {
                     !scannerInteractor.hasCameraPermission() -> {
                         setState {
@@ -200,7 +181,7 @@ class DriverLicenseScreenViewModel(
                                 isLoading = false
                             )
                         }
-                        // IMPORTANTE: Iniciar scanning automático
+
                         startScanning()
                     }
                 }
@@ -208,8 +189,8 @@ class DriverLicenseScreenViewModel(
                 setState {
                     copy(
                         isLoading = false,
-                        errorMessage = "Erro ao inicializar câmera: ${e.message}",
-                        scanState = MrzScanState.Error("Falha na inicialização")
+                        errorMessage = "Error initializing camera: ${e.message}",
+                        scanState = MrzScanState.Error("Initialization failed")
                     )
                 }
             }
@@ -224,15 +205,8 @@ class DriverLicenseScreenViewModel(
             )
         }
 
-        // Se permissão foi concedida e ainda não inicializou, esperar pela PreviewView
-        // O InitializeScanner vai ser chamado pelo LaunchedEffect da UI
     }
 
-    // ============================================
-    // Controle de Scanning CONTÍNUO
-    // ============================================
-
-    // CORREÇÃO CRÍTICA DO SCAN RESULT (Impede sobreposição contínua)
     private fun startScanning() {
         val owner = lifecycleOwner
         val preview = previewView
@@ -241,7 +215,6 @@ class DriverLicenseScreenViewModel(
         viewModelScope.launch {
             try {
                 scannerInteractor.startScanning(owner, preview, ScanType.Document).collect { scanState ->
-                    // Se já temos documento, ignora frames extra até o utilizador clicar "Repetir"
                     if (viewState.value.scannedDocument != null) return@collect
 
                     setState { copy(scanState = scanState) }
@@ -250,12 +223,11 @@ class DriverLicenseScreenViewModel(
                         is MrzScanState.Success -> {
                             val doc = scanState.document
                             if (doc != null) {
-                                stopScanning() // Pausa para leitura dos dados
+                                stopScanning()
                                 setEvent(Event.OnScanResult(doc))
                             }
                         }
                         is MrzScanState.SecurityCheckFailed -> {
-                            // Injeta o alerta de fraude na UI
                             setState {
                                 copy(
                                     scanState = scanState,
@@ -270,7 +242,7 @@ class DriverLicenseScreenViewModel(
                     }
                 }
             } catch (e: Exception) {
-                setEvent(Event.OnScanError(message = e.message ?: "Erro crítico"))
+                setEvent(Event.OnScanError(message = e.message ?: "Critical error"))
             }
         }
     }
@@ -280,7 +252,7 @@ class DriverLicenseScreenViewModel(
         setState {
             copy(
                 scanState = MrzScanState.Idle,
-                scannedDocument = null // Limpar documento ao parar
+                scannedDocument = null
             )
         }
     }
@@ -293,13 +265,11 @@ class DriverLicenseScreenViewModel(
                 errorMessage = null
             )
         }
-        // Reiniciar o scanning
+
         startScanning()
     }
 
-    // ============================================
-    // Tratamento de Resultados
-    // ============================================
+
 
     private fun handleScanResult(event: Event.OnScanResult) {
         setState {
@@ -329,25 +299,21 @@ class DriverLicenseScreenViewModel(
         when (document) {
             is MrzDocument.DrivingLicense -> handleDrivingLicense(document)
             else -> {
-                println("Tipo de documento não suportado")
+                println("Document type not supported")
             }
         }
     }
 
-    // ============================================
-    // Processamento por Tipo de Documento
-    // ============================================
-
     private fun handleDrivingLicense(license: MrzDocument.DrivingLicense) {
         viewModelScope.launch {
-            // Validações de carta de condução
+
         }
     }
 
     private fun triggerManualCapture() {
         viewModelScope.launch {
             setState { copy(scanState = MrzScanState.Processing()) }
-            // Implementar captura manual se necessário
+
         }
     }
 
@@ -356,12 +322,12 @@ class DriverLicenseScreenViewModel(
             setState { copy(scanState = MrzScanState.Processing()) }
 
             try {
-                // Processar imagem da galeria
+
                 // scannerInteractor.processImage(event.uri)
             } catch (e: Exception) {
                 setState {
                     copy(
-                        scanState = MrzScanState.Error("Erro ao processar imagem"),
+                        scanState = MrzScanState.Error("Error processing image"),
                         errorMessage = e.message
                     )
                 }

@@ -17,6 +17,8 @@ import eu.europa.ec.mrzscannerLogic.service.ChecksumValidationService
 import eu.europa.ec.mrzscannerLogic.service.ChecksumValidationServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseService
 import eu.europa.ec.mrzscannerLogic.service.DriverLicenseParseServiceImpl
+import eu.europa.ec.mrzscannerLogic.service.FaceNetService
+import eu.europa.ec.mrzscannerLogic.service.FaceNetServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.FaceService
 import eu.europa.ec.mrzscannerLogic.service.FaceServiceImpl
 import eu.europa.ec.mrzscannerLogic.service.MrzParserService
@@ -34,6 +36,15 @@ import org.koin.core.annotation.Single
 @Module
 @ComponentScan("eu.europa.ec.mrzscannerLogic")
 class LogicMrzScannerModule
+
+
+
+@Single
+fun provideFaceNetService(
+    resourceProvider: ResourceProvider,
+): FaceNetService =
+    FaceNetServiceImpl(resourceProvider)
+
 
 
 @Single
@@ -115,11 +126,13 @@ fun provideLivenessDetectionsFaceController(
     cameraFrontService: CameraFrontService,
     logController: LogController,
     resourceProvider: ResourceProvider,
-    configLogic: ConfigLogic
+    configLogic: ConfigLogic,
+    faceNetService: FaceNetService
 ): LivenessDetectionFaceController =
     LivenessDetectionFaceControllerImpl(
         cameraFrontService = cameraFrontService,
         logController = logController,
         context = resourceProvider,
-        configLogic = configLogic
+        configLogic = configLogic,
+        faceNetService = faceNetService
     )

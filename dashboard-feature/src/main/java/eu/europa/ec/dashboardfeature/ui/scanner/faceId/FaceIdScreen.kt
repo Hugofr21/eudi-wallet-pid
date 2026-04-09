@@ -109,17 +109,17 @@ private fun FaceIdContent(
             modifier            = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top bar
+
             FaceTopBar(onClose = onClose)
 
             Spacer(Modifier.height(12.dp))
 
-            // Badge de estado
+
             FaceScanStatusBadge(scanState = state.scanState)
 
             Spacer(Modifier.weight(1f))
 
-            // Janela da câmara / foto capturada
+
             FaceScannerWindow(
                 previewView    = previewView,
                 scanState      = state.scanState,
@@ -128,13 +128,13 @@ private fun FaceIdContent(
 
             Spacer(Modifier.weight(1f))
 
-            // Dica inferior
+
             FaceBottomHint(scanState = state.scanState)
 
             Spacer(Modifier.height(20.dp))
         }
 
-        // ── Cartão de resultado ────────────────────────────────────────────
+
         AnimatedVisibility(
             visible  = capturedBitmap != null,
             enter    = slideInVertically(
@@ -155,7 +155,6 @@ private fun FaceIdContent(
             }
         }
 
-        // ── Loading overlay ────────────────────────────────────────────────
         if (state.isLoading) {
             Box(
                 modifier         = Modifier
@@ -172,7 +171,6 @@ private fun FaceIdContent(
     }
 }
 
-// ─── Top Bar ─────────────────────────────────────────────────────────────────
 
 @Composable
 private fun FaceTopBar(onClose: () -> Unit) {
@@ -184,12 +182,12 @@ private fun FaceTopBar(onClose: () -> Unit) {
         verticalAlignment     = Alignment.CenterVertically
     ) {
         IconButton(onClick = onClose) {
-            Icon(Icons.Default.Close, "Fechar", tint = MaterialTheme.colorScheme.onBackground)
+            Icon(Icons.Default.Close, "Close", tint = MaterialTheme.colorScheme.onBackground)
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text       = "Verificação Facial",
+                text       = "Face Verification",
                 fontWeight = FontWeight.Bold,
                 fontSize   = 16.sp,
                 color      = MaterialTheme.colorScheme.onBackground
@@ -199,24 +197,22 @@ private fun FaceTopBar(onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.success, modifier = Modifier.size(10.dp))
-                Text("Biometria Segura", fontSize = 10.sp, color = MaterialTheme.colorScheme.success, fontWeight = FontWeight.Medium)
+                Text("Secure Biometrics", fontSize = 10.sp, color = MaterialTheme.colorScheme.success, fontWeight = FontWeight.Medium)
             }
         }
 
-        // Espaço simétrico (sem botão de flash)
         Spacer(Modifier.size(48.dp))
     }
 }
 
-// ─── Badge de estado ──────────────────────────────────────────────────────────
-
 @Composable
 private fun FaceScanStatusBadge(scanState: MrzScanState) {
     val (text, color) = when (scanState) {
-        is MrzScanState.Processing -> "A detetar rosto…"       to MaterialTheme.colorScheme.primary
-        is MrzScanState.Success    -> "Rosto capturado!"        to MaterialTheme.colorScheme.success
-        is MrzScanState.Error      -> "Erro de captura"         to MaterialTheme.colorScheme.error
-        else                       -> "Pronto para digitalizar" to MaterialTheme.colorScheme.onSurfaceVariant
+        is MrzScanState.Processing -> "Detecting face…" to MaterialTheme.colorScheme.primary
+        is MrzScanState.Success -> "Face captured!" to MaterialTheme.colorScheme.success
+        is MrzScanState.Error -> "Capture error" to MaterialTheme.colorScheme.error
+        else -> "Ready to scan" to MaterialTheme.colorScheme.onSurfaceVariant
+
     }
 
     Row(
@@ -233,7 +229,6 @@ private fun FaceScanStatusBadge(scanState: MrzScanState) {
     }
 }
 
-// ─── Janela de scan ───────────────────────────────────────────────────────────
 
 @Composable
 private fun FaceScannerWindow(
@@ -252,7 +247,7 @@ private fun FaceScannerWindow(
         modifier            = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Etiqueta superior
+
         Row(
             modifier          = Modifier
                 .padding(bottom = 8.dp)
@@ -276,37 +271,32 @@ private fun FaceScannerWindow(
             )
         }
 
-        // Viewport — proporção foto de passe (35×45 mm ≈ 0.778)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 60.dp) // mais estreito que o passaporte
+                .padding(horizontal = 60.dp)
                 .aspectRatio(35f / 45f)
                 .clip(RoundedCornerShape(14.dp))
                 .border(2.dp, borderColor, RoundedCornerShape(14.dp))
         ) {
             if (capturedBitmap != null) {
-                // Mostrar foto capturada em vez da câmara
                 Image(
                     bitmap             = capturedBitmap.asImageBitmap(),
-                    contentDescription = "Rosto capturado",
+                    contentDescription = "Face captured",
                     modifier           = Modifier.fillMaxSize(),
                     contentScale       = ContentScale.Crop
                 )
             } else {
-                // Câmara ao vivo
+
                 AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
 
-                // Linha de scan animada (só durante a deteção ativa)
                 if (scanState is MrzScanState.Scanning || scanState is MrzScanState.Processing) {
                     ScanLine()
                 }
             }
 
-            // Cantos de mira
             FaceCornerMarkers(borderColor)
 
-            // Overlay de sucesso
             if (scanState is MrzScanState.Success && capturedBitmap == null) {
                 Box(
                     modifier         = Modifier
@@ -323,7 +313,6 @@ private fun FaceScannerWindow(
                 }
             }
 
-            // Barra de progresso (processing)
             if (scanState is MrzScanState.Processing) {
                 LinearProgressIndicator(
                     modifier   = Modifier
@@ -336,10 +325,9 @@ private fun FaceScannerWindow(
             }
         }
 
-        // Etiqueta inferior
         Spacer(Modifier.height(8.dp))
         Text(
-            text          = "Foto de Passe  •  ICAO  •  35×45 mm",
+            text          = "Passport Photo • ICAO • 35×45 mm",
             fontSize      = 10.sp,
             color         = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             fontWeight    = FontWeight.Medium,
@@ -348,8 +336,6 @@ private fun FaceScannerWindow(
         )
     }
 }
-
-// ─── Linha de scan animada ────────────────────────────────────────────────────
 
 @Composable
 private fun ScanLine() {
@@ -374,7 +360,7 @@ private fun ScanLine() {
             end         = Offset(size.width - 12f, y),
             strokeWidth = 2f
         )
-        // Halo difuso por baixo da linha
+
         drawLine(
             color       = lineColor.copy(alpha = 0.15f),
             start       = Offset(12f, y),
@@ -384,7 +370,6 @@ private fun ScanLine() {
     }
 }
 
-// ─── Cantos de mira (ovais) ───────────────────────────────────────────────────
 
 @Composable
 private fun FaceCornerMarkers(color: Color) {
@@ -410,15 +395,15 @@ private fun FaceCornerMarkers(color: Color) {
     }
 }
 
-// ─── Dica inferior ────────────────────────────────────────────────────────────
 
 @Composable
 private fun FaceBottomHint(scanState: MrzScanState) {
     val hint = when (scanState) {
-        is MrzScanState.Processing -> "A processar… mantenha-se imóvel"
-        is MrzScanState.Success    -> "Rosto capturado com sucesso"
-        is MrzScanState.Error      -> "Ajuste a posição e tente novamente"
-        else                       -> "Centre o rosto na moldura acima"
+        is MrzScanState.Processing -> "Processing… please remain still"
+        is MrzScanState.Success -> "Face captured successfully"
+        is MrzScanState.Error -> "Adjust the position and try again"
+        else -> "Center the face in the frame above"
+
     }
 
     Row(
@@ -462,12 +447,10 @@ private fun FaceResultCard(
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {
-            // Cabeçalho
             Row(
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Miniatura da foto capturada
                 Box(
                     modifier = Modifier
                         .size(52.dp)
@@ -476,7 +459,7 @@ private fun FaceResultCard(
                 ) {
                     Image(
                         bitmap             = bitmap.asImageBitmap(),
-                        contentDescription = "Selfie capturada",
+                        contentDescription = "Selfie captured",
                         modifier           = Modifier.fillMaxSize(),
                         contentScale       = ContentScale.Crop
                     )
@@ -484,7 +467,7 @@ private fun FaceResultCard(
 
                 Column {
                     Text(
-                        "Verificação Facial",
+                        "Face Verification",
                         fontWeight = FontWeight.Bold,
                         fontSize   = 16.sp,
                         color      = MaterialTheme.colorScheme.onSurface
@@ -500,7 +483,7 @@ private fun FaceResultCard(
                             modifier = Modifier.size(12.dp)
                         )
                         Text(
-                            "Rosto detetado automaticamente",
+                            "Face detected automatically",
                             fontSize = 12.sp,
                             color    = MaterialTheme.colorScheme.success
                         )
@@ -512,7 +495,6 @@ private fun FaceResultCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(14.dp))
 
-            // Informação sobre a foto
             Row(
                 modifier              = Modifier
                     .fillMaxWidth()
@@ -530,13 +512,13 @@ private fun FaceResultCard(
                 )
                 Column {
                     Text(
-                        "Foto de passe gerada",
+                        "Pass photo generated",
                         fontSize   = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color      = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "Fundo removido  •  Formato ICAO  •  35×45 mm",
+                        "Back cover removed • ICAO format • 35×45 mm",
                         fontSize = 11.sp,
                         color    = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
@@ -544,8 +526,6 @@ private fun FaceResultCard(
             }
 
             Spacer(Modifier.height(18.dp))
-
-            // Botões
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick  = onRetry,
@@ -554,7 +534,7 @@ private fun FaceResultCard(
                 ) {
                     Icon(Icons.Default.Refresh, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Repetir", fontSize = 14.sp)
+                    Text("Repeat", fontSize = 14.sp)
                 }
                 Button(
                     onClick  = onConfirm,
@@ -563,7 +543,7 @@ private fun FaceResultCard(
                 ) {
                     Icon(Icons.Default.Check, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Confirmar", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Confirm", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
         }

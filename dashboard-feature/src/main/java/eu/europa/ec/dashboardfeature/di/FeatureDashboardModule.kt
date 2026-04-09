@@ -63,9 +63,13 @@ class FeatureDashboardModule
 
 @Factory
 fun provideLivenessInteractor(
-    livenessController: LivenessDetectionFaceController
+    livenessController: LivenessDetectionFaceController,
+    walletCoreDocumentsController: WalletCoreDocumentsController,
+    resourceProvider: ResourceProvider
 ): LivenessInteractor = LivenessInteractorImpl(
     livenessController,
+    walletCoreDocumentsController,
+    resourceProvider
 )
 
 @Factory

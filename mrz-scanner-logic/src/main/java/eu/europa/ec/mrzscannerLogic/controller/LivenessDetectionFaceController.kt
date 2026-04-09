@@ -1,11 +1,13 @@
 package eu.europa.ec.mrzscannerLogic.controller
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.PointF
 import android.graphics.Rect
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.view.PreviewView
+import androidx.core.graphics.scale
 import androidx.lifecycle.LifecycleOwner
 import eu.europa.ec.businesslogic.config.ConfigLogic
 import eu.europa.ec.businesslogic.controller.log.LogController
@@ -15,6 +17,8 @@ import eu.europa.ec.mrzscannerLogic.model.FaceGeometry
 import eu.europa.ec.mrzscannerLogic.model.LivenessThresholds
 import eu.europa.ec.mrzscannerLogic.model.ScanType
 import eu.europa.ec.mrzscannerLogic.service.CameraFrontService
+import eu.europa.ec.mrzscannerLogic.service.FaceNetService
+import eu.europa.ec.mrzscannerLogic.service.FaceVerificationResult
 import eu.europa.ec.mrzscannerLogic.utils.ImageUtils.bitmapToJpeg
 import eu.europa.ec.resourceslogic.provider.ResourceProvider
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +34,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.Executors
+import kotlin.math.atan2
 
 
 sealed class LivenessUpdate {
@@ -83,7 +88,10 @@ sealed class LivenessResult {
     object InProgress : LivenessResult()
 
     /** All challenges passed. [capturedJpeg] is the selfie. Never empty on success. */
-    data class Success(val capturedJpeg: ByteArray) : LivenessResult() {
+    data class Success(
+        val capturedJpeg: ByteArray,
+        val verification: FaceVerificationResult? = null
+    ) : LivenessResult() {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -124,7 +132,8 @@ class LivenessDetectionFaceControllerImpl(
     private val logController: LogController,
     private val numberOfChallenges: Int = 3,
     private val context: ResourceProvider,
-    private val configLogic: ConfigLogic
+    private val configLogic: ConfigLogic,
+    private val faceNetService: FaceNetService,
 ) : LivenessDetectionFaceController {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -140,6 +149,8 @@ class LivenessDetectionFaceControllerImpl(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
+    @Volatile private var latestFaceBoundingBox: FaceFeatures? = null
+
     private var lastUpdateMs: Long = 0
     private var baselineYaw: Float? = null
     private var baselinePitch: Float? = null
@@ -149,6 +160,9 @@ class LivenessDetectionFaceControllerImpl(
 
     private val selfieFile: File
         get() = File(context.provideContext().filesDir, "auto_self.jpg")
+
+    private val faceRefFile: File
+        get() = File(context.provideContext().filesDir, "face_ref.jpg")
 
     override fun startScanning(
         lifecycleOwner: LifecycleOwner,
@@ -164,6 +178,9 @@ class LivenessDetectionFaceControllerImpl(
             onFaceDetected = { geometry, features, bitmap ->
                 bitmap?.let { latestFrameBitmap = it }
 
+                if (features.boundingBox.width() > 0) {
+                    latestFaceBoundingBox = features
+                }
                 onNewFrame(geometry)
 
                 val currentState = _challengeState.value
@@ -215,6 +232,7 @@ class LivenessDetectionFaceControllerImpl(
     override fun stopScanning() {
         sessionJob?.cancel()
         cameraFrontService.stop()
+        faceNetService.close()
         reset()
     }
 
@@ -294,29 +312,56 @@ class LivenessDetectionFaceControllerImpl(
     private fun initiateFinalCaptureSequence() {
         sessionJob?.cancel()
         sessionJob = scope.launch {
+
             for (secondsLeft in 3 downTo 1) {
                 _challengeState.value = ChallengeState.Countdown(secondsLeft)
                 delay(1000)
             }
 
             val currentBitmap = latestFrameBitmap
+            val faceBbox      = latestFaceBoundingBox
+
             if (currentBitmap == null) {
-                val failureResult = LivenessResult.Failure("Failed to extract final logical frame.")
-                _livenessResult.value = failureResult
-                _livenessUpdate.tryEmit(LivenessUpdate.SessionResult(failureResult))
-                cameraFrontService.stop()
+                emit(LivenessResult.Failure("Failed to extract final logical frame."))
                 return@launch
             }
 
             val jpegBytes = bitmapToJpeg(currentBitmap)
-            val successResult = LivenessResult.Success(jpegBytes)
 
-            _livenessResult.value = successResult
-            _challengeState.value = ChallengeState.Idle
-            _livenessUpdate.tryEmit(LivenessUpdate.SessionResult(successResult))
+            val liveCrop: Bitmap = if (faceBbox != null && faceBbox.boundingBox.width() > 0)
+                alignAndCropFace(currentBitmap, faceBbox)
+            else
+                currentBitmap
 
-            cameraFrontService.stop()
+            val verification: FaceVerificationResult? = runCatching {
+
+                if (faceRefFile.exists()) {
+                    val refCrop = BitmapFactory.decodeByteArray(
+                        faceRefFile.readBytes(), 0, faceRefFile.length().toInt()
+                    )
+
+                    faceNetService.loadModel()
+                    faceNetService.setReferenceIdentity(refCrop)
+                    faceNetService.verifyIdentity(liveCrop)
+
+                } else {
+                    faceRefFile.writeBytes(bitmapToJpeg(liveCrop))
+                    selfieFile.writeBytes(jpegBytes)
+                    null
+                }
+
+            }.getOrNull()
+
+            emit(LivenessResult.Success(capturedJpeg = jpegBytes, verification = verification))
         }
+    }
+
+    // Helper para não repetir o bloco de emissão
+    private fun CoroutineScope.emit(result: LivenessResult) {
+        _livenessResult.value = result
+        _challengeState.value = ChallengeState.Idle
+        _livenessUpdate.tryEmit(LivenessUpdate.SessionResult(result))
+        cameraFrontService.stop()
     }
 
     private fun onChallengePassed(challenge: Challenge) {
@@ -375,4 +420,46 @@ class LivenessDetectionFaceControllerImpl(
 
     private fun checkOpenMouth(g: FaceGeometry) =
         g.mar > LivenessThresholds.MAR_OPEN_THRESHOLD
+
+
+    private fun alignAndCropFace(frame: Bitmap, features: FaceFeatures): Bitmap {
+        if (features.leftEye.isEmpty() || features.rightEye.isEmpty()) {
+            return cropSquareFace(frame, features.boundingBox)
+        }
+
+        val leftEyeCenter = PointF(
+            features.leftEye.map { it.x }.average().toFloat(),
+            features.leftEye.map { it.y }.average().toFloat()
+        )
+        val rightEyeCenter = PointF(
+            features.rightEye.map { it.x }.average().toFloat(),
+            features.rightEye.map { it.y }.average().toFloat()
+        )
+
+        val deltaY = rightEyeCenter.y - leftEyeCenter.y
+        val deltaX = rightEyeCenter.x - leftEyeCenter.x
+        val angleDegrees = Math.toDegrees(atan2(deltaY.toDouble(), deltaX.toDouble())).toFloat()
+
+        val matrix = android.graphics.Matrix()
+        matrix.postRotate(-angleDegrees, frame.width / 2f, frame.height / 2f)
+
+        val rotatedFrame = Bitmap.createBitmap(frame, 0, 0, frame.width, frame.height, matrix, true)
+        return cropSquareFace(rotatedFrame, features.boundingBox)
+    }
+
+    private fun cropSquareFace(frame: Bitmap, box: Rect): Bitmap {
+        val centerX = box.centerX()
+        val centerY = box.centerY()
+        val size = box.width().coerceAtLeast(box.height())
+        val padding = (size * 0.20f).toInt()
+        val finalSize = size + padding
+
+        val left = (centerX - finalSize / 2).coerceIn(0, frame.width)
+        val top = (centerY - finalSize / 2).coerceIn(0, frame.height)
+        val width = (left + finalSize).coerceAtMost(frame.width) - left
+        val height = (top + finalSize).coerceAtMost(frame.height) - top
+
+        val minEdge = width.coerceAtMost(height)
+        return Bitmap.createBitmap(frame, left, top, minEdge, minEdge)
+    }
 }

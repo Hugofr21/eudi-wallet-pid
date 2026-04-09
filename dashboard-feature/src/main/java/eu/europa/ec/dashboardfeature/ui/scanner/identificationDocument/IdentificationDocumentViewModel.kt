@@ -1,5 +1,6 @@
 package eu.europa.ec.dashboardfeature.ui.scanner.identificationDocument
 
+import android.annotation.SuppressLint
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
@@ -89,10 +90,9 @@ class IdentificationDocumentViewModel(
 ) : MviViewModel<Event, State, Effect>() {
 
     private var lifecycleOwner: LifecycleOwner? = null
+    @SuppressLint("StaticFieldLeak")
     private var previewView: PreviewView? = null
     private var scanningJob: Job? = null
-
-    // Job separado para o timer de unfreeze — cancelável independentemente do scan
     private var unfreezeJob: Job? = null
 
     override fun setInitialState() = State(
@@ -129,7 +129,6 @@ class IdentificationDocumentViewModel(
         }
     }
 
-    // ── Permissões ────────────────────────────────────────────────────────────
 
     private fun checkInitialPermissions() {
         viewModelScope.launch {
@@ -145,7 +144,6 @@ class IdentificationDocumentViewModel(
         }
     }
 
-    // ── Inicialização ─────────────────────────────────────────────────────────
 
     private fun handleInitializeScanner(event: Event.InitializeScanner) {
         viewModelScope.launch {
@@ -168,9 +166,11 @@ class IdentificationDocumentViewModel(
                 setState {
                     copy(
                         isLoading = false,
-                        errorMessage = "Erro ao inicializar câmera: ${e.message}",
-                        scanState = MrzScanState.Error("Falha na inicialização")
+                        errorMessage = "Error initializing camera: ${e.message}",
+                        scanState = MrzScanState.Error("Initialization failed")
+
                     )
+
                 }
             }
         }
@@ -180,12 +180,9 @@ class IdentificationDocumentViewModel(
         setState { copy(isCameraAvailability = event.availability, isPermissionChecked = true) }
     }
 
-    // ── Controlo de scanning ──────────────────────────────────────────────────
-
     private fun startScanning() {
-        val owner   = lifecycleOwner ?: run { setState { copy(scanState = MrzScanState.Error("Câmera não inicializada")) }; return }
-        val preview = previewView    ?: run { setState { copy(scanState = MrzScanState.Error("PreviewView não disponível")) }; return }
-
+        val owner = lifecycleOwner ?: run { setState { copy(scanState = MrzScanState.Error("Camera not initialized")) }; return }
+        val preview = previewView ?: run { setState { copy(scanState = MrzScanState.Error("PreviewView not available")) }; return }
         scanningJob?.cancel()
 
         scanningJob = viewModelScope.launch {
@@ -193,7 +190,6 @@ class IdentificationDocumentViewModel(
                 scannerInteractor.startScanning(owner, preview, ScanType.Document)
                     .collect { scanState ->
 
-                        // Se o scan está frozen aguardando confirmação do utilizador, ignorar
                         if (viewState.value.isScanFrozen) return@collect
 
                         when (scanState) {
@@ -210,20 +206,19 @@ class IdentificationDocumentViewModel(
                                     }
                                 } else {
                                     freezeTemporarily(
-                                        newScanState = MrzScanState.Error("Documento não reconhecido"),
-                                        message      = "Documento não reconhecido",
-                                        // Erro sem documento: desbloqueia rápido
+                                        newScanState = MrzScanState.Error("Unrecognized document"),
+                                        message      = "Unrecognized document",
                                         durationMs   = 1_500L
                                     )
                                 }
                             }
 
                             is MrzScanState.SecurityCheckFailed -> {
-                                // SecurityCheckFailed: mostra aviso mas desbloqueia RÁPIDO (1.5s).
-                                // O analyzer já tem debounce interno (3 falhas seguidas), por isso
-                                // quando chega aqui é genuinamente suspeito — mas não deve bloquear
-                                // mais do que 1-2 segundos, para não frustrar documentos reais com
-                                // reflexo momentâneo.
+                                // SecurityCheckFailed: shows a warning but unlocks QUICKLY (1.5s).
+                                // The analyzer already has internal debounce (3 consecutive failures), so
+                                // when it gets here it's genuinely suspicious — but it shouldn't block
+                                // for more than 1-2 seconds, so as not to frustrate real documents with
+                                // momentary reflex.
                                 freezeTemporarily(
                                     newScanState = scanState,
                                     message      = scanState.reason,
@@ -246,7 +241,7 @@ class IdentificationDocumentViewModel(
                 if (e is kotlinx.coroutines.CancellationException) return@launch
                 setState {
                     copy(
-                        scanState    = MrzScanState.Error("Erro ao iniciar scanning"),
+                        scanState    = MrzScanState.Error("Error starting scanning"),
                         errorMessage = e.message
                     )
                 }
@@ -255,9 +250,10 @@ class IdentificationDocumentViewModel(
     }
 
     /**
-     * Congela a UI por [durationMs] milissegundos e depois retoma automaticamente.
-     * Cancela qualquer timer anterior para evitar sobreposições.
+     * Freezes the UI for [durationMs] milliseconds and then resumes automatically.
+     * Cancels any previous timer to avoid overlaps.
      */
+
     private fun freezeTemporarily(
         newScanState: MrzScanState,
         message: String?,
@@ -308,8 +304,6 @@ class IdentificationDocumentViewModel(
         lifecycleOwner = null
         previewView    = null
     }
-
-    // ── Resultados ────────────────────────────────────────────────────────────
 
     private fun handleScanResult(event: Event.OnScanResult) {
         setState {

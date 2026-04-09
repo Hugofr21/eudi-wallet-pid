@@ -64,6 +64,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import eu.europa.ec.mrzscannerLogic.controller.FaceFeatures
 import eu.europa.ec.mrzscannerLogic.model.ScanType
+import eu.europa.ec.mrzscannerLogic.service.FaceVerificationResult
+import eu.europa.ec.uilogic.component.utils.VSpacer
 
 @Composable
 fun LivenessFaceScreen(
@@ -81,7 +83,9 @@ fun LivenessFaceScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
         when {
             !state.isInstructionAcknowledged -> {
                 FaceIdInstructionsPanel(
@@ -90,9 +94,36 @@ fun LivenessFaceScreen(
             }
 
             state.isSessionComplete -> {
+                val vr = state.showVerificationLabel
+                when {
+
+                    vr != null && !vr.isVerified -> {
+                        FaceIdVerificationFailedPanel(
+                            score   = (vr.similarityScore * 100).toInt(),
+                            onRetry = { viewModel.setEvent(Event.RetryScanning) }
+                        )
+                    }
+
+                    state.capturedBitmap != null -> {
+                        FaceIdConfirmationPanel(
+                            capturedBitmap     = state.capturedBitmap!!,
+                            verificationResult = vr,
+                            verifiedPersonName = state.verifiedPersonName,
+                            onRetry            = { viewModel.setEvent(Event.RetryScanning) },
+                            onConfirm          = { viewModel.setEvent(Event.ConfirmDocument) }
+                        )
+                    }
+
+                    else -> FaceIdCaptureErrorPanel(
+                        onRetry = { viewModel.setEvent(Event.RetryScanning) }
+                    )
+                }
+
                 if (state.capturedBitmap != null) {
                     FaceIdConfirmationPanel(
                         capturedBitmap = state.capturedBitmap!!,
+                        verificationResult = state.showVerificationLabel,
+                        verifiedPersonName = state.verifiedPersonName,
                         onRetry   = { viewModel.setEvent(Event.RetryScanning) },
                         onConfirm = { viewModel.setEvent(Event.ConfirmDocument) }
                     )
@@ -114,7 +145,7 @@ fun LivenessFaceScreen(
 
         if (state.isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.8f)),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) { CircularProgressIndicator() }
         }
@@ -124,12 +155,12 @@ fun LivenessFaceScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .background(Color(0xFFB00020).copy(alpha = 0.9f))
+                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.9f))
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = msg, color = Color.White,
+                    text = msg, color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
@@ -186,7 +217,6 @@ private fun FaceIdScanningPanel(
             modifier = Modifier
                 .weight(0.35f)
                 .fillMaxWidth()
-                .background(Color.White)
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
             LiveFacePreview(bitmap = state.previewBitmap)
@@ -368,7 +398,7 @@ private fun CountdownOverlay(seconds: Int) {
                     text = "$sec",
                     fontSize = 52.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -462,7 +492,6 @@ private fun FaceIdCaptureErrorPanel(onRetry: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -483,10 +512,11 @@ private fun FaceIdCaptureErrorPanel(onRetry: () -> Unit) {
     }
 }
 
-
 @Composable
 private fun FaceIdConfirmationPanel(
     capturedBitmap: Bitmap,
+    verificationResult: FaceVerificationResult?,
+    verifiedPersonName: String?,
     onRetry: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -501,6 +531,54 @@ private fun FaceIdConfirmationPanel(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+
+            verificationResult?.let { vr ->
+                val isMatch   = vr.isVerified
+                val pct       = (vr.similarityScore * 100).toInt()
+                val badgeColor = if (isMatch) Color(0xFF2E7D32) else Color(0xFFB00020)
+                val icon       = if (isMatch) Icons.Default.CheckCircle else Icons.Default.Face
+                val mainLabel = if (isMatch && !verifiedPersonName.isNullOrBlank()) {
+                    verifiedPersonName
+                } else if (isMatch) {
+                    "Identity confirmed"
+                } else {
+                    "Unrecognized"
+                }
+
+                val subLabel = if (isMatch) "Identity confirmation · $pct%" else "$pct% similarity"
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp)
+                        .background(badgeColor.copy(alpha = 0.88f), RoundedCornerShape(24.dp))
+                        .padding(horizontal = 18.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector        = icon,
+                            contentDescription = null,
+                            tint               = MaterialTheme.colorScheme.primary,
+                            modifier           = Modifier.size(20.dp)
+                        )
+                        VSpacer.Small() // 8dp
+                        Column {
+                            Text(
+                                text       = mainLabel,
+                                color      = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                style      = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text  = subLabel,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth().height(64.dp)
@@ -517,7 +595,9 @@ private fun FaceIdConfirmationPanel(
                     Spacer(modifier = Modifier.size(8.dp))
                     Text(text = "Liveness confirm",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White, fontWeight = FontWeight.Medium)
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
@@ -525,7 +605,6 @@ private fun FaceIdConfirmationPanel(
         Column(
             modifier = Modifier
                 .fillMaxWidth().weight(0.30f)
-                .background(Color.White)
                 .padding(horizontal = 24.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
@@ -554,6 +633,73 @@ private fun FaceIdConfirmationPanel(
                     Text("Confirm identity", fontWeight = FontWeight.Medium)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FaceIdVerificationFailedPanel(
+    score: Int,
+    onRetry: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .background(Color(0xFFFFEBEE), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text       = "$score%",
+                    fontSize   = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color      = Color(0xFFB00020)
+                )
+                Text(
+                    text  = "similarity",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFFB00020)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text       = "Identity not confirmed",
+            style      = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color      = Color.Black,
+            textAlign  = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text      = "The match was $score%, below the minimum required 85%. Please ensure it's the same person from the initial capture and try again.",
+            style     = MaterialTheme.typography.bodyMedium,
+            color     = Color.Gray,
+            textAlign = TextAlign.Center,
+            modifier  = Modifier.padding(horizontal = 8.dp)
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        Button(
+            onClick  = onRetry,
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFB00020)),
+            shape    = RoundedCornerShape(12.dp)
+        ) {
+            Text("Repeat check", fontWeight = FontWeight.Medium)
         }
     }
 }
