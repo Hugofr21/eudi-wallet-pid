@@ -18,6 +18,8 @@ package eu.europa.ec.dashboardfeature.interactor
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import eu.europa.ec.dashboardfeature.ui.document_sign.model.DocumentSignButtonUi
 import eu.europa.ec.eudi.rqesui.infrastructure.DocumentUri
 import eu.europa.ec.eudi.rqesui.infrastructure.EudiRQESUi
@@ -27,10 +29,16 @@ import eu.europa.ec.uilogic.component.AppIcons
 import eu.europa.ec.uilogic.component.ListItemDataUi
 import eu.europa.ec.uilogic.component.ListItemMainContentDataUi
 import eu.europa.ec.uilogic.component.ListItemTrailingContentDataUi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.Locale
+
 
 interface DocumentSignInteractor {
     fun launchRqesSdk(context: Context, uri: Uri)
     fun getItemUi(): DocumentSignButtonUi
+    suspend fun processAndSanitizeDocument(context: Context, originalUri: Uri, userName: String): Uri?
 }
 
 class DocumentSignInteractorImpl(
@@ -54,8 +62,35 @@ class DocumentSignInteractorImpl(
                 trailingContentData = ListItemTrailingContentDataUi.Icon(
                     iconData = AppIcons.Add
                 ),
-
             )
         )
+    }
+
+    override suspend fun processAndSanitizeDocument(
+        context: Context,
+        originalUri: Uri,
+        userName: String
+    ): Uri? = withContext(Dispatchers.IO) {
+        try {
+            val sanitizedUser = userName
+                .lowercase(Locale.ROOT)
+                .replace(Regex("[^a-z0-9]"), "")
+                .ifBlank { "user" }
+
+            val finalFileName = "${sanitizedUser}_signature.pdf"
+            val destFile = File(context.cacheDir, finalFileName)
+
+            context.contentResolver.openInputStream(originalUri)?.use { input ->
+                destFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            } ?: return@withContext null
+
+            val authority = "${context.packageName}.provider"
+            return@withContext FileProvider.getUriForFile(context, authority, destFile)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext null
+        }
     }
 }

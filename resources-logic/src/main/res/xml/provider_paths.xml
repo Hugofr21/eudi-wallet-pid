@@ -21,4 +21,5 @@
     <files-path
         name="backup"
         path="backup/" />
+    <cache-path name="cache_files" path="." />
 </paths>

@@ -16,9 +16,7 @@
 
 package eu.europa.ec.dashboardfeature.ui.document_sign
 
-import android.content.Context
 import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -34,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import eu.europa.ec.dashboardfeature.ui.document_sign.model.DocumentSignButtonUi
@@ -57,8 +54,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
-import java.io.File
-import java.util.Locale
 
 @Composable
 internal fun DocumentSignScreen(
@@ -87,7 +82,6 @@ internal fun DocumentSignScreen(
     }
 }
 
-
 @Composable
 private fun Content(
     state: State,
@@ -96,7 +90,6 @@ private fun Content(
     onNavigationRequested: (Effect.Navigation) -> Unit,
     paddingValues: PaddingValues,
 ) {
-
     val context = LocalContext.current
 
     Column(
@@ -122,34 +115,10 @@ private fun Content(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri: Uri? ->
         uri?.let { selectedUri ->
-            val fileName = getFileNameFromUri(context, selectedUri)
-            val regex = Regex("^[a-z0-9_-]+\\.pdf$")
-
-            if (fileName != null) {
-                val normalizedName = fileName.lowercase(Locale.ROOT)
-                if (regex.matches(normalizedName)) {
-                    onEventSend(Event.DocumentUriRetrieved(context, selectedUri))
-                } else {
-                    val sanitized = sanitizeFileName(fileName)
-                    val inputStream = context.contentResolver.openInputStream(selectedUri)
-                    if (inputStream != null) {
-                        inputStream.use { input ->
-                            val destFile = File(context.cacheDir, sanitized)
-                            destFile.outputStream().use { out ->
-                                input.copyTo(out)
-                            }
-                            val newUri = destFile.toUri()
-                            onEventSend(Event.DocumentUriRetrieved(context, newUri))
-                        }
-                    } else {
-                        onEventSend(Event.InvalidDocumentName(fileName))
-                    }
-                }
-            } else {
-                onEventSend(Event.InvalidDocumentName("Unknown"))
-            }
+            onEventSend(Event.DocumentSelected(context, selectedUri))
         }
     }
+
     LaunchedEffect(Unit) {
         effectFlow.onEach { effect ->
             when (effect) {
@@ -160,43 +129,6 @@ private fun Content(
             }
         }.collect()
     }
-}
-
-
-private fun getFileNameFromUri(context: Context, uri: Uri): String? {
-    val cursor = context.contentResolver.query(uri, null, null, null, null)
-    return cursor?.use {
-        if (it.moveToFirst()) {
-            val displayNameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (displayNameIndex != -1) {
-                it.getString(displayNameIndex)
-            } else {
-                null
-            }
-        } else {
-            null
-        }
-    }
-}
-
-
-fun sanitizeFileName(original: String): String {
-    val trimmed = original.trim()
-    val dotIndex = trimmed.lastIndexOf('.')
-    val base = if (dotIndex > 0) trimmed.substring(0, dotIndex) else trimmed
-    var ext = if (dotIndex > 0) trimmed.substring(dotIndex + 1) else ""
-    ext = ext.lowercase(Locale.ROOT)
-    if (ext != "pdf") ext = "pdf"
-
-    var baseNormalized = base.lowercase(Locale.ROOT)
-        .replace(Regex("[^a-z0-9_-]+"), "_")
-        .replace(Regex("_+"), "_")
-        .trim('_')
-
-    if (baseNormalized.isBlank()) baseNormalized = "document"
-    if (baseNormalized.length > 200) baseNormalized = baseNormalized.take(200)
-
-    return "$baseNormalized.$ext"
 }
 
 @Composable

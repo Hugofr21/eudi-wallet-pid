@@ -18,7 +18,10 @@ package eu.europa.ec.dashboardfeature.ui.document_sign
 
 import android.content.Context
 import android.net.Uri
+import androidx.lifecycle.viewModelScope
 import eu.europa.ec.dashboardfeature.interactor.DocumentSignInteractor
+import eu.europa.ec.dashboardfeature.interactor.HomeInteractor
+import eu.europa.ec.dashboardfeature.interactor.HomeInteractorGetUserNameViaMainPidDocumentPartialState
 import eu.europa.ec.dashboardfeature.ui.document_sign.Effect.*
 import eu.europa.ec.dashboardfeature.ui.document_sign.model.DocumentSignButtonUi
 import eu.europa.ec.resourceslogic.R
@@ -28,7 +31,10 @@ import eu.europa.ec.uilogic.mvi.MviViewModel
 import eu.europa.ec.uilogic.mvi.ViewEvent
 import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
+import java.util.Locale
 
 data class State(
     val isLoading: Boolean = false,
@@ -36,15 +42,16 @@ data class State(
     val title: String,
     val subtitle: String,
     val buttonUi: DocumentSignButtonUi,
-    val errorDoc: ContentErrorConfig? = null
+    val errorDoc: ContentErrorConfig? = null,
+    val welcomeUserMessage: String? = null
 ) : ViewState
 
 sealed class Event : ViewEvent {
     data object Pop : Event()
     data object OnSelectDocument : Event()
-    data class DocumentUriRetrieved(val context: Context, val uri: Uri) : Event()
-
-    data class InvalidDocumentName(val fileName: String) : Event()
+    // Evento atualizado para apenas repassar a URI original para o ViewModel processar
+    data class DocumentSelected(val context: Context, val uri: Uri) : Event()
+    data class ErrorProcessingDocument(val reason: String) : Event()
 }
 
 sealed class Effect : ViewSideEffect {
@@ -54,12 +61,17 @@ sealed class Effect : ViewSideEffect {
 
     data class OpenDocumentSelection(val selection: List<String>) : Effect()
 }
-
 @KoinViewModel
 class DocumentSignViewModel(
     private val documentSignInteractor: DocumentSignInteractor,
     private val resourceProvider: ResourceProvider,
+    private val homeInteractor: HomeInteractor
 ) : MviViewModel<Event, State, Effect>() {
+    private var cachedUserName: String = "user"
+
+    init {
+        fetchUserName()
+    }
 
     override fun setInitialState(): State = State(
         title = resourceProvider.getString(R.string.document_sign_title),
@@ -67,31 +79,59 @@ class DocumentSignViewModel(
         buttonUi = documentSignInteractor.getItemUi(),
     )
 
+    private fun fetchUserName() {
+        viewModelScope.launch {
+            homeInteractor.getUserNameViaMainPidDocument().collect { response ->
+                if (response is HomeInteractorGetUserNameViaMainPidDocumentPartialState.Success) {
+                    cachedUserName = response.userFirstName
+                    setState {
+                        copy(
+                            welcomeUserMessage = if (response.userFirstName.isNotBlank()) {
+                                resourceProvider.getString(R.string.home_screen_welcome_user_message, response.userFirstName)
+                            } else resourceProvider.getString(R.string.home_screen_welcome)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     override fun handleEvents(event: Event) {
         when (event) {
             is Event.OnSelectDocument -> {
-                setEffect { OpenDocumentSelection(listOf("application/pdf")) }
+                setEffect { Effect.OpenDocumentSelection(listOf("application/pdf")) }
             }
-
             is Event.Pop -> setEffect { Effect.Navigation.Pop }
-            is Event.DocumentUriRetrieved -> documentSignInteractor.launchRqesSdk(
-                event.context,
-                event.uri
-            )
-
-            is Event.InvalidDocumentName -> {
+            is Event.DocumentSelected -> processSelectedDocument(event.context, event.uri)
+            is Event.ErrorProcessingDocument -> {
                 setState {
                     copy(
                         errorDoc = ContentErrorConfig(
                             errorTitle = resourceProvider.getString(R.string.error_title),
-                            errorSubTitle = resourceProvider.getString(
-                                R.string.invalid_document_name_error,
-                                event.fileName
-                            ),
+                            errorSubTitle = event.reason,
                             onCancel = { setState { copy(errorDoc = null) } }
                         )
                     )
                 }
+            }
+        }
+    }
+
+    private fun processSelectedDocument(context: Context, originalUri: Uri) {
+        setState { copy(isLoading = true) }
+        viewModelScope.launch {
+            val processedUri = documentSignInteractor.processAndSanitizeDocument(
+                context = context,
+                originalUri = originalUri,
+                userName = cachedUserName
+            )
+
+            setState { copy(isLoading = false) }
+
+            if (processedUri != null) {
+                documentSignInteractor.launchRqesSdk(context, processedUri)
+            } else {
+                handleEvents(Event.ErrorProcessingDocument("Failed to process and sanitize the PDF document."))
             }
         }
     }
