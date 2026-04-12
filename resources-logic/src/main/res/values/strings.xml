@@ -580,6 +580,7 @@
     <string name="capture_photo_captured_title">Face captured</string>
     <string name="capture_photo_captured_subtitle">Liveness and face anti-spoofing detection: the backbone of secure face recognition</string>
     <string name="capture_liveness_confirmed">Next</string>
+    <string name="home_screen_vc">Scanner VC</string>
 
     <!-- Logs Screen -->
 </resources>

@@ -95,6 +95,7 @@ foundation = "1.10.4"
 uiGraphics = "1.10.4"
 cameraViewVersion = "1.6.0"
 runtime = "1.10.6"
+uiGraphicsVersion = "1.10.6"
 
 [libraries]
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
@@ -228,6 +229,7 @@ androidx-foundation = { group = "androidx.compose.foundation", name = "foundatio
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraViewVersion" }
 androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
+ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphicsVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

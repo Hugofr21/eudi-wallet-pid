@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.foundation)
+    implementation(libs.ui.graphics)
 
     testImplementation(project(LibraryModule.TestLogic.path))
 }

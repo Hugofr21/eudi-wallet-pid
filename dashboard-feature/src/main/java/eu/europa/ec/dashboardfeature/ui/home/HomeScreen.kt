@@ -42,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
@@ -235,62 +236,29 @@ private fun Content(
 
         WrapActionCard(
             config = state.authenticateCardConfig,
-            onActionClick = {
-                onEventSent(
-                    Event.AuthenticateCard.AuthenticatePressed
-                )
-            },
-            onLearnMoreClick = {
-                onEventSent(
-                    Event.AuthenticateCard.LearnMorePressed
-                )
-            },
-            base = LightSkyBlue
+            baseColor = Color(0xFF1565C0),
+            buttonTextColor = Color(0xFF1A3A6E),
+            badgeLabel = "eID",
+            onActionClick = { onEventSent(Event.AuthenticateCard.AuthenticatePressed) },
+            onLearnMoreClick = { onEventSent(Event.AuthenticateCard.LearnMorePressed) }
         )
 
         WrapActionCard(
             config = state.signCardConfig,
-            onActionClick = {
-                onEventSent(
-                    Event.SignDocumentCard.SignDocumentPressed
-                )
-            },
-            onLearnMoreClick = {
-                onEventSent(
-                    Event.SignDocumentCard.LearnMorePressed
-                )
-            },
-            base = SoftYellow
-        )
-
-        WrapActionCard(
-            config = state.DidComm,
-            onActionClick = {
-                onEventSent(
-                    Event.SignWebFidoCard.SignWebFidoPressed
-                )
-            },
-            onLearnMoreClick = {
-                onEventSent(
-                    Event.SignWebFidoCard.LearnMorePressed
-                )
-            },
-            base = CoralRed
+            baseColor = Color(0xFF00796B),
+            buttonTextColor = Color(0xFF004D40),
+            badgeLabel = "QES",
+            onActionClick = { onEventSent(Event.SignDocumentCard.SignDocumentPressed) },
+            onLearnMoreClick = { onEventSent(Event.SignDocumentCard.LearnMorePressed) }
         )
 
         WrapActionCard(
             config = state.ShraringVc,
-            onActionClick = {
-                onEventSent(
-                    Event.ScannerCameraCard.ScannerCameraCardPressed
-                )
-            },
-            onLearnMoreClick = {
-                onEventSent(
-                    Event.ScannerCameraCard.LearnMorePressed
-                )
-            },
-            base = LightTeal
+            baseColor = Color(0xFF1565C0),
+            buttonTextColor = Color(0xFF1A3A6E),
+            badgeLabel = "VC",
+            onActionClick = { onEventSent(Event.ScannerCameraCard.ScannerCameraCardPressed) },
+            onLearnMoreClick = { onEventSent(Event.ScannerCameraCard.LearnMorePressed) }
         )
     }
 
@@ -505,6 +473,44 @@ private fun HomeScreenSheetContent(
             )
         }
 
+        is HomeScreenBottomSheetContent.LearnMoreAboutScanner -> {
+            GenericBottomSheet(
+                titleContent = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        WrapIcon(
+                            iconData = AppIcons.Info,
+                            customTint = MaterialTheme.colorScheme.primary
+                        )
+                        HSpacer.Small()
+                        Text(
+                            text = stringResource(R.string.home_screen_vc),
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                        )
+                    }
+                },
+                bodyContent = {
+                    Column(verticalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)) {
+                        Text(
+                            stringResource(R.string.home_screen_sign_learn_more_inner_title),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                        Text(
+                            stringResource(R.string.home_screen_sign_learn_more_description),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                    }
+                }
+            )
+        }
+
         is HomeScreenBottomSheetContent.Bluetooth -> {
             DialogBottomSheet(
                 textData = BottomSheetTextDataUi(
@@ -589,12 +595,6 @@ private fun HomeScreenContentPreview() {
                     signCardConfig = ActionCardConfig(
                         title = stringResource(R.string.home_screen_sign_card_title),
                         icon = AppIcons.Contract,
-                        primaryButtonText = stringResource(R.string.home_screen_sign),
-                        secondaryButtonText = stringResource(R.string.home_screen_learn_more),
-                    ),
-                    DidComm = ActionCardConfig(
-                        title = stringResource(R.string.digital_credentials_screen_sign_card_title),
-                        icon = AppIcons.DidComm,
                         primaryButtonText = stringResource(R.string.home_screen_sign),
                         secondaryButtonText = stringResource(R.string.home_screen_learn_more),
                     ),

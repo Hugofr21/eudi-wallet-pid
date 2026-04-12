@@ -55,7 +55,6 @@ data class State(
     val welcomeUserMessage: String,
     val authenticateCardConfig: ActionCardConfig,
     val signCardConfig: ActionCardConfig,
-    val DidComm: ActionCardConfig,
     val ShraringVc: ActionCardConfig,
     val bleAvailability: BleAvailability = BleAvailability.UNKNOWN,
     val isBleCentralClientModeEnabled: Boolean = false
@@ -76,11 +75,6 @@ sealed class Event : ViewEvent {
 
     }
 
-    sealed class SignWebFidoCard : Event() {
-        data object SignWebFidoPressed : Event()
-        data object LearnMorePressed : Event()
-
-    }
 
     sealed class ScannerCameraCard : Event() {
         data object ScannerCameraCardPressed : Event()
@@ -138,6 +132,8 @@ sealed class HomeScreenBottomSheetContent {
     data object Authenticate : HomeScreenBottomSheetContent()
     data object LearnMoreAboutAuthenticate : HomeScreenBottomSheetContent()
     data object LearnMoreAboutSignDocument : HomeScreenBottomSheetContent()
+
+    data object LearnMoreAboutScanner : HomeScreenBottomSheetContent()
     data object Sign : HomeScreenBottomSheetContent()
 
     data class Bluetooth(val availability: BleAvailability) : HomeScreenBottomSheetContent()
@@ -162,12 +158,6 @@ class HomeViewModel(
             signCardConfig = ActionCardConfig(
                 title = resourceProvider.getString(R.string.home_screen_sign_card_title),
                 icon = AppIcons.Contract,
-                primaryButtonText = resourceProvider.getString(R.string.home_screen_sign),
-                secondaryButtonText = resourceProvider.getString(R.string.home_screen_learn_more)
-            ),
-            DidComm = ActionCardConfig(
-                title = resourceProvider.getString(R.string.digital_credentials_screen_sign_card_title),
-                icon = AppIcons.DidComm,
                 primaryButtonText = resourceProvider.getString(R.string.home_screen_sign),
                 secondaryButtonText = resourceProvider.getString(R.string.home_screen_learn_more)
             ),
@@ -265,19 +255,14 @@ class HomeViewModel(
                 navigateToQrScan()
             }
 
-            is Event.SignWebFidoCard.LearnMorePressed -> showBottomSheet(
-                sheetContent = HomeScreenBottomSheetContent.LearnMoreAboutAuthenticate
-            )
-
-            Event.SignWebFidoCard.SignWebFidoPressed -> TODO()
-
             Event.ScannerCameraCard.ScannerCameraCardPressed -> {
                 navigateScreenScanner()
             }
 
-            else -> {
+            Event.ScannerCameraCard.LearnMorePressed -> showBottomSheet(
+                sheetContent = HomeScreenBottomSheetContent.LearnMoreAboutScanner
+            )
 
-            }
         }
     }
 
@@ -311,8 +296,12 @@ class HomeViewModel(
                 setEffect { Effect.Navigation.OnSystemSettings }
             }
 
-            else -> {
-                // no implementation
+            BleAvailability.UNKNOWN -> {
+
+            }
+
+            BleAvailability.AVAILABLE -> {
+
             }
         }
     }

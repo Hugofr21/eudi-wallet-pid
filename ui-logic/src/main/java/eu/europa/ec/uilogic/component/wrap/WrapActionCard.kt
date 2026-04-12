@@ -16,27 +16,23 @@
 
 package eu.europa.ec.uilogic.component.wrap
 
-import android.graphics.drawable.Icon
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,12 +45,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -72,17 +67,17 @@ data class ActionCardConfig(
     val primaryButtonText: String,
     val secondaryButtonText: String,
 )
-
 @Composable
 fun WrapActionCard(
     modifier: Modifier = Modifier,
     config: ActionCardConfig,
     onActionClick: () -> Unit = {},
     onLearnMoreClick: () -> Unit = {},
-    minHeight: Dp = 150.dp,
-    base : Color
+    minHeight: Dp = 200.dp,
+    baseColor: Color,
+    buttonTextColor: Color,
+    badgeLabel: String? = null,
 ) {
-
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -92,102 +87,119 @@ fun WrapActionCard(
                 role = Role.Button,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(bounded = true)
-            )
-            .border(
-                width = 1.dp,
-                color = DeepBlue.copy(alpha = 0.06f),
             ),
         shape = RoundedCornerShape(0.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = baseColor)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            base,
-                            base.copy(alpha = 0.95f)
-                        )
-                    )
-                )
-                .padding(horizontal = SPACING_MEDIUM.dp, vertical = SPACING_MEDIUM.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
 
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(end = 8.dp, top = 8.dp)
-                    .size(44.dp)
+                    .padding(12.dp)
+                    .size(28.dp)
                     .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.20f))
                     .clickable(
-                        onClick = { onLearnMoreClick() },
+                        onClick = onLearnMoreClick,
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = ripple(bounded = false)
+                        indication = ripple(bounded = true)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Info,
-                    contentDescription = "Learn more",
-                    tint = OceanBlue,
-                    modifier = Modifier.size(20.dp)
+                    contentDescription = config.secondaryButtonText,
+                    tint = Color.White.copy(alpha = 0.90f),
+                    modifier = Modifier.size(15.dp)
                 )
             }
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .align(Alignment.Center),
+                    .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                VSpacer.Large()
 
                 Box(
                     modifier = Modifier
-                        .size(110.dp),
+                        .size(64.dp)
+                        .background(
+                            color = Color.White.copy(alpha = 0.15f),
+                            shape = CircleShape
+                        )
+                    ,
+
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(90.dp)
-                            .background(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = 0.14f),
-                                        base.copy(alpha = 0.06f),
-                                        Color.Transparent
-                                    )
-                                ),
-                                shape = CircleShape
-                            )
-
-                    )
                     WrapImage(
-                        modifier = Modifier
-                            .size(110.dp)
-                            .shadow(8.dp, shape = CircleShape, clip = false),
+                        modifier = Modifier.size(30.dp),
                         iconData = config.icon,
-                        contentScale = ContentScale.Fit
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.tint(Color.White)
                     )
                 }
 
-                VSpacer.Medium()
+                VSpacer.Small()
+
+                badgeLabel?.let {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.White.copy(alpha = 0.15f))
+                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = it.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.80f),
+                        )
+                    }
+                    VSpacer.ExtraSmall()
+                }
 
                 Text(
                     text = config.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = DeepBlue,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = Color.White,
                     maxLines = 2,
                     textAlign = TextAlign.Center,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                VSpacer.Small()
+
+                Button(
+                    onClick = onActionClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp),
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+                        contentColor = buttonTextColor
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                ) {
+                    Text(
+                        text = config.primaryButtonText,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
+
+                VSpacer.Medium()
             }
         }
     }
 }
-
 
 @ThemeModePreviews
 @Composable
@@ -200,7 +212,12 @@ private fun WrapActionCardPreview() {
                 primaryButtonText = "Authenticate",
                 secondaryButtonText = "Learn more",
             ),
-            base = LightSkyBlue
+            baseColor = Color(0xFF1A4FA3),
+            buttonTextColor = Color(0xFF1A3A6E),
+            badgeLabel = "eID",
+            onActionClick = {  },
+            onLearnMoreClick = { }
+
         )
     }
 }
