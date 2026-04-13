@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
+import androidx.core.graphics.createBitmap
 
 class FaceCardImageAnalyzer(
     private val resultFlow: ProducerScope<MrzScanState>,
@@ -36,8 +37,6 @@ class FaceCardImageAnalyzer(
     private val requiredSuccessFrames: Int = 3,
     private val scope: CoroutineScope,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
-    antiSpoofingService: AnalyzerGuidelineCardService,
-    sensorDocumentService: SensorDocumentService,
 ) : ImageAnalysis.Analyzer {
 
     private val isProcessing = AtomicBoolean(false)
@@ -53,11 +52,37 @@ class FaceCardImageAnalyzer(
     }
 
 
+    /**
+     * Pipeline principal de análise de frames provenientes da câmera em tempo real.
+     *
+     * Esta função implementa controlo de concorrência, limitação de taxa (throttling) e gestão
+     * de ciclo de vida do ImageProxy, garantindo que cada frame é processado de forma segura
+     * sem bloqueio da pipeline da CameraX.
+     *
+     * O processamento segue duas vias condicionais dependendo do formato da imagem:
+     * - YUV_420_888: utilização direta via InputImage.fromMediaImage (menor custo computacional).
+     * - Outros formatos (ex.: RGBA_8888): conversão intermédia para Bitmap.
+     *
+     * O sistema executa deteção facial através de um serviço ML Kit abstraído (FaceService),
+     * e apenas continua o pipeline caso existam faces detetadas.
+     *
+     * A função garante:
+     * - Exclusão de concorrência via AtomicBoolean.
+     * - Throttling temporal para evitar sobrecarga do pipeline.
+     * - Liberação garantida do ImageProxy.
+     *
+     * Limitações estruturais:
+     * - Conversão para Bitmap introduz overhead significativo em dispositivos de gama baixa.
+     * - O pipeline assume que pelo menos uma face relevante existe antes de avançar.
+     * - Dependência direta de ML Kit pode introduzir variabilidade de latência.
+     *
+     * @param imageProxy Frame de entrada fornecido pelo CameraX ImageAnalysis.
+     */
+
     @OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
         val currentTime = System.currentTimeMillis()
 
-        // Throttle
         if (isProcessing.get() || (currentTime - lastProcessTime) < throttleMs) {
             imageProxy.close()
             return
@@ -79,20 +104,12 @@ class FaceCardImageAnalyzer(
         try {
             val rotation = imageProxy.imageInfo.rotationDegrees
 
-            // --- CORREÇÃO HÍBRIDA (Universal) ---
-            // Verifica o formato para decidir como criar o InputImage
-            // Formato 35 = YUV_420_888 (Padrão rápido)
-            // Formato 1 = RGBA_8888 (Configuração atual)
-
             var inputImage: InputImage? = null
             var cachedBitmap: Bitmap? = null
 
             if (imageProxy.format == ImageFormat.YUV_420_888) {
-                // Caminho Rápido (YUV): Passa o buffer direto
                 inputImage = InputImage.fromMediaImage(mediaImage, rotation)
             } else {
-                // Caminho de Compatibilidade (RGBA): Converte para Bitmap primeiro
-                // Nota: toBitmap() já aplica a rotação, por isso passamos 0 no InputImage
                 cachedBitmap = imageProxy.toBitmap()
                 inputImage = InputImage.fromBitmap(cachedBitmap, 0)
             }
@@ -101,8 +118,6 @@ class FaceCardImageAnalyzer(
                 .addOnSuccessListener { faces ->
                     if (faces.isNotEmpty()) {
                         try {
-                            // Se já convertemos o bitmap antes (caminho RGBA), usamos esse.
-                            // Se viemos do caminho YUV, convertemos agora (Lazy Conversion).
                             val bitmapToProcess = cachedBitmap ?: imageProxy.toBitmap()
 
                             scope.launch(dispatcher) {
@@ -120,8 +135,6 @@ class FaceCardImageAnalyzer(
                     consecutiveSuccesses = 0
                 }
                 .addOnCompleteListener {
-                    // O imageProxy é fechado aqui.
-                    // Se usámos o toBitmap(), os dados já foram copiados, por isso é seguro fechar.
                     imageProxy.close()
                     isProcessing.set(false)
                 }
@@ -132,6 +145,28 @@ class FaceCardImageAnalyzer(
             isProcessing.set(false)
         }
     }
+
+    /**
+     * Processa o resultado da deteção facial e valida a qualidade geométrica da face principal.
+     *
+     * A função seleciona a face dominante com base na área do bounding box, assumindo
+     * que esta corresponde ao sujeito principal da imagem.
+     *
+     * A validação de qualidade é baseada em heurísticas geométricas (cobertura relativa da face
+     * na imagem e coerência espacial), o que implica ausência de robustez semântica.
+     *
+     * Quando a qualidade é considerada estável por múltiplos frames consecutivos,
+     * inicia-se o pipeline de segmentação de fundo com expansão contextual do bounding box
+     * para melhorar a estabilidade do modelo de segmentação.
+     *
+     * Riscos técnicos:
+     * - Seleção por área pode falhar em cenários com múltiplos rostos de tamanho semelhante.
+     * - Expansão do bounding box pode introduzir clipping em bordas da imagem.
+     * - Estado interno (consecutiveSuccesses) introduz dependência temporal (stateful pipeline).
+     *
+     * @param faces Lista de faces detetadas pelo ML Kit.
+     * @param originalBitmap Frame original convertido.
+     */
     private fun processDetectedFaces(faces: List<Face>, originalBitmap: Bitmap) {
         if (faces.isEmpty()) {
             consecutiveSuccesses = 0
@@ -140,28 +175,34 @@ class FaceCardImageAnalyzer(
 
         Log.i("FaceAnalyzer", "Faces detectadas: ${faces.size}")
 
-
-        // Pega na maior cara (assumindo que focou o cartão)
         val mainFace = faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() } ?: return
 
         if (isFaceQualityGood(mainFace, originalBitmap.width, originalBitmap.height)) {
             consecutiveSuccesses++
-
-            // Feedback
             resultFlow.trySend(MrzScanState.Processing(1f))
 
             if (consecutiveSuccesses >= requiredSuccessFrames) {
                 try {
+                    val expandedBounds = Rect(
+                        maxOf(0, mainFace.boundingBox.left - mainFace.boundingBox.width()),
+                        maxOf(0, mainFace.boundingBox.top - mainFace.boundingBox.height()),
+                        minOf(originalBitmap.width, mainFace.boundingBox.right + mainFace.boundingBox.width()),
+                        minOf(originalBitmap.height, mainFace.boundingBox.bottom + mainFace.boundingBox.height())
+                    )
 
-                    // 1. Recorta a imagem expandida (como já fazia)
-                    val faceBitmapExpanded = cropFace(originalBitmap, mainFace.boundingBox)
-                    Log.i("FaceAnalyzer", "Sucesso! Face recortada, iniciando remoção de fundo...")
+                    val contextBitmap = Bitmap.createBitmap(
+                        originalBitmap,
+                        expandedBounds.left,
+                        expandedBounds.top,
+                        expandedBounds.width(),
+                        expandedBounds.height()
+                    )
 
-                    // --- ALTERADO: Em vez de enviar logo, inicia a segmentação ---
-                    processSegmentation(faceBitmapExpanded)
+                    Log.i("FaceAnalyzer", "Iniciando segmentação com contexto...")
+                    processSegmentation(contextBitmap, mainFace)
 
                 } catch (e: Exception) {
-                    Log.e("FaceAnalyzer", "Erro crop: ${e.message}")
+                    Log.e("FaceAnalyzer", "Erro na preparação: ${e.message}")
                     consecutiveSuccesses = 0
                 }
             }
@@ -170,21 +211,38 @@ class FaceCardImageAnalyzer(
         }
     }
 
-    // --- NOVO: Processamento da Segmentação Mais Seguro ---
-    private fun processSegmentation(croppedBitmap: Bitmap) {
-        // --- CORREÇÃO DE BITMAP PRETO ---
-        // 1. Forçar cópia para memória SOFTWARE (ARGB_8888).
-        // Se usar o bitmap direto da câmara, o getPixels() pode falhar silenciosamente.
-        val safeBitmap = croppedBitmap.copy(Bitmap.Config.ARGB_8888, true)
+    /**
+     * Executa segmentação de foreground (selfie segmentation) e constrói a imagem final
+     * centrada e normalizada.
+     *
+     * Esta etapa aplica segmentação semântica através do ML Kit Selfie Segmenter,
+     * gerando uma máscara de probabilidade por pixel que distingue sujeito e fundo.
+     *
+     * O pipeline executa:
+     * 1. Segmentação do conteúdo expandido (contexto adicional ao rosto).
+     * 2. Aplicação da máscara para remoção de fundo.
+     * 3. Correção de coordenadas relativas devido ao crop expandido.
+     * 4. Recorte da face com proporção fixa (documentação tipo passe).
+     * 5. Recentração final em canvas branco.
+     *
+     * Limitações críticas:
+     * - A qualidade da segmentação depende fortemente da iluminação e contraste.
+     * - A compensação de coordenadas é sensível a erros acumulados de cropping.
+     * - O modelo ML Kit não garante consistência temporal entre frames.
+     *
+     * @param contextBitmap Imagem expandida contendo contexto adicional ao rosto.
+     * @param mainFace Face principal detetada no frame original.
+     */
 
+    private fun processSegmentation(contextBitmap: Bitmap, mainFace: Face) {
+        val safeBitmap = contextBitmap.copy(Bitmap.Config.ARGB_8888, true)
         val inputImage = InputImage.fromBitmap(safeBitmap, 0)
 
         segmenter.process(inputImage)
             .addOnSuccessListener { segmentationMask ->
                 scope.launch(dispatcher) {
                     try {
-                        // O ML Kit devolve geralmente 256x256. A imagem pode ser 500x700.
-                        // NÃO FAZEMOS verificação de igualdade. Passamos tudo para a função aplicar.
+
                         val bitmapWithWhiteBg = applyBackgroundMask(
                             image = safeBitmap,
                             maskBuffer = segmentationMask.buffer,
@@ -192,12 +250,21 @@ class FaceCardImageAnalyzer(
                             maskHeight = segmentationMask.height
                         )
 
-                        Log.i("FaceAnalyzer", "Fundo branco aplicado. A recentrar conteúdo...")
 
-                        // --- NOVO PASSO 2: Recentrar o conteúdo na tela branca ---
-                        val finalCenteredBitmap = centerContentOnWhiteCanvas(bitmapWithWhiteBg)
+                        val offsetX = maxOf(0, mainFace.boundingBox.left - mainFace.boundingBox.width())
+                        val offsetY = maxOf(0, mainFace.boundingBox.top - mainFace.boundingBox.height())
+                        val localFaceBounds = Rect(
+                            mainFace.boundingBox.left - offsetX,
+                            mainFace.boundingBox.top - offsetY,
+                            mainFace.boundingBox.right - offsetX,
+                            mainFace.boundingBox.bottom - offsetY
+                        )
 
-                        Log.i("FaceAnalyzer", "Imagem final centrada. Enviando para UI...")
+                        val faceBitmapExpanded = cropFace(bitmapWithWhiteBg, localFaceBounds)
+
+                        val finalCenteredBitmap = centerContentOnWhiteCanvas(faceBitmapExpanded)
+
+                        Log.i("FaceAnalyzer", "Imagem final segmentada e centrada com sucesso.")
                         resultFlow.trySend(MrzScanState.Success(capturedImage = finalCenteredBitmap))
                         consecutiveSuccesses = 0
 
@@ -213,7 +280,33 @@ class FaceCardImageAnalyzer(
             }
     }
 
-    // --- NOVO: Aplicação Otimizada (Rápida e Segura) ---
+    /**
+     * Aplica uma máscara de segmentação semântica sobre uma imagem de alta resolução,
+     * removendo o fundo com base em probabilidades por pixel.
+     *
+     * A máscara fornecida pelo ML Kit é redimensionada implicitamente para o espaço da imagem
+     * original através de interpolação linear por escala (scaleX, scaleY).
+     *
+     * Cada pixel da imagem é classificado com base na confiança da máscara:
+     * - confidence < threshold → considerado fundo e substituído por branco.
+     * - confidence ≥ threshold → preserva pixel original.
+     *
+     * Este método implementa uma forma simplificada de matting binário,
+     * sem refinamento de borda ou suavização alfa, o que pode introduzir aliasing
+     * em regiões de transição.
+     *
+     * Problemas técnicos conhecidos:
+     * - Possível desalinhamento entre máscara e imagem devido a downsampling do ML Kit.
+     * - Operação O(n²) altamente custosa em imagens de alta resolução.
+     * - Ausência de blur de borda (edge feathering), resultando em recortes rígidos.
+     *
+     * @param image Bitmap original de entrada.
+     * @param maskBuffer Buffer de saída do ML Kit segmentation.
+     * @param maskWidth Largura da máscara.
+     * @param maskHeight Altura da máscara.
+     * @return Bitmap com fundo removido (substituído por branco).
+     */
+
     private fun applyBackgroundMask(
         image: Bitmap,
         maskBuffer: ByteBuffer,
@@ -222,39 +315,28 @@ class FaceCardImageAnalyzer(
     ): Bitmap {
         val imgWidth = image.width
         val imgHeight = image.height
-
-        // 1. CORREÇÃO DE DADOS (CRÍTICO): Definir a ordem dos bytes
-        // Sem isto, os números vêm errados e a máscara falha.
         maskBuffer.order(ByteOrder.nativeOrder())
         maskBuffer.rewind()
 
-        // 2. Ler a máscara para um array (Rápido)
         val confidences = FloatArray(maskWidth * maskHeight)
         maskBuffer.asFloatBuffer().get(confidences)
 
-        // 3. Obter os píxeis da imagem original (Alta Resolução)
         val pixels = IntArray(imgWidth * imgHeight)
         image.getPixels(pixels, 0, imgWidth, 0, 0, imgWidth, imgHeight)
 
-        // 4. Calcular a Escala (Para esticar a máscara pequena sobre a imagem grande)
         val scaleX = maskWidth.toFloat() / imgWidth
         val scaleY = maskHeight.toFloat() / imgHeight
 
-        // 5. Loop de Processamento
+
         for (y in 0 until imgHeight) {
             for (x in 0 until imgWidth) {
-                // Encontrar o píxel correspondente na máscara pequena
                 val maskX = (x * scaleX).toInt().coerceIn(0, maskWidth - 1)
                 val maskY = (y * scaleY).toInt().coerceIn(0, maskHeight - 1)
                 val maskIndex = (maskY * maskWidth) + maskX
-
-                // Valor da máscara: 0.0 (Fundo) a 1.0 (Pessoa)
                 val confidence = confidences[maskIndex]
 
-                // LÓGICA DE TRANSPARÊNCIA:
-                // Se a confiança for baixa (< 0.8), é fundo -> Torna Transparente.
-                // Caso contrário, mantém o píxel original da foto.
-                if (confidence < 0.85f) { // Ajuste 0.85f para limpar bem as bordas
+
+                if (confidence < 0.85f) {
                     val pixelIndex = (y * imgWidth) + x
 //                    pixels[pixelIndex] = Color.TRANSPARENT
                     pixels[pixelIndex] = Color.WHITE
@@ -262,42 +344,54 @@ class FaceCardImageAnalyzer(
             }
         }
 
-        // 6. Criar Bitmap Final
-        // Config.ARGB_8888 é obrigatório para suportar transparência
         val resultBitmap = Bitmap.createBitmap(imgWidth, imgHeight, Bitmap.Config.ARGB_8888)
         resultBitmap.setPixels(pixels, 0, imgWidth, 0, 0, imgWidth, imgHeight)
 
         return resultBitmap
     }
 
+
+    /**
+     * Avalia a qualidade geométrica da face detetada com base em critérios heurísticos
+     * de cobertura e consistência espacial.
+     *
+     * A métrica principal utilizada é a proporção da área da face em relação à área total
+     * da imagem, assumindo que faces demasiado pequenas indicam deteção não confiável.
+     *
+     * Critérios aplicados:
+     * - Cobertura mínima da face na imagem (threshold empírico de 1%).
+     * - Rejeição de bounding boxes completamente fora dos limites da imagem.
+     *
+     * Esta abordagem não avalia qualidade visual (nitidez, blur ou oclusão),
+     * sendo estritamente geométrica.
+     *
+     * Limitações:
+     * - Não deteta faces desfocadas ou parcialmente ocluídas.
+     * - Sensível a resolução da imagem (heurística não normalizada por DPI real).
+     * - Pode rejeitar casos válidos em imagens de alta resolução com faces pequenas.
+     *
+     * @param face Objeto Face detetado pelo ML Kit.
+     * @param imgWidth Largura da imagem.
+     * @param imgHeight Altura da imagem.
+     * @return true se a face satisfaz critérios mínimos de qualidade.
+     */
     private fun isFaceQualityGood(face: Face, imgWidth: Int, imgHeight: Int): Boolean {
         val bounds = face.boundingBox
 
-        // 1. LOG DE DEBUG: Veja isto no Logcat para entender porque falhava
-        Log.d("FaceQuality", "Face Bounds: $bounds | Imagem: ${imgWidth}x${imgHeight}")
-
-        // 2. Validação de Tamanho
+        Log.d("FaceQuality", "Face Bounds: $bounds | Image: ${imgWidth}x${imgHeight}")
         val faceArea = bounds.width() * bounds.height()
         val imageArea = imgWidth * imgHeight
         val coverage = faceArea.toFloat() / imageArea.toFloat()
 
-        Log.d("FaceQuality", "Cobertura: $coverage (Mínimo necessário: 0.01)")
+        Log.d("FaceQuality", "Coverage: $coverage (Minimum required: 0.01)")
 
-        // Reduzi para 1% (0.01f) porque em câmaras de alta resolução (4K),
-        // a foto do cartão pode parecer pequena em píxeis.
         if (coverage < 0.01f) {
-            Log.w("FaceQuality", "REJEITADO: Face demasiado pequena.")
+            Log.w("FaceQuality", "REJECTED: Face too small.")
             return false
         }
 
-        // 3. REMOVIDA A VALIDAÇÃO DE LIMITES ESTRITA
-        // Antes você retornava 'false' se left < 0.
-        // O ML Kit faz isso muitas vezes.
-        // A função 'cropFace' já lida com coordenadas negativas, por isso ACEITAMOS.
-
-        // A única coisa que devemos verificar é se a cara está TOTALMENTE fora (impossível, mas seguro verificar)
         if (bounds.right < 0 || bounds.left > imgWidth || bounds.bottom < 0 || bounds.top > imgHeight) {
-            Log.w("FaceQuality", "REJEITADO: Face totalmente fora da imagem.")
+            Log.w("FaceQuality", "REJECTED: Face completely outside the image.")
             return false
         }
 
@@ -305,70 +399,88 @@ class FaceCardImageAnalyzer(
     }
 
     /**
-     * Recorta a face forçando a proporção oficial de Foto Tipo Passe (35x45mm).
-     * Rácio: 35 / 45 = ~0.777
+     * Recorta a região da face e força conformidade com proporção fotográfica oficial
+     * (tipo passe 35x45mm).
+     *
+     * O algoritmo ajusta dinamicamente a região de recorte com base no centro da face,
+     * aplicando expansão vertical para incluir contexto facial adicional (testa e queixo).
+     *
+     * O bounding box é normalizado com:
+     * - Clamping de coordenadas para evitar out-of-bounds.
+     * - Ajuste de largura/altura para manter proporção alvo.
+     *
+     * Limitações técnicas:
+     * - Não preserva exatamente o bounding box original, introduzindo distorção controlada.
+     * - Pode cortar partes relevantes da face em caso de deteções próximas das bordas.
+     * - Dependência de heurística fixa de proporção pode não generalizar para todos os standards biométricos.
+     *
+     * @param bitmap Imagem de entrada já segmentada.
+     * @param faceBounds Bounding box da face detetada.
+     * @return Bitmap recortado com proporção fixa biométrica.
      */
     private fun cropFace(bitmap: Bitmap, faceBounds: Rect): Bitmap {
-        // 1. Definição do Aspect Ratio (35mm x 45mm)
         val targetRatio = 35f / 45f
 
-        // 2. Calcular o tamanho base da cabeça detetada
         val faceWidth = faceBounds.width()
         val faceHeight = faceBounds.height()
 
-        // 3. Definir a altura desejada do recorte final
-        // A cara deve ocupar cerca de 70% a 80% da altura da foto final.
-        // Multiplicamos a altura da cara por 2.0x para ter espaço para cabelo e pescoço.
         val finalHeight = (faceHeight * 2.0f).toInt()
-
-        // 4. Calcular a largura baseada no Rácio 35x45
         val finalWidth = (finalHeight * targetRatio).toInt()
 
-        // 5. Calcular o centro da cara detetada
         val centerX = faceBounds.centerX()
         val centerY = faceBounds.centerY()
 
-        // 6. Calcular coordenadas de origem (Top/Left)
-        // Centramos horizontalmente na cara.
         var x = centerX - (finalWidth / 2)
-
-        // Verticalmente, a cara deve estar ligeiramente acima do centro da foto.
-        // Subimos o topo para deixar 1/3 de espaço acima dos olhos (testa) e 2/3 abaixo.
-        // O centerY do ML Kit é o meio da cara.
         var y = centerY - (finalHeight * 0.45f).toInt()
 
-        // 7. Proteção de Limites (Clamping)
-        // Garante que o quadrado de recorte não sai fora da imagem original
+        x = x.coerceAtLeast(0)
+        y = y.coerceAtLeast(0)
 
-        // Ajuste Esquerda/Direita
-        if (x < 0) x = 0
-        if (x + finalWidth > bitmap.width) x = bitmap.width - finalWidth
+        var w = finalWidth
+        var h = finalHeight
 
-        // Ajuste Topo/Baixo
-        if (y < 0) y = 0
-        if (y + finalHeight > bitmap.height) y = bitmap.height - finalHeight
-
-        // Validação final de segurança (caso a imagem seja muito pequena)
-        val validWidth = finalWidth.coerceAtMost(bitmap.width)
-        val validHeight = finalHeight.coerceAtMost(bitmap.height)
-
-        if (validWidth <= 0 || validHeight <= 0) {
-            // Fallback se o cálculo falhar: retorna apenas a cara detetada
-            return Bitmap.createBitmap(
-                bitmap,
-                faceBounds.left,
-                faceBounds.top,
-                faceBounds.width(),
-                faceBounds.height()
-            )
+        if (x + w > bitmap.width) {
+            w = bitmap.width - x
         }
 
-        return Bitmap.createBitmap(bitmap, x, y, validWidth, validHeight)
+        if (y + h > bitmap.height) {
+            h = bitmap.height - y
+        }
+
+        if (w <= 0 || h <= 0) {
+            Log.w("FaceAnalyzer", "Warning in cropFace: Invalid crop dimensions (w=$w, h=$h). Returning the original image.")
+            return bitmap
+        }
+
+        return Bitmap.createBitmap(bitmap, x, y, w, h)
     }
 
     /**
-     * NOVO: Pega numa imagem com fundo branco, deteta os limites do conteúdo
-     * (a pessoa) e redesenha esse conteúdo perfeitamente centrado numa nova tela branca.
+     * Centraliza o conteúdo visível de uma imagem num canvas branco através de análise
+     * de intensidade RGB por limiar fixo.
+     *
+     * O algoritmo identifica o bounding box do conteúdo com base na detecção de pixels
+     * não-brancos (RGB < 240 em qualquer canal), assumindo fundo uniforme branco.
+     *
+     * Pipeline:
+     * 1. Extração de matriz de pixels.
+     * 2. Identificação de bounding box do foreground.
+     * 3. Recorte da região relevante.
+     * 4. Redesenho centrado em canvas branco.
+     *
+     * Esta abordagem é uma heurística de segmentação baseada em intensidade,
+     * não sendo robusta a:
+     * - Sombras suaves.
+     * - Compressão JPEG.
+     * - Fundos não uniformes.
+     *
+     * Implicações técnicas:
+     * - Pode gerar bounding boxes incorretas em condições reais de iluminação.
+     * - Não substitui segmentação semântica.
+     * - Opera em O(n) sobre todos os pixels da imagem.
+     *
+     * @param inputBitmap Imagem de entrada já processada.
+     * @return Bitmap recortado e centrado sobre fundo branco.
      */
     private fun centerContentOnWhiteCanvas(inputBitmap: Bitmap): Bitmap {
         val width = inputBitmap.width
@@ -376,21 +488,21 @@ class FaceCardImageAnalyzer(
         val pixels = IntArray(width * height)
         inputBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
-        // 1. Encontrar os limites (bounding box) dos píxeis que NÃO são brancos
         var minX = width
         var minY = height
         var maxX = -1
         var maxY = -1
         var foundContent = false
 
-        // Cor branca pura em inteiro
-        val whitePixel = Color.WHITE
-
         for (y in 0 until height) {
             for (x in 0 until width) {
                 val pixel = pixels[y * width + x]
-                // Se o píxel não for branco puro, faz parte da pessoa
-                if (pixel != whitePixel) {
+
+                val r = Color.red(pixel)
+                val g = Color.green(pixel)
+                val b = Color.blue(pixel)
+
+                if (r < 240 || g < 240 || b < 240) {
                     if (x < minX) minX = x
                     if (x > maxX) maxX = x
                     if (y < minY) minY = y
@@ -400,36 +512,26 @@ class FaceCardImageAnalyzer(
             }
         }
 
-        // Se por algum motivo a imagem for toda branca (erro de segmentação), devolve a original
         if (!foundContent || minX > maxX || minY > maxY) {
+            Log.w("FaceAnalyzer", "Warning: No content detected outside the white background. Returning to original.")
             return inputBitmap
         }
 
-        // Dimensões reais do conteúdo (a pessoa recortada)
         val contentWidth = maxX - minX + 1
         val contentHeight = maxY - minY + 1
 
-        // 2. Criar uma nova tela final, preenchida com Branco
-        // Usamos ARGB_8888 para garantir qualidade, embora não precisemos de transparência aqui.
         val finalCenteredBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(finalCenteredBitmap)
-        canvas.drawColor(Color.WHITE) // Preenche o fundo de branco
+        canvas.drawColor(Color.WHITE)
 
-        // 3. Calcular as coordenadas para desenhar o conteúdo centrado
-        // Posição X para centrar horizontalmente
         val drawX = (width - contentWidth) / 2f
-        // Posição Y para centrar verticalmente
         val drawY = (height - contentHeight) / 2f
 
-        // 4. Recortar apenas o conteúdo da imagem original
         val contentOnlyBitmap = Bitmap.createBitmap(inputBitmap, minX, minY, contentWidth, contentHeight)
 
-        // 5. Desenhar o conteúdo na posição centrada na nova tela branca
-        // Usamos um Paint com anti-aliasing para suavizar as bordas
         val paint = Paint().apply { isAntiAlias = true }
         canvas.drawBitmap(contentOnlyBitmap, drawX, drawY, paint)
 
-        // Limpar bitmaps intermédios para poupar memória
         contentOnlyBitmap.recycle()
         if (inputBitmap != finalCenteredBitmap) {
             inputBitmap.recycle()
@@ -437,6 +539,7 @@ class FaceCardImageAnalyzer(
 
         return finalCenteredBitmap
     }
+
     fun close() {
         segmenter.close()
     }

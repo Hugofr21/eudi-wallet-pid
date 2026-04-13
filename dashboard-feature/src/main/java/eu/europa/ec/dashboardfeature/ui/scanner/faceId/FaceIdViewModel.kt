@@ -1,6 +1,6 @@
 package eu.europa.ec.dashboardfeature.ui.scanner.faceId
 
-
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import org.koin.core.annotation.InjectedParam
 import androidx.camera.view.PreviewView
@@ -18,6 +18,7 @@ import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 
@@ -51,7 +52,6 @@ sealed class Effect : ViewSideEffect {
         ) : Navigation()
     }
 
-
     sealed class ShowDialog : Effect() {
         object Help : ShowDialog()
     }
@@ -64,13 +64,12 @@ class FaceIdScreenViewModel(
 ) : MviViewModel<Event, State, Effect>() {
     private lateinit var document: MrzDocument
     private var lifecycleOwner: LifecycleOwner? = null
+
+    @SuppressLint("StaticFieldLeak")
     private var previewView: PreviewView? = null
 
     private var capturedSelfieBitmap: Bitmap? = null
-
-//    init {
-//        loadDocument()
-//    }
+    private var scanningJob: Job? = null
 
     override fun setInitialState() = State()
 
@@ -85,28 +84,16 @@ class FaceIdScreenViewModel(
         }
     }
 
-
-
     private fun loadDocument() {
         val document = Gson().fromJson(documentId, MrzDocument::class.java)
         if (document != null) {
             this.document = document
-            if (document is MrzDocument.Passport ){
-                println("Document ID: ${document.documentNumber}")
-                println("Document Type: ${document.documentType}")
-                println("Document Nationality: ${document.nationality}")
-                println("Document Date of Birth: ${document.dateOfBirth}")
-                println("Document Date of Expiry: ${document.dateOfExpiry}")
-            }
-
         } else {
-            setState { copy(errorMessage = "Documento não encontrado") }
+            setState { copy(errorMessage = "Document not found") }
         }
     }
 
     private fun handleInitializeScanner(event: Event.InitializeScanner) {
-        println("FaceIdScreenViewModel.handleInitializeScanner")
-
         viewModelScope.launch {
             setState { copy(isLoading = true) }
             try {
@@ -122,11 +109,16 @@ class FaceIdScreenViewModel(
     private fun startScanning() {
         val owner = lifecycleOwner ?: return
         val preview = previewView ?: return
+        scannerInteractor.resetScanner()
+        scanningJob?.cancel()
 
-        viewModelScope.launch {
+        scanningJob = viewModelScope.launch {
             scannerInteractor.startScanning(owner, preview, ScanType.Face)
                 .collect { scanState ->
                     when (scanState) {
+                        is MrzScanState.Scanning -> {
+                            setState { copy(scanState = scanState, isLoading = false, errorMessage = null) }
+                        }
                         is MrzScanState.Success -> {
                             val faceBitmap = scanState.capturedImage
                             if (faceBitmap != null) {
@@ -134,20 +126,10 @@ class FaceIdScreenViewModel(
                             }
                         }
                         is MrzScanState.Error -> {
-                            setState {
-                                copy(
-                                    scanState = scanState,
-                                    isLoading = false
-                                )
-                            }
+                            setState { copy(scanState = scanState, isLoading = false) }
                         }
                         else -> {
-                            setState {
-                                copy(
-                                    scanState = scanState,
-                                    isLoading = false
-                                )
-                            }
+                            setState { copy(scanState = scanState, isLoading = false) }
                         }
                     }
                 }
@@ -155,11 +137,8 @@ class FaceIdScreenViewModel(
     }
 
     private fun handleFaceCaptured(bitmap: Bitmap) {
-
         stopScanning()
-
         capturedSelfieBitmap = bitmap
-
 
         setState {
             copy(
@@ -170,18 +149,22 @@ class FaceIdScreenViewModel(
     }
 
     private fun retryScanning() {
-
         capturedSelfieBitmap = null
+        scannerInteractor.resetScanner()
+
         setState {
             copy(
-                scanState = MrzScanState.Initializing,
-                isLoading = true
+                scanState = MrzScanState.Scanning,
+                isLoading = false,
+                errorMessage = null
             )
         }
         startScanning()
     }
 
     private fun stopScanning() {
+        scanningJob?.cancel()
+        scanningJob = null
         scannerInteractor.stopScanning()
     }
 
@@ -190,7 +173,8 @@ class FaceIdScreenViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             setState { copy(isLoading = true) }
-            // CBOR
+
+            // CBOR logic here...
             val selfieBytes = ImageUtils.bitmapToBytes(selfie)
 
             setEffect {
@@ -200,5 +184,12 @@ class FaceIdScreenViewModel(
                 )
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopScanning()
+        lifecycleOwner = null
+        previewView = null
     }
 }
