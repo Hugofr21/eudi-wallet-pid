@@ -23,6 +23,8 @@ interface ScannerInteractor{
 
     fun hasCameraPermission(): Boolean
     fun enableFlash(newState: Boolean)
+
+    fun resetScanner()
 }
 
 class ScannerInteractorImpl(
@@ -60,5 +62,9 @@ class ScannerInteractorImpl(
 
     override fun enableFlash(newState: Boolean) {
        mrzScanController.enableTorch(newState)
+    }
+
+    override fun resetScanner() {
+        mrzScanController.resetScanner()
     }
 }

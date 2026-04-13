@@ -183,6 +183,10 @@ class IdentificationDocumentViewModel(
     private fun startScanning() {
         val owner = lifecycleOwner ?: run { setState { copy(scanState = MrzScanState.Error("Camera not initialized")) }; return }
         val preview = previewView ?: run { setState { copy(scanState = MrzScanState.Error("PreviewView not available")) }; return }
+
+        // Garante que o motor está limpo antes de subscrever o flow
+        scannerInteractor.resetScanner()
+
         scanningJob?.cancel()
 
         scanningJob = viewModelScope.launch {
@@ -190,9 +194,21 @@ class IdentificationDocumentViewModel(
                 scannerInteractor.startScanning(owner, preview, ScanType.Document)
                     .collect { scanState ->
 
-                        if (viewState.value.isScanFrozen) return@collect
+                        // Se a UI estiver bloqueada após um sucesso final, não aceita mais eventos
+                        if (viewState.value.isScanFrozen && scanState !is MrzScanState.Scanning) return@collect
 
                         when (scanState) {
+                            is MrzScanState.Scanning -> {
+                                // O Analisador recuperou (ou fez reset). Limpa a UI de erros antigos.
+                                setState {
+                                    copy(
+                                        scanState = scanState,
+                                        isScanFrozen = false,
+                                        errorMessage = null
+                                    )
+                                }
+                            }
+
                             is MrzScanState.Success -> {
                                 val doc = scanState.document
                                 if (doc != null) {
@@ -201,37 +217,34 @@ class IdentificationDocumentViewModel(
                                             scanState       = scanState,
                                             scannedDocument = doc,
                                             errorMessage    = null,
-                                            isScanFrozen    = true
+                                            isScanFrozen    = true // Bloqueia a UI no ecrã de sucesso
                                         )
                                     }
-                                } else {
-                                    freezeTemporarily(
-                                        newScanState = MrzScanState.Error("Unrecognized document"),
-                                        message      = "Unrecognized document",
-                                        durationMs   = 1_500L
-                                    )
                                 }
                             }
 
                             is MrzScanState.SecurityCheckFailed -> {
-                                // SecurityCheckFailed: shows a warning but unlocks QUICKLY (1.5s).
-                                // The analyzer already has internal debounce (3 consecutive failures), so
-                                // when it gets here it's genuinely suspicious — but it shouldn't block
-                                // for more than 1-2 seconds, so as not to frustrate real documents with
-                                // momentary reflex.
-                                freezeTemporarily(
-                                    newScanState = scanState,
-                                    message      = scanState.reason,
-                                    durationMs   = 1_500L
-                                )
+                                // Deixa a UI mostrar o erro. O Analisador resolve-se sozinho enviando
+                                // um MrzScanState.Scanning assim que detetar um documento válido.
+                                setState {
+                                    copy(
+                                        scanState = scanState,
+                                        errorMessage = scanState.reason
+                                    )
+                                }
+                            }
+
+                            is MrzScanState.Processing -> {
+                                setState { copy(scanState = scanState) }
                             }
 
                             is MrzScanState.Error -> {
-                                freezeTemporarily(
-                                    newScanState = scanState,
-                                    message      = scanState.message,
-                                    durationMs   = 1_500L
-                                )
+                                setState {
+                                    copy(
+                                        scanState = scanState,
+                                        errorMessage = scanState.message
+                                    )
+                                }
                             }
 
                             else -> setState { copy(scanState = scanState) }
@@ -249,34 +262,12 @@ class IdentificationDocumentViewModel(
         }
     }
 
-    /**
-     * Freezes the UI for [durationMs] milliseconds and then resumes automatically.
-     * Cancels any previous timer to avoid overlaps.
-     */
-
-    private fun freezeTemporarily(
-        newScanState: MrzScanState,
-        message: String?,
-        durationMs: Long
-    ) {
-        setState {
-            copy(
-                scanState    = newScanState,
-                errorMessage = message,
-                isScanFrozen = true
-            )
-        }
-        unfreezeJob?.cancel()
-        unfreezeJob = viewModelScope.launch {
-            delay(durationMs)
-            setState { copy(isScanFrozen = false, errorMessage = null) }
-        }
-    }
 
     private fun retryScanning() {
         unfreezeJob?.cancel()
-        scanningJob?.cancel()
-        scanningJob = null
+        unfreezeJob = null
+        scannerInteractor.resetScanner()
+
         setState {
             copy(
                 scannedDocument = null,
@@ -285,7 +276,6 @@ class IdentificationDocumentViewModel(
                 isScanFrozen    = false
             )
         }
-        startScanning()
     }
 
     private fun stopScanning() {

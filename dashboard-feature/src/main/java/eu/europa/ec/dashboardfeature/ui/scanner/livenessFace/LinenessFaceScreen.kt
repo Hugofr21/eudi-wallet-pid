@@ -3,36 +3,53 @@ package eu.europa.ec.dashboardfeature.ui.scanner.livenessFace
 import android.graphics.Bitmap
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RemoveRedEye
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -48,6 +65,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asImageBitmap
@@ -67,6 +85,10 @@ import eu.europa.ec.mrzscannerLogic.model.ScanType
 import eu.europa.ec.mrzscannerLogic.service.FaceVerificationResult
 import eu.europa.ec.uilogic.component.utils.VSpacer
 
+private val ColorSuccess = Color(0xFF10B981)
+private val ColorWarning = Color(0xFFF59E0B)
+private val ColorError   = Color(0xFFEF4444)
+
 @Composable
 fun LivenessFaceScreen(
     navHostController: NavController,
@@ -83,28 +105,26 @@ fun LivenessFaceScreen(
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        when {
-            !state.isInstructionAcknowledged -> {
-                FaceIdInstructionsPanel(
-                    onProceed = { viewModel.setEvent(Event.AcknowledgeInstructions) }
-                )
-            }
+    Scaffold(
+        modifier       = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when {
+                !state.isInstructionAcknowledged -> {
+                    FaceIdInstructionsPanel(
+                        onProceed = { viewModel.setEvent(Event.AcknowledgeInstructions) }
+                    )
+                }
 
-            state.isSessionComplete -> {
-                val vr = state.showVerificationLabel
-                when {
+                state.isSessionComplete -> {
+                    val vr = state.showVerificationLabel
 
-                    vr != null && !vr.isVerified -> {
-                        FaceIdVerificationFailedPanel(
-                            score   = (vr.similarityScore * 100).toInt(),
-                            onRetry = { viewModel.setEvent(Event.RetryScanning) }
-                        )
-                    }
-
-                    state.capturedBitmap != null -> {
+                    if (state.capturedBitmap != null) {
                         FaceIdConfirmationPanel(
                             capturedBitmap     = state.capturedBitmap!!,
                             verificationResult = vr,
@@ -112,63 +132,104 @@ fun LivenessFaceScreen(
                             onRetry            = { viewModel.setEvent(Event.RetryScanning) },
                             onConfirm          = { viewModel.setEvent(Event.ConfirmDocument) }
                         )
+                    } else {
+                        FaceIdCaptureErrorPanel(
+                            onRetry = { viewModel.setEvent(Event.RetryScanning) }
+                        )
                     }
 
-                    else -> FaceIdCaptureErrorPanel(
-                        onRetry = { viewModel.setEvent(Event.RetryScanning) }
-                    )
+                    AnimatedVisibility(
+                        visible  = vr != null && !vr.isVerified,
+                        enter    = slideInVertically(
+                            initialOffsetY = { it },
+                            animationSpec  = tween(350, easing = FastOutSlowInEasing)
+                        ) + fadeIn(tween(200)),
+                        exit     = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(250)) + fadeOut(),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(16.dp)
+                    ) {
+                        vr?.let {
+                            FaceIdVerificationFailedCard(
+                                score   = (it.similarityScore * 100).toInt(),
+                                onRetry = { viewModel.setEvent(Event.RetryScanning) }
+                            )
+                        }
+                    }
                 }
 
-                if (state.capturedBitmap != null) {
-                    FaceIdConfirmationPanel(
-                        capturedBitmap = state.capturedBitmap!!,
-                        verificationResult = state.showVerificationLabel,
-                        verifiedPersonName = state.verifiedPersonName,
-                        onRetry   = { viewModel.setEvent(Event.RetryScanning) },
-                        onConfirm = { viewModel.setEvent(Event.ConfirmDocument) }
-                    )
-                } else {
-                    FaceIdCaptureErrorPanel(
-                        onRetry = { viewModel.setEvent(Event.RetryScanning) }
+                else -> {
+                    FaceIdScanningPanel(
+                        viewModel      = viewModel,
+                        lifecycleOwner = lifecycleOwner,
+                        state          = state
                     )
                 }
             }
 
-            else -> {
-                FaceIdScanningPanel(
-                    viewModel      = viewModel,
-                    lifecycleOwner = lifecycleOwner,
-                    state          = state
-                )
+            if (state.isLoading) {
+                Box(
+                    modifier         = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            color       = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            "Processing…",
+                            fontSize = 14.sp,
+                            color    = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
-        }
 
-        if (state.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
-        }
-
-        state.errorMessage?.let { msg ->
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.9f))
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = msg, color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
-                )
+            state.errorMessage?.let { msg ->
+                AnimatedVisibility(
+                    visible  = true,
+                    enter    = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit     = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp)
+                ) {
+                    Card(
+                        modifier  = Modifier.fillMaxWidth(),
+                        shape     = RectangleShape,
+                        colors    = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        ),
+                        elevation = CardDefaults.cardElevation(6.dp)
+                    ) {
+                        Row(
+                            modifier          = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.ErrorOutline,
+                                contentDescription = null,
+                                tint     = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            VSpacer.Small()
+                            Text(
+                                text     = msg,
+                                color    = MaterialTheme.colorScheme.onErrorContainer,
+                                fontSize = 13.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
-
 
 @Composable
 private fun FaceIdScanningPanel(
@@ -180,13 +241,147 @@ private fun FaceIdScanningPanel(
         onDispose { viewModel.setEvent(Event.StopScanning) }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier            = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        FaceTopBar(onClose = { viewModel.setEvent(Event.StopScanning) })
 
-        Box(modifier = Modifier.weight(0.65f)) {
+        VSpacer.Small()
+
+        FaceScanStatusBadge(
+            completedCount = state.completedChallenges.size,
+            isCountingDown = state.countdownSeconds != null
+        )
+
+        Spacer(Modifier.weight(1f))
+
+        FaceCameraWindow(
+            viewModel      = viewModel,
+            lifecycleOwner = lifecycleOwner,
+            state          = state
+        )
+
+        Spacer(Modifier.weight(1f))
+
+        FaceBottomHint(
+            challengeMessage    = state.currentChallengeMessage,
+            completedChallenges = state.completedChallenges
+        )
+
+        Spacer(Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun FaceTopBar(onClose: () -> Unit) {
+    Row(
+        modifier              = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment     = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onClose) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Close",
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text       = "Biometric Verification",
+                fontWeight = FontWeight.Bold,
+                fontSize   = 16.sp,
+            )
+            Row(
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Icon(
+                    Icons.Default.Lock,
+                    contentDescription = null,
+                    tint     = ColorSuccess,
+                    modifier = Modifier.size(10.dp)
+                )
+                Text(
+                    "Liveness check",
+                    fontSize   = 10.sp,
+                    color      = ColorSuccess,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        Spacer(Modifier.size(48.dp))
+    }
+}
+
+@Composable
+private fun FaceScanStatusBadge(completedCount: Int, isCountingDown: Boolean) {
+    val (text, color) = when {
+        isCountingDown     -> "Capturing…"            to MaterialTheme.colorScheme.primary
+        completedCount > 0 -> "Challenge $completedCount done" to ColorSuccess
+        else               -> "Ready to scan"         to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Row(
+        modifier              = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Canvas(modifier = Modifier.size(7.dp)) { drawCircle(color = color) }
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = color)
+    }
+}
+
+@Composable
+private fun FaceCameraWindow(
+    viewModel: LivenessFaceViewModel,
+    lifecycleOwner: LifecycleOwner,
+    state: State
+) {
+    Column(
+        modifier            = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier              = Modifier
+                .padding(bottom = 8.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                Icons.Default.Face,
+                contentDescription = null,
+                tint     = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                "Frontal Camera",
+                fontSize   = 11.sp,
+                color      = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(14.dp))
+                .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
+        ) {
             AndroidView(
                 factory = { context ->
                     PreviewView(context).apply {
-                        scaleType = PreviewView.ScaleType.FILL_CENTER
+                        scaleType          = PreviewView.ScaleType.FILL_CENTER
                         implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                     }.also { pv ->
                         viewModel.setEvent(
@@ -201,232 +396,74 @@ private fun FaceIdScanningPanel(
                 modifier = Modifier.fillMaxSize()
             )
 
-            state.faceFeatures?.let { features ->
-                FaceContoursOverlay(features = features)
-            }
+            state.faceFeatures?.let { FaceContoursOverlay(features = it) }
 
             FaceCircleOverlay()
 
-            state.countdownSeconds?.let { sec ->
-                CountdownOverlay(seconds = sec)
-            }
+            state.countdownSeconds?.let { CountdownOverlay(seconds = it) }
         }
 
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text          = "ISO/IEC 30107-3 · Liveness · PAD Level 1",
+            fontSize      = 10.sp,
+            color         = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            fontWeight    = FontWeight.Medium,
+            textAlign     = TextAlign.Center,
+            letterSpacing = 0.4.sp
+        )
+    }
+}
+
+@Composable
+private fun FaceBottomHint(challengeMessage: String, completedChallenges: List<String>) {
+    Column(
+        modifier            = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .weight(0.35f)
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            LiveFacePreview(bitmap = state.previewBitmap)
-            Spacer(modifier = Modifier.size(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Current challenge",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.Gray
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = state.currentChallengeMessage,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-                if (state.completedChallenges.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    state.completedChallenges.forEach { label ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = Color(0xFF4CAF50),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.DarkGray,
-                                modifier = Modifier.padding(start = 6.dp)
-                            )
-                        }
-                    }
+            Icon(
+                Icons.Default.RemoveRedEye,
+                contentDescription = null,
+                tint     = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(15.dp)
+            )
+            Text(
+                text       = challengeMessage,
+                fontSize   = 13.sp,
+                color      = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
+                textAlign  = TextAlign.Center
+            )
+        }
+
+        if (completedChallenges.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            completedChallenges.forEach { label ->
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier              = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp)
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint     = ColorSuccess,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        }
-    }
-}
-
-
-/**
- * Draws facial landmark contours directly on the camera preview.
- *
- * ML Kit returns points in image-space. We map them to view-space using the
- * same FILL_CENTER (scale-to-fill, centered) logic the PreviewView uses.
- * The front camera mirrors the image horizontally, so we flip the X axis.
- *
- * Groups drawn:
- *   faceOval         — outer face boundary       (blue,   2 dp)
- *   eyes             — left + right eye contours  (cyan,   1.5 dp)
- *   eyebrows         — top + bottom per eye       (white,  1.5 dp)
- *   noseBridge       — nose bridge                (white,  1.5 dp)
- *   noseBottom       — nose bottom arc            (white,  1.5 dp)
- *   upperLip top+bot — upper lip shape            (coral,  1.5 dp)
- *   lowerLip top+bot — lower lip shape            (coral,  1.5 dp)
- */
-@Composable
-fun FaceContoursOverlay(
-    modifier: Modifier = Modifier,
-    features: FaceFeatures
-) {
-    Canvas(modifier = modifier.fillMaxSize()) {
-        val vw = size.width
-        val vh = size.height
-        val iw = features.imageWidth.toFloat()
-        val ih = features.imageHeight.toFloat()
-        if (iw <= 0 || ih <= 0) return@Canvas
-
-        val scale = maxOf(vw / iw, vh / ih)
-        val scaledW = iw * scale
-        val scaledH = ih * scale
-        val ox = (vw - scaledW) / 2f
-        val oy = (vh - scaledH) / 2f
-
-        fun mapX(x: Float) = vw - (x * scale + ox)
-        fun mapY(y: Float) = y * scale + oy
-
-        fun drawContour(
-            pts: List<android.graphics.PointF>,
-            color: Color,
-            width: Float,
-            close: Boolean = false
-        ) {
-            if (pts.size < 2) return
-            val path = Path()
-            path.moveTo(mapX(pts[0].x), mapY(pts[0].y))
-            for (i in 1 until pts.size) path.lineTo(mapX(pts[i].x), mapY(pts[i].y))
-            if (close) path.close()
-            drawPath(
-                path  = path,
-                color = color,
-                style = Stroke(
-                    width     = width,
-                    cap       = StrokeCap.Round,
-                    join      = StrokeJoin.Round
-                )
-            )
-        }
-
-        val faceColor  = Color(0xFF1565C0)
-        val eyeColor   = Color(0xFF00BCD4)
-        val browColor  = Color.White.copy(alpha = 0.85f)
-        val noseColor  = Color.White.copy(alpha = 0.75f)
-        val lipColor   = Color(0xFFFF7043)
-
-        drawContour(features.faceOval,          faceColor, 3.dp.toPx(), close = true)
-        drawContour(features.leftEye,            eyeColor,  2.5f.dp.toPx(), close = true)
-        drawContour(features.rightEye,           eyeColor,  2.5f.dp.toPx(), close = true)
-        drawContour(features.leftEyebrowTop,     browColor, 2.dp.toPx())
-        drawContour(features.leftEyebrowBottom,  browColor, 2.dp.toPx())
-        drawContour(features.rightEyebrowTop,    browColor, 2.dp.toPx())
-        drawContour(features.rightEyebrowBottom, browColor, 2.dp.toPx())
-        drawContour(features.noseBridge,         noseColor, 2.dp.toPx())
-        drawContour(features.noseBottom,         noseColor, 2.dp.toPx())
-        drawContour(features.upperLipTop,        lipColor,  2.dp.toPx())
-        drawContour(features.upperLipBottom,     lipColor,  2.dp.toPx())
-        drawContour(features.lowerLipTop,        lipColor,  2.dp.toPx())
-        drawContour(features.lowerLipBottom,     lipColor,  2.dp.toPx())
-    }
-}
-
-
-@Composable
-fun FaceCircleOverlay(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.fillMaxSize()) {
-        val diameter = size.width * 0.76f
-        val cx = size.width  / 2f
-        val cy = size.height / 2f
-        val r  = diameter    / 2f
-
-        // White mask with circular cutout
-        val path = Path().apply {
-            addRect(Rect(0f, 0f, size.width, size.height))
-            addOval(Rect(cx - r, cy - r, cx + r, cy + r))
-            fillType = PathFillType.EvenOdd
-        }
-        drawPath(path = path, color = Color.White)
-
-        // Soft halo + crisp ring
-        drawCircle(
-            color  = Color.White.copy(alpha = 0.2f),
-            radius = r + 7.dp.toPx(),
-            center = Offset(cx, cy),
-            style  = Stroke(width = 7.dp.toPx())
-        )
-        drawCircle(
-            color  = Color(0xFF1565C0),
-            radius = r,
-            center = Offset(cx, cy),
-            style  = Stroke(width = 2.dp.toPx())
-        )
-    }
-}
-
-
-@Composable
-private fun CountdownOverlay(seconds: Int) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .background(Color.Black.copy(alpha = 0.60f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            AnimatedContent(
-                targetState = seconds,
-                transitionSpec = {
-                    (fadeIn(tween(180)) + scaleIn(tween(180), initialScale = 1.5f))
-                        .togetherWith(fadeOut(tween(120)))
-                },
-                label = "countdown"
-            ) { sec ->
-                Text(
-                    text = "$sec",
-                    fontSize = 52.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LiveFacePreview(bitmap: Bitmap?) {
-    Box(
-        modifier = Modifier
-            .size(72.dp)
-            .background(Color(0xFFE8E8E8), CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = "Face preview",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(72.dp).clip(CircleShape)
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Default.Face,
-                contentDescription = null,
-                tint = Color.Gray,
-                modifier = Modifier.size(32.dp)
-            )
         }
     }
 }
@@ -434,36 +471,62 @@ private fun LiveFacePreview(bitmap: Bitmap?) {
 @Composable
 private fun FaceIdInstructionsPanel(onProceed: () -> Unit) {
     Column(
-        modifier = Modifier
+        modifier            = Modifier
             .fillMaxSize()
-            .background(Color.White)
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Box(
+            modifier         = Modifier
+                .size(72.dp)
+                .clip(CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Face,
+                contentDescription = null,
+                tint     = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(36.dp)
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+
         Text(
-            text = "Biometric Verification",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.Black,
+            text       = "Biometric Verification",
+            style      = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 8.dp)
+            textAlign  = TextAlign.Center
         )
+        Spacer(Modifier.height(8.dp))
         Text(
-            text = "To confirm your identity, perform a few simple gestures in front of the front camera.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray,
+            text      = "Perform a few simple gestures in front of the front camera to confirm your identity.",
+            style     = MaterialTheme.typography.bodyMedium,
+            color     = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 40.dp)
+            modifier  = Modifier.padding(bottom = 32.dp)
         )
-        InstructionRow(Icons.Default.LightMode,    "Ensure good lighting, avoid bright light behind you.")
-        Spacer(modifier = Modifier.height(16.dp))
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(24.dp))
+
+        InstructionRow(Icons.Default.LightMode,    "Good lighting — avoid bright light behind you.")
+        Spacer(Modifier.height(16.dp))
         InstructionRow(Icons.Default.Face,         "Remove sunglasses or hats.")
-        Spacer(modifier = Modifier.height(16.dp))
-        InstructionRow(Icons.Default.RemoveRedEye, "Follow these instructions: blink, smile, turn your head…")
-        Spacer(modifier = Modifier.height(48.dp))
-        Button(onClick = onProceed, modifier = Modifier.fillMaxWidth()) {
-            Text("Start Scan")
+        Spacer(Modifier.height(16.dp))
+        InstructionRow(Icons.Default.RemoveRedEye, "Follow on-screen instructions: blink, smile, turn…")
+
+        Spacer(Modifier.height(40.dp))
+
+        Button(
+            onClick  = onProceed,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = RectangleShape
+        ) {
+            Text("Start Scan", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -473,41 +536,76 @@ private fun InstructionRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     text: String
 ) {
-    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+    Row(
+        verticalAlignment = Alignment.Top,
+        modifier          = Modifier.fillMaxWidth()
+    ) {
         Icon(
-            imageVector = icon, contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp).padding(top = 2.dp)
+            imageVector        = icon,
+            contentDescription = null,
+            tint     = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .size(24.dp)
+                .padding(top = 2.dp)
         )
         Text(
-            text = text, style = MaterialTheme.typography.bodyMedium,
-            color = Color.DarkGray, modifier = Modifier.padding(start = 12.dp)
+            text     = text,
+            style    = MaterialTheme.typography.bodyMedium,
+            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 12.dp)
         )
     }
 }
 
-
 @Composable
 private fun FaceIdCaptureErrorPanel(onRetry: () -> Unit) {
     Column(
-        modifier = Modifier
+        modifier            = Modifier
             .fillMaxSize()
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(imageVector = Icons.Default.Face, contentDescription = null,
-            tint = Color(0xFFB00020),
-            modifier = Modifier.size(64.dp).padding(bottom = 16.dp))
-        Text(text = "The image could not be captured.",
-            style = MaterialTheme.typography.titleLarge, color = Color.Black,
-            fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 12.dp))
-        Text(text = "Make sure your face is well lit and within the circle, then try again.",
-            style = MaterialTheme.typography.bodyMedium, color = Color.Gray,
-            textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 40.dp))
-        Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
-            Text("Try again")
+        Box(
+            modifier         = Modifier
+                .size(80.dp)
+                .clip(CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.ErrorOutline,
+                contentDescription = null,
+                tint     = ColorError,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+        Text(
+            text       = "Image could not be captured",
+            style      = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            textAlign  = TextAlign.Center
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text      = "Ensure your face is well lit and centred inside the circle, then try again.",
+            style     = MaterialTheme.typography.bodyMedium,
+            color     = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier  = Modifier.padding(bottom = 40.dp)
+        )
+        Button(
+            onClick  = onRetry,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = ColorError),
+            shape  = RectangleShape
+        ) {
+            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Try Again", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -521,116 +619,151 @@ private fun FaceIdConfirmationPanel(
     onConfirm: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.Black),
+        modifier            = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(modifier = Modifier.fillMaxWidth().weight(0.70f)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(0.70f)
+        ) {
             Image(
-                bitmap = capturedBitmap.asImageBitmap(),
-                contentDescription = "Face captured",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                bitmap             = capturedBitmap.asImageBitmap(),
+                contentDescription = "Captured face",
+                contentScale       = ContentScale.Crop,
+                modifier           = Modifier.fillMaxSize()
             )
 
             verificationResult?.let { vr ->
-                val isMatch   = vr.isVerified
-                val pct       = (vr.similarityScore * 100).toInt()
-                val badgeColor = if (isMatch) Color(0xFF2E7D32) else Color(0xFFB00020)
-                val icon       = if (isMatch) Icons.Default.CheckCircle else Icons.Default.Face
-                val mainLabel = if (isMatch && !verifiedPersonName.isNullOrBlank()) {
-                    verifiedPersonName
-                } else if (isMatch) {
-                    "Identity confirmed"
-                } else {
-                    "Unrecognized"
+                val isMatch    = vr.isVerified
+                val pct        = (vr.similarityScore * 100).toInt()
+                val badgeColor = if (isMatch) ColorSuccess else ColorError
+                val mainLabel  = when {
+                    isMatch && !verifiedPersonName.isNullOrBlank() -> verifiedPersonName
+                    isMatch -> "Identity confirmed"
+                    else    -> "Unrecognised"
                 }
+                val subLabel = if (isMatch) "Similarity · $pct%" else "$pct% similarity"
 
-                val subLabel = if (isMatch) "Identity confirmation · $pct%" else "$pct% similarity"
-
-                Box(
+                Row(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .padding(top = 16.dp)
-                        .background(badgeColor.copy(alpha = 0.88f), RoundedCornerShape(24.dp))
-                        .padding(horizontal = 18.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(badgeColor.copy(alpha = 0.88f))
+                        .border(1.dp, badgeColor.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 18.dp, vertical = 8.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector        = icon,
-                            contentDescription = null,
-                            tint               = MaterialTheme.colorScheme.primary,
-                            modifier           = Modifier.size(20.dp)
-                        )
-                        VSpacer.Small() // 8dp
-                        Column {
-                            Text(
-                                text       = mainLabel,
-                                color      = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
-                                style      = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                text  = subLabel,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
+                    Canvas(Modifier.size(7.dp)) { drawCircle(color = Color.White) }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(mainLabel, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(subLabel, color = Color.White.copy(alpha = 0.80f), fontSize = 11.sp)
                     }
                 }
             }
 
             Box(
                 modifier = Modifier
-                    .fillMaxWidth().height(64.dp)
+                    .fillMaxWidth()
+                    .height(48.dp)
                     .align(Alignment.BottomCenter)
                     .background(Color.Black.copy(alpha = 0.55f)),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null,
-                        tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(text = "Liveness confirm",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint     = ColorSuccess,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        "Liveness confirmed",
+                        style      = MaterialTheme.typography.bodyMedium,
+                        color      = Color.White,
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth().weight(0.30f)
-                .padding(horizontal = 24.dp, vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+        Card(
+            modifier  = Modifier
+                .fillMaxWidth()
+                .weight(0.30f),
+            shape     = RectangleShape,
+            colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(8.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "Face captured",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold, color = Color.Black)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Is your face clearly visible? If not, repeat.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray, textAlign = TextAlign.Center)
-            }
-            Row(modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = onRetry,
-                    modifier = Modifier.weight(1f).height(50.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFF0F0F0), contentColor = Color.DarkGray),
-                    shape = RoundedCornerShape(12.dp)) {
-                    Text("Repeat", fontWeight = FontWeight.Medium)
+            Column(
+                modifier            = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier         = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(ColorSuccess.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint     = ColorSuccess,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            "Face captured",
+                            fontWeight = FontWeight.Bold,
+                            fontSize   = 16.sp,
+                            color      = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text("Automatically detected", fontSize = 12.sp, color = ColorSuccess)
+                    }
                 }
-                Button(onClick = onConfirm,
-                    modifier = Modifier.weight(2f).height(50.dp),
-                    shape = RoundedCornerShape(12.dp)) {
-                    Text("Confirm identity", fontWeight = FontWeight.Medium)
+
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick  = onRetry,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RectangleShape
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Repeat", fontSize = 14.sp)
+                    }
+                    Button(
+                        onClick  = onConfirm,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RectangleShape
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Confirm", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
                 }
             }
         }
@@ -638,68 +771,175 @@ private fun FaceIdConfirmationPanel(
 }
 
 @Composable
-private fun FaceIdVerificationFailedPanel(
-    score: Int,
-    onRetry: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+private fun FaceIdVerificationFailedCard(score: Int, onRetry: () -> Unit) {
+    Card(
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RectangleShape,
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        elevation = CardDefaults.cardElevation(6.dp)
     ) {
-
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .background(Color(0xFFFFEBEE), CircleShape),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier            = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text       = "$score%",
-                    fontSize   = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color      = Color(0xFFB00020)
-                )
-                Text(
-                    text  = "similarity",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFB00020)
-                )
+            Row(
+                verticalAlignment     = Alignment.CenterVertically,
+                modifier              = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier         = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(ColorError.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "$score%",
+                        fontSize   = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color      = ColorError
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Identity not confirmed",
+                        fontWeight = FontWeight.Bold,
+                        color      = MaterialTheme.colorScheme.onErrorContainer,
+                        fontSize   = 14.sp
+                    )
+                    Text(
+                        "Match score $score% — minimum required is 85%. Ensure the same person is present and retry.",
+                        color      = MaterialTheme.colorScheme.onErrorContainer,
+                        fontSize   = 12.sp,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Button(
+                onClick  = onRetry,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = ColorError),
+                shape  = RectangleShape
+            ) {
+                Text("Repeat check", fontWeight = FontWeight.Bold)
             }
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(24.dp))
+@Composable
+fun FaceContoursOverlay(
+    modifier: Modifier = Modifier,
+    features: FaceFeatures
+) {
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val vw = size.width
+        val vh = size.height
+        val iw = features.imageWidth.toFloat()
+        val ih = features.imageHeight.toFloat()
+        if (iw <= 0 || ih <= 0) return@Canvas
 
-        Text(
-            text       = "Identity not confirmed",
-            style      = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color      = Color.Black,
-            textAlign  = TextAlign.Center
+        val scale   = maxOf(vw / iw, vh / ih)
+        val scaledW = iw * scale
+        val scaledH = ih * scale
+        val ox      = (vw - scaledW) / 2f
+        val oy      = (vh - scaledH) / 2f
+
+        fun mapX(x: Float) = vw - (x * scale + ox)
+        fun mapY(y: Float) = y * scale + oy
+
+        fun drawContour(pts: List<android.graphics.PointF>, color: Color, width: Float, close: Boolean = false) {
+            if (pts.size < 2) return
+            val path = Path().apply {
+                moveTo(mapX(pts[0].x), mapY(pts[0].y))
+                for (i in 1 until pts.size) lineTo(mapX(pts[i].x), mapY(pts[i].y))
+                if (close) close()
+            }
+            drawPath(
+                path  = path,
+                color = color,
+                style = Stroke(width = width, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            )
+        }
+
+        drawContour(features.faceOval,          Color(0xFF1565C0),                3.dp.toPx(),    close = true)
+        drawContour(features.leftEye,            ColorSuccess.copy(alpha = 0.9f), 2.5f.dp.toPx(), close = true)
+        drawContour(features.rightEye,           ColorSuccess.copy(alpha = 0.9f), 2.5f.dp.toPx(), close = true)
+        drawContour(features.leftEyebrowTop,     Color.White.copy(alpha = 0.85f), 2.dp.toPx())
+        drawContour(features.leftEyebrowBottom,  Color.White.copy(alpha = 0.85f), 2.dp.toPx())
+        drawContour(features.rightEyebrowTop,    Color.White.copy(alpha = 0.85f), 2.dp.toPx())
+        drawContour(features.rightEyebrowBottom, Color.White.copy(alpha = 0.85f), 2.dp.toPx())
+        drawContour(features.noseBridge,         Color.White.copy(alpha = 0.75f), 2.dp.toPx())
+        drawContour(features.noseBottom,         Color.White.copy(alpha = 0.75f), 2.dp.toPx())
+        drawContour(features.upperLipTop,        ColorWarning.copy(alpha = 0.9f), 2.dp.toPx())
+        drawContour(features.upperLipBottom,     ColorWarning.copy(alpha = 0.9f), 2.dp.toPx())
+        drawContour(features.lowerLipTop,        ColorWarning.copy(alpha = 0.9f), 2.dp.toPx())
+        drawContour(features.lowerLipBottom,     ColorWarning.copy(alpha = 0.9f), 2.dp.toPx())
+    }
+}
+
+@Composable
+fun FaceCircleOverlay(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val diameter = size.width * 0.76f
+        val cx = size.width  / 2f
+        val cy = size.height / 2f
+        val r  = diameter    / 2f
+
+        val path = Path().apply {
+            addRect(Rect(0f, 0f, size.width, size.height))
+            addOval(Rect(cx - r, cy - r, cx + r, cy + r))
+            fillType = PathFillType.EvenOdd
+        }
+        drawPath(path = path, color = Color.Black.copy(alpha = 0.55f))
+
+        drawCircle(
+            color  = Color.White.copy(alpha = 0.15f),
+            radius = r + 7.dp.toPx(),
+            center = Offset(cx, cy),
+            style  = Stroke(width = 7.dp.toPx())
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text      = "The match was $score%, below the minimum required 85%. Please ensure it's the same person from the initial capture and try again.",
-            style     = MaterialTheme.typography.bodyMedium,
-            color     = Color.Gray,
-            textAlign = TextAlign.Center,
-            modifier  = Modifier.padding(horizontal = 8.dp)
+        drawCircle(
+            color  = Color(0xFF1565C0),
+            radius = r,
+            center = Offset(cx, cy),
+            style  = Stroke(width = 2.dp.toPx())
         )
+    }
+}
 
-        Spacer(modifier = Modifier.height(40.dp))
-
-        Button(
-            onClick  = onRetry,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFB00020)),
-            shape    = RoundedCornerShape(12.dp)
+@Composable
+private fun CountdownOverlay(seconds: Int) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier         = Modifier
+                .size(96.dp)
+                .background(Color.Black.copy(alpha = 0.60f), CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            Text("Repeat check", fontWeight = FontWeight.Medium)
+            AnimatedContent(
+                targetState = seconds,
+                transitionSpec = {
+                    (fadeIn(tween(180)) + scaleIn(tween(180), initialScale = 1.5f))
+                        .togetherWith(fadeOut(tween(120)))
+                },
+                label = "countdown"
+            ) { sec ->
+                Text(
+                    text       = "$sec",
+                    fontSize   = 52.sp,
+                    fontWeight = FontWeight.Bold,
+                    color      = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

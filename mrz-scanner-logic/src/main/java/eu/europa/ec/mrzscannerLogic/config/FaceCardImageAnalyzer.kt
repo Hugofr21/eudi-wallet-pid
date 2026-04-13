@@ -1,5 +1,10 @@
+package eu.europa.ec.mrzscannerLogic.config
+
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ImageFormat
+import android.graphics.Paint
 import android.graphics.Rect
 import android.util.Log
 import androidx.annotation.OptIn
@@ -21,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
 
 class FaceCardImageAnalyzer(
@@ -81,7 +87,7 @@ class FaceCardImageAnalyzer(
             var inputImage: InputImage? = null
             var cachedBitmap: Bitmap? = null
 
-            if (imageProxy.format == android.graphics.ImageFormat.YUV_420_888) {
+            if (imageProxy.format == ImageFormat.YUV_420_888) {
                 // Caminho Rápido (YUV): Passa o buffer direto
                 inputImage = InputImage.fromMediaImage(mediaImage, rotation)
             } else {
@@ -219,7 +225,7 @@ class FaceCardImageAnalyzer(
 
         // 1. CORREÇÃO DE DADOS (CRÍTICO): Definir a ordem dos bytes
         // Sem isto, os números vêm errados e a máscara falha.
-        maskBuffer.order(java.nio.ByteOrder.nativeOrder())
+        maskBuffer.order(ByteOrder.nativeOrder())
         maskBuffer.rewind()
 
         // 2. Ler a máscara para um array (Rápido)
@@ -406,7 +412,7 @@ class FaceCardImageAnalyzer(
         // 2. Criar uma nova tela final, preenchida com Branco
         // Usamos ARGB_8888 para garantir qualidade, embora não precisemos de transparência aqui.
         val finalCenteredBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(finalCenteredBitmap)
+        val canvas = Canvas(finalCenteredBitmap)
         canvas.drawColor(Color.WHITE) // Preenche o fundo de branco
 
         // 3. Calcular as coordenadas para desenhar o conteúdo centrado
@@ -420,7 +426,7 @@ class FaceCardImageAnalyzer(
 
         // 5. Desenhar o conteúdo na posição centrada na nova tela branca
         // Usamos um Paint com anti-aliasing para suavizar as bordas
-        val paint = android.graphics.Paint().apply { isAntiAlias = true }
+        val paint = Paint().apply { isAntiAlias = true }
         canvas.drawBitmap(contentOnlyBitmap, drawX, drawY, paint)
 
         // Limpar bitmaps intermédios para poupar memória

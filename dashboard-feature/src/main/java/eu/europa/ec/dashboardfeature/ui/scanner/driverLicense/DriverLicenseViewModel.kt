@@ -1,5 +1,6 @@
 package eu.europa.ec.dashboardfeature.ui.scanner.driverLicense
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
@@ -15,6 +16,7 @@ import eu.europa.ec.uilogic.mvi.ViewSideEffect
 import eu.europa.ec.uilogic.mvi.ViewState
 import eu.europa.ec.uilogic.navigation.DashboardScreens
 import eu.europa.ec.uilogic.serializer.UiSerializer
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 
@@ -23,7 +25,6 @@ enum class CameraAvailability {
     AVAILABLE, NO_PERMISSION, DISABLED, UNKNOWN
 }
 
-
 data class State(
     val isLoading: Boolean = false,
     val isCameraAvailability: CameraAvailability? = null,
@@ -31,10 +32,9 @@ data class State(
     val scannedDocument: MrzDocument? = null,
     val errorMessage: String? = null,
     val isPermissionChecked: Boolean = false,
-    val isInstructionsAcknowledged: Boolean = false
+    val isInstructionsAcknowledged: Boolean = false,
+    val isScanFrozen: Boolean = false
 ) : ViewState
-
-
 
 sealed class Event : ViewEvent {
     object AcknowledgeInstructions : Event()
@@ -75,10 +75,7 @@ sealed class Effect : ViewSideEffect {
         ) : Navigation()
 
         data object OnAppSettings : Navigation()
-        data object OnSystemSettings : Navigation()
-
     }
-
 
     sealed class ShowDialog : Effect() {
         object Help : ShowDialog()
@@ -92,7 +89,9 @@ class DriverLicenseScreenViewModel(
 ) : MviViewModel<Event, State, Effect>() {
 
     private var lifecycleOwner: LifecycleOwner? = null
+    @SuppressLint("StaticFieldLeak")
     private var previewView: PreviewView? = null
+    private var scanningJob: Job? = null
 
     override fun setInitialState(): State {
         return State(
@@ -143,7 +142,6 @@ class DriverLicenseScreenViewModel(
                     setState { copy(isCameraAvailability = CameraAvailability.DISABLED) }
                 }
                 else -> {
-
                     setState { copy(isCameraAvailability = CameraAvailability.AVAILABLE) }
                 }
             }
@@ -204,30 +202,50 @@ class DriverLicenseScreenViewModel(
                 isPermissionChecked = true
             )
         }
-
     }
 
     private fun startScanning() {
-        val owner = lifecycleOwner
-        val preview = previewView
-        if (owner == null || preview == null) return
+        val owner = lifecycleOwner ?: return
+        val preview = previewView ?: return
 
-        viewModelScope.launch {
+        scannerInteractor.resetScanner()
+        scanningJob?.cancel()
+
+        scanningJob = viewModelScope.launch {
             try {
                 scannerInteractor.startScanning(owner, preview, ScanType.Document).collect { scanState ->
-                    if (viewState.value.scannedDocument != null) return@collect
-
-                    setState { copy(scanState = scanState) }
+                    if (viewState.value.isScanFrozen && scanState !is MrzScanState.Scanning) return@collect
 
                     when (scanState) {
+                        is MrzScanState.Scanning -> {
+                            setState {
+                                copy(
+                                    scanState = scanState,
+                                    isScanFrozen = false,
+                                    errorMessage = null
+                                )
+                            }
+                        }
+
                         is MrzScanState.Success -> {
                             val doc = scanState.document
                             if (doc != null) {
-                                stopScanning()
-                                setEvent(Event.OnScanResult(doc))
+                                // Deixamos a câmara rodar visualmente, mas bloqueamos a UI de processar mais dados
+                                setState {
+                                    copy(
+                                        scanState = scanState,
+                                        scannedDocument = doc,
+                                        errorMessage = null,
+                                        isScanFrozen = true
+                                    )
+                                }
+                                handleDocumentByType(doc)
                             }
                         }
+
                         is MrzScanState.SecurityCheckFailed -> {
+                            // Transmitimos o erro de segurança à UI, mas permitimos que o Analisador recupere
+                            // automaticamente assim que a câmara focar um cartão limpo.
                             setState {
                                 copy(
                                     scanState = scanState,
@@ -235,40 +253,62 @@ class DriverLicenseScreenViewModel(
                                 )
                             }
                         }
+
                         is MrzScanState.Error -> {
-                            setEvent(Event.OnScanError(message = scanState.message))
+                            setState {
+                                copy(
+                                    scanState = scanState,
+                                    errorMessage = scanState.message
+                                )
+                            }
                         }
-                        else -> {}
+
+                        is MrzScanState.Processing -> {
+                            setState { copy(scanState = scanState) }
+                        }
+
+                        else -> {
+                            setState { copy(scanState = scanState) }
+                        }
                     }
                 }
             } catch (e: Exception) {
-                setEvent(Event.OnScanError(message = e.message ?: "Critical error"))
+                if (e is kotlinx.coroutines.CancellationException) return@launch
+                setState {
+                    copy(
+                        scanState = MrzScanState.Error("Critical error"),
+                        errorMessage = e.message ?: "Critical error"
+                    )
+                }
             }
         }
     }
 
     private fun stopScanning() {
+        scanningJob?.cancel()
+        scanningJob = null
         scannerInteractor.stopScanning()
         setState {
             copy(
                 scanState = MrzScanState.Idle,
-                scannedDocument = null
+                scannedDocument = null,
+                isScanFrozen = false
             )
         }
     }
 
     private fun retryScanning() {
+        scannerInteractor.resetScanner()
         setState {
             copy(
                 scannedDocument = null,
-                scanState = MrzScanState.Idle,
-                errorMessage = null
+                scanState = MrzScanState.Scanning,
+                errorMessage = null,
+                isScanFrozen = false
             )
         }
-
         startScanning()
     }
-
 
 
     private fun handleScanResult(event: Event.OnScanResult) {
@@ -356,6 +396,7 @@ class DriverLicenseScreenViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        scanningJob?.cancel()
         stopScanning()
         lifecycleOwner = null
         previewView = null

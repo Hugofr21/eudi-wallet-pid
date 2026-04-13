@@ -1,11 +1,16 @@
+package eu.europa.ec.mrzscannerLogic.config
+
 import android.graphics.Bitmap
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
 import eu.europa.ec.mrzscannerLogic.middleware.ProbabilityAggregator
+import eu.europa.ec.mrzscannerLogic.model.AntiSpoofingCheck
 import eu.europa.ec.mrzscannerLogic.model.GuidelineAntiSpoofing
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
 import eu.europa.ec.mrzscannerLogic.service.AnalyzerGuidelineCardService
@@ -20,24 +25,41 @@ import eu.europa.ec.mrzscannerLogic.utils.MRZCleaner.isValidMrzLine
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Analyzer otimizado para deteção AUTOMÁTICA e CONTÍNUA de documentos MRZ.
- *  O analisador tem com obejcto cria dois tipo de leitor  DE icao PAR PASSPORT que comceça ifornaçao com <<
- *  O segundo leitor de passpor usdo ORC  e ROI apra tamanho leitir pcarta conduçao para capataçai de texto dos cartoes
- * Correções principais:
- * - Período de warmup: primeiros [warmupFrames] frames ignoram anti-spoofing (sensores
- *   ainda estão a calibrar e qualquer leitura seria instável).
- * - Anti-spoofing debounced: só emite SecurityCheckFailed após [maxConsecutiveAntiSpoofFails]
- *   falhas SEGUIDAS, evitando bloqueios por frames isolados com reflexo ou microtremor.
- * - OCR ocorre sempre (mesmo em falha de spoofing pontual), permitindo leitura rápida
- *   de documentos físicos reais.
- * - requiredSuccessFrames=1 por defeito: um parse MRZ válido com checksum correto é
- *   suficiente para emitir sucesso.
+ * Define a necessidade de aplicação de um limitador temporal de frames (frame throttling)
+ * durante o pipeline de análise de vídeo, com o objetivo de evitar concorrência e sobreposição
+ * de processamento (overlay) entre módulos críticos como detecção e anti-spoofing.
+ *
+ * <p>Sem um mecanismo de limitação, o sistema pode sofrer acúmulo de frames na fila de processamento,
+ * causando aumento progressivo de latência e potencial inconsistência entre os resultados de módulos
+ * que dependem de sincronização temporal. Esse cenário compromete diretamente a integridade do fluxo
+ * de validação biométrica e a confiabilidade da detecção de eventos.</p>
+ *
+ * <p>Considerando que o algoritmo de OCR possui tempo médio de processamento de aproximadamente
+ * 150 ms por frame, a capacidade prática de avaliação do sistema é limitada a cerca de 6 frames por segundo.
+ * Entretanto, uma câmera operando em 30 FPS produz frames em uma taxa significativamente superior à capacidade
+ * de consumo do pipeline. Caso a captura seja realizada de forma síncrona e contínua, a fila de frames
+ * tende a crescer rapidamente, resultando em backlog e degradação operacional.</p>
+ *
+ * <p>Como estratégia de mitigação, recomenda-se o descarte controlado de frames após a captura de um frame
+ * selecionado para leitura. Uma abordagem objetiva consiste em descartar os três frames subsequentes ao frame
+ * processado, reduzindo a pressão sobre a fila e mantendo o processamento próximo do tempo real.</p>
+ *
+ * <p>Essa política de descarte deve ser ajustada conforme o desempenho real do dispositivo e a latência
+ * observada em produção, podendo ser substituída por mecanismos adaptativos baseados em taxa de processamento,
+ * tamanho de fila ou deadline temporal.</p>
+ *
+ * @implNote A taxa de captura (30 FPS) excede significativamente a taxa máxima de processamento (≈ 6 FPS),
+ *           tornando inevitável o descarte de frames ou o uso de buffering com limite rígido.
+ *
+ * @see <a href="https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem">Producer–Consumer Problem</a>
+ * @see <a href="https://developer.android.com/reference/java/util/concurrent/BlockingQueue">BlockingQueue</a>
  */
 class MrzImageAnalyzer(
     private val resultFlow: ProducerScope<MrzScanState>,
@@ -50,15 +72,7 @@ class MrzImageAnalyzer(
     private val requiredSuccessFrames: Int = 1,
     private val antiSpoofingService: AnalyzerGuidelineCardService,
     private val sensorDocumentService: SensorDocumentService,
-    /**
-     * Número de frames iniciais em que o anti-spoofing é ignorado.
-     * Permite que giroscópio e acelerómetro calibrem antes de avaliarem.
-     */
     private val warmupFrames: Int = 5,
-    /**
-     * Número de falhas de anti-spoofing CONSECUTIVAS necessárias para emitir
-     * SecurityCheckFailed. Um único frame com reflexo não bloqueia o scanner.
-     */
     private val maxConsecutiveAntiSpoofFails: Int = 3,
 ) : ImageAnalysis.Analyzer {
 
@@ -77,10 +91,10 @@ class MrzImageAnalyzer(
     private var consecutiveAntiSpoofFails = 0
     private var consecutiveSuccessCount = 0
     private var lastDetectedDocument: MrzDocument? = null
-
+    private var wasInSpoofingError = false
     private val probabilityAggregator = ProbabilityAggregator()
 
-    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
+    @OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
         val currentTime = System.currentTimeMillis()
 
@@ -114,9 +128,14 @@ class MrzImageAnalyzer(
             try {
                 val isInWarmup = currentFrame <= warmupFrames
 
+                val deferredTextResult = async {
+                    val inputImage = InputImage.fromBitmap(croppedBitmap, 0)
+                    textRecognitionService.recognizeText(inputImage, 0)
+                }
+
                 if (!isInWarmup) {
                     val spoofingReport = antiSpoofingService.analyze(
-                        bitmap = croppedBitmap,
+                        bitmap = rotatedBitmap,
                         config = securityConfig,
                         gyroscopeMatrix = sensorSnapshot.rotationMatrix,
                         accelerometerData = sensorSnapshot.accelerometerData
@@ -124,41 +143,40 @@ class MrzImageAnalyzer(
 
                     if (!spoofingReport.isReal) {
                         consecutiveAntiSpoofFails++
-                        Log.d(
-                            "MrzAnalyzer",
-                            "Spoofing fail $consecutiveAntiSpoofFails/$maxConsecutiveAntiSpoofFails " +
-                                    "(score=${spoofingReport.overallScore})"
-                        )
+                        Log.d("MrzAnalyzer", "Spoofing fail $consecutiveAntiSpoofFails/$maxConsecutiveAntiSpoofFails (score=${spoofingReport.overallScore})")
 
-                        // Só bloqueia após N falhas seguidas, não na primeira
                         if (consecutiveAntiSpoofFails >= maxConsecutiveAntiSpoofFails) {
                             consecutiveSuccessCount = 0
-                            val failedChecks =
-                                spoofingReport.checks.filter { !it.passed }.map { it.check }
+                            lastDetectedDocument = null
+                            probabilityAggregator.reset()
+
+                            wasInSpoofingError = true
+                            val failedChecks = spoofingReport.checks.filter { !it.passed }.map { it.check }
+
+                            val isTooDark = spoofingReport.checks.any { it.check == AntiSpoofingCheck.IMAGE_QUALITY && it.score < 0.40f }
+                            val alertReason = if (isTooDark) {
+                                "Dark environment. Turn on the light or move the document closer."
+                            } else {
+                                "Physically invalid document (score: ${"%.2f".format(spoofingReport.overallScore)})"
+                            }
                             resultFlow.trySend(
-                                MrzScanState.SecurityCheckFailed(
-                                    failedChecks = failedChecks,
-                                    reason = "Documento fisicamente inválido (score: ${
-                                        "%.2f".format(spoofingReport.overallScore)
-                                    })"
-                                )
+                                MrzScanState.SecurityCheckFailed(failedChecks = failedChecks, reason = alertReason)
                             )
-                            // NÃO faz return aqui: deixa o OCR tentar na mesma.
-                            // Se o MRZ for válido mesmo com spoofing marginal, o documento
-                            // é provavelmente real e o SecurityCheckFailed será sobreposto
-                            // pelo Success no próximo frame bom.
                         }
-                        // Frame isolado de falha: continua para OCR sem bloquear
+
+                        deferredTextResult.cancel()
+                        return@launch
                     } else {
-                        // Passou no anti-spoofing — reset do contador de falhas
                         consecutiveAntiSpoofFails = 0
+
+                        if (wasInSpoofingError) {
+                            wasInSpoofingError = false
+                            resultFlow.trySend(MrzScanState.Scanning)
+                        }
                     }
-                } else {
-                    Log.d("MrzAnalyzer", "Warmup frame $currentFrame/$warmupFrames — a saltar anti-spoofing")
                 }
 
-                val inputImage = InputImage.fromBitmap(croppedBitmap, 0)
-                val textResult = textRecognitionService.recognizeText(inputImage, 0)
+                val textResult = deferredTextResult.await()
 
                 textResult.onSuccess { textObject ->
                     processRecognizedText(textObject, croppedBitmap)
@@ -175,7 +193,7 @@ class MrzImageAnalyzer(
     }
 
     private fun processRecognizedText(textObject: Text, bitmap: Bitmap) {
-        val allLines = textObject.text.split("\n")
+        val allLines = textObject.textBlocks.flatMap { it.lines }.map { it.text }
 
         val mrzCandidates = allLines
             .map { cleanLine(it) }
@@ -183,18 +201,22 @@ class MrzImageAnalyzer(
 
         if (mrzCandidates.size >= 2) {
             val parseResult = parserService.parse(mrzCandidates)
-            if (parseResult is MrzParseResult.Success) {
-                handleParseMrzResult(parseResult)
-                return
-            }
+            handleParseMrzResult(parseResult)
+            return
         }
 
-        val dlResult = driverLicenseParser.parse(textObject)
-        if (dlResult is MrzParseResult.Success) {
-            val dlDoc = dlResult.document as MrzDocument.DrivingLicense
-            handleDrivingLicensePartial(dlDoc)
-        } else {
-            consecutiveSuccessCount = 0
+        when (val dlResult = driverLicenseParser.parse(textObject)) {
+            is MrzParseResult.Success -> {
+                val dlDoc = dlResult.document as MrzDocument.DrivingLicense
+                handleDrivingLicensePartial(dlDoc)
+            }
+            is MrzParseResult.Partial -> {
+                val dlDoc = dlResult.document as MrzDocument.DrivingLicense
+                handleDrivingLicensePartial(dlDoc)
+            }
+            else -> {
+                // empty
+            }
         }
     }
 
@@ -238,19 +260,16 @@ class MrzImageAnalyzer(
             resultFlow.trySend(MrzScanState.Success(document))
             consecutiveSuccessCount = 0
             lastDetectedDocument = null
+            probabilityAggregator.reset()
         }
     }
 
-    /**
-     * Extrai a zona central da imagem correspondente à janela de scan da UI.
-     * A caixa da UI ocupa ~85% da largura e ~40% da altura em portrait.
-     */
     private fun extractRoi(bitmap: Bitmap): Bitmap {
         val width = bitmap.width
         val height = bitmap.height
 
-        val roiWidthFraction = 0.85f
-        val roiHeightFraction = 0.40f
+        val roiWidthFraction = 0.90f
+        val roiHeightFraction = 0.80f
 
         val cropWidth = (width * roiWidthFraction).toInt()
         val cropHeight = (height * roiHeightFraction).toInt()
@@ -259,5 +278,19 @@ class MrzImageAnalyzer(
         val y = (height - cropHeight) / 2
 
         return Bitmap.createBitmap(bitmap, x, y, cropWidth, cropHeight)
+    }
+
+    fun resetAnalyzerState() {
+        consecutiveAntiSpoofFails = 0
+        consecutiveSuccessCount = 0
+        lastDetectedDocument = null
+        wasInSpoofingError = false
+        probabilityAggregator.reset()
+        frameCount.set(0)
+
+        resultFlow.trySend(MrzScanState.Scanning)
+        resultFlow.trySend(MrzScanState.Processing(0f))
+
+        Log.d("MrzAnalyzer", "Analyzer state reset complete. Ready for new capture.")
     }
 }

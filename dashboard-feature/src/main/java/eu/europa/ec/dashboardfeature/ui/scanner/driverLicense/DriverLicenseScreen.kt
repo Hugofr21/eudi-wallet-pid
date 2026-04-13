@@ -45,6 +45,7 @@ import eu.europa.ec.mrzscannerLogic.model.AntiSpoofingCheck
 import eu.europa.ec.mrzscannerLogic.model.MrzDocument
 import eu.europa.ec.resourceslogic.theme.values.success
 import eu.europa.ec.resourceslogic.theme.values.warning
+import eu.europa.ec.uilogic.component.utils.VSpacer
 import eu.europa.ec.uilogic.extension.openAppSettings
 
 @Composable
@@ -144,7 +145,7 @@ private fun InstructionsScreen(
             .background(MaterialTheme.colorScheme.background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TopBar(title = "Leitor de Carta", onClose = onClose)
+        TopBar(title = "Letter Reader", onClose = onClose)
 
         Spacer(Modifier.height(48.dp))
 
@@ -166,7 +167,7 @@ private fun InstructionsScreen(
         Spacer(Modifier.height(28.dp))
 
         Text(
-            text       = "Posicione a Zona MRZ\ndentro da área de leitura",
+            text       = "Position the MRZ Zone within the reading area.",
             fontSize   = 20.sp,
             fontWeight = FontWeight.Bold,
             color      = MaterialTheme.colorScheme.onBackground,
@@ -178,7 +179,7 @@ private fun InstructionsScreen(
         Spacer(Modifier.height(10.dp))
 
         Text(
-            text      = "Certifique-se de que o documento está bem iluminado, sem reflexos e que a zona MRZ está completamente visível.",
+            text      = "Make sure the document is well lit, without reflections, and that the MRZ zone is fully visible.",
             fontSize  = 14.sp,
             color     = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -200,7 +201,7 @@ private fun InstructionsScreen(
                 .height(52.dp),
             shape = RoundedCornerShape(10.dp),
         ) {
-            Text("Iniciar Leitura", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text("Start Reading", fontSize = 15.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.width(8.dp))
             Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(18.dp))
         }
@@ -210,10 +211,11 @@ private fun InstructionsScreen(
 @Composable
 private fun InstructionTips() {
     val tips = listOf(
-        Triple(Icons.Default.LightMode, "Iluminação",    "Ambiente bem iluminado, sem sombras"),
-        Triple(Icons.Default.CropFree,  "Enquadramento", "MRZ completamente dentro da área"),
-        Triple(Icons.Default.BlurOff,   "Nitidez",       "Documento parado e câmara estável"),
-    )
+        Triple(Icons.Default.LightMode, "Lighting", "Well-lit environment, no shadows"),
+        Triple(Icons.Default.CropFree, "Framing", "MRZ completely within the area"),
+        Triple(Icons.Default.BlurOff, "Sharpness", "Document still and camera stable"),
+
+        )
     Column(
         modifier            = Modifier
             .fillMaxWidth()
@@ -225,7 +227,7 @@ private fun InstructionTips() {
                 modifier          = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+//                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -233,12 +235,15 @@ private fun InstructionTips() {
                     modifier         = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+//                        .background(MaterialTheme.colorScheme.primaryContainer)
+                            ,
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Icon(icon, null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp))
                 }
-                Spacer(Modifier.width(14.dp))
+                VSpacer.Small()
                 Column {
                     Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                     Text(desc,  fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 16.sp)
@@ -278,7 +283,7 @@ private fun AutomaticScannerContent(
             modifier            = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            TopBar(title = "Digitalizar Carta", onClose = { viewModel.setEvent(Event.GoBack) })
+            TopBar(title = "Digitize Letter", onClose = { viewModel.setEvent(Event.GoBack) })
 
             Spacer(Modifier.height(12.dp))
 
@@ -310,7 +315,6 @@ private fun AutomaticScannerContent(
             }
         }
 
-        // Alerta de erro / segurança
         AnimatedVisibility(
             visible  = state.scanState is MrzScanState.Error || state.scanState is MrzScanState.SecurityCheckFailed,
             enter    = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -328,12 +332,12 @@ private fun AutomaticScannerContent(
 
 @Composable
 private fun ScanStatusBadge(scanState: MrzScanState) {
-    val (text, color) = when (scanState) {
-        is MrzScanState.Processing          -> "A extrair dados…"        to MaterialTheme.colorScheme.primary
-        is MrzScanState.Success             -> "Documento lido!"         to MaterialTheme.colorScheme.success
-        is MrzScanState.Error               -> "Erro de leitura"         to MaterialTheme.colorScheme.error
-        is MrzScanState.SecurityCheckFailed -> "Verificação falhou"      to MaterialTheme.colorScheme.warning
-        else                                -> "Pronto para digitalizar" to MaterialTheme.colorScheme.onSurfaceVariant
+    val(text, color) = when (scanState) {
+        is MrzScanState.Processing -> "Extracting data…" to MaterialTheme.colorScheme.primary
+        is MrzScanState.Success -> "Document read!" to MaterialTheme.colorScheme.success
+        is MrzScanState.Error -> "Read error" to MaterialTheme.colorScheme.error
+        is MrzScanState.SecurityCheckFailed -> "Verification failed" to MaterialTheme.colorScheme.warning
+        else -> "Ready to scan" to MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     Row(
@@ -423,7 +427,7 @@ private fun ScannerWindow(previewView: PreviewView, scanState: MrzScanState) {
         }
 
 
-        Spacer(Modifier.height(8.dp))
+        VSpacer.Small()
         Text(
             text          = "Driving License • ID-1 • ISO/IEC 7810",
             fontSize      = 10.sp,
@@ -488,7 +492,7 @@ private fun TopBar(title: String, onClose: () -> Unit) {
         verticalAlignment     = Alignment.CenterVertically
     ) {
         IconButton(onClick = onClose) {
-            Icon(Icons.Default.Close, "Fechar", tint = MaterialTheme.colorScheme.onBackground)
+            Icon(Icons.Default.Close, "Closed", tint = MaterialTheme.colorScheme.onBackground)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground)
@@ -497,7 +501,7 @@ private fun TopBar(title: String, onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.success, modifier = Modifier.size(10.dp))
-                Text("Leitura Segura", fontSize = 10.sp, color = MaterialTheme.colorScheme.success, fontWeight = FontWeight.Medium)
+                Text("Safe Reading", fontSize = 10.sp, color = MaterialTheme.colorScheme.success, fontWeight = FontWeight.Medium)
             }
         }
         IconButton(onClick = { /* flash */ }) {

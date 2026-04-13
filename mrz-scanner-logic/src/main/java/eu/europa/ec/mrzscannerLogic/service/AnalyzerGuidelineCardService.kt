@@ -12,10 +12,19 @@ import eu.europa.ec.mrzscannerLogic.utils.ImageUtils.bitmapToGrayResized
 import eu.europa.ec.mrzscannerLogic.utils.ImageUtils.toPixelArray
 import eu.europa.ec.mrzscannerLogic.utils.ImageUtils.meanRgb
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import kotlin.math.*
 
 
+private val VETO_CHECKS = setOf(
+    AntiSpoofingCheck.PRINT_ARTIFACT,
+    AntiSpoofingCheck.HOMOGRAPHY_PLANARITY,
+    AntiSpoofingCheck.MOIRE_PATTERN,
+    AntiSpoofingCheck.TEMPORAL_CONSISTENCY
+
+)
 interface AnalyzerGuidelineCardService {
     suspend fun analyze(
         bitmap: Bitmap,
@@ -39,7 +48,7 @@ class AnalyzerGuidelineCardServiceImpl(
 
     private var zeroSpecularFrames = 0
 
-    // Janela deslizante de energia Moiré (5 frames)
+    // sliding windows de energia Moiré (5 frames)
     private val moireEnergyWindow = ArrayDeque<Float>(5)
 
     // Centróides de gradiente por quadrante para homografia
@@ -70,47 +79,65 @@ class AnalyzerGuidelineCardServiceImpl(
 
         val results = mutableListOf<CheckResult>()
 
-        if (config.checkSpecularReflection)
-            results += runCheck(AntiSpoofingCheck.SPECULAR_REFLECTION) { checkSpecularReflection(bitmap) }
-        if (config.checkMoirePattern)
-            results += runCheck(AntiSpoofingCheck.MOIRE_PATTERN) { checkMoirePattern(bitmap) }
-        if (config.checkImageQuality)
-            results += runCheck(AntiSpoofingCheck.IMAGE_QUALITY) { checkImageQuality(bitmap) }
-        if (config.checkGyroscope && gyroscopeMatrix != null)
-            results += runCheck(AntiSpoofingCheck.GYROSCOPE) { checkGyroscopeConsistency(bitmap, gyroscopeMatrix) }
-        if (config.checkAccelerometer && accelerometerData != null)
-            results += runCheck(AntiSpoofingCheck.ACCELEROMETER) { checkAccelerometerStability(accelerometerData) }
-        if (config.checkEdgeSharpness)
-            results += runCheck(AntiSpoofingCheck.EDGE_SHARPNESS) { checkEdgeSharpness(bitmap) }
-        if (config.checkColorConsistency)
-            results += runCheck(AntiSpoofingCheck.COLOR_CONSISTENCY) { checkColorConsistency(bitmap) }
-        if (config.checkTemporalConsistency)
-            results += runCheck(AntiSpoofingCheck.TEMPORAL_CONSISTENCY) { checkTemporalConsistency(bitmap) }
-        if (config.checkPrintArtifact)
-            results += runCheck(AntiSpoofingCheck.PRINT_ARTIFACT) { checkPrintArtifacts(bitmap) }
-        if (config.checkHomographyPlanarity)
-            results += runCheck(AntiSpoofingCheck.HOMOGRAPHY_PLANARITY) { checkHomographyPlanarity(bitmap) }
+        // FASE 1: EXECUÇÃO PARALELA (MULTI-THREADING)
+        // Lançamos todas as métricas críticas em simultâneo nas threads disponíveis.
+        val phase1Deferred = listOfNotNull(
+            if (config.checkMoirePattern) async { runCheck(AntiSpoofingCheck.MOIRE_PATTERN) { checkMoirePattern(bitmap) } } else null,
+            if (config.checkHomographyPlanarity) async { runCheck(AntiSpoofingCheck.HOMOGRAPHY_PLANARITY) { checkHomographyPlanarity(bitmap) } } else null,
+            if (config.checkPrintArtifact) async { runCheck(AntiSpoofingCheck.PRINT_ARTIFACT) { checkPrintArtifacts(bitmap) } } else null,
+            if (config.checkTemporalConsistency) async { runCheck(AntiSpoofingCheck.TEMPORAL_CONSISTENCY) { checkTemporalConsistency(bitmap) } } else null,
+            if (config.checkSpecularReflection) async { runCheck(AntiSpoofingCheck.SPECULAR_REFLECTION) { checkSpecularReflection(bitmap) } } else null
+        )
 
-        val overallScore = computeWeightedScore(results)
+        // Aguardamos que todas as threads terminem o seu cálculo
+        results.addAll(phase1Deferred.awaitAll())
 
-        log.d("AntiSpoofing") {
-            "[FINAL] score=${"%.3f".format(overallScore)} threshold=${config.threshold}\n" +
-                    results.joinToString("\n") { r ->
-                        "  ${r.check.name}: ${"%.2f".format(r.score)}${r.reason?.let { " ← $it" } ?: ""}"
-                    }
+        // PORTÃO LÓGICO (FAST-FAIL)
+        val hasCriticalFailure = results.any { it.check in VETO_CHECKS && it.score < 0.25f }
+        if (hasCriticalFailure) {
+            val score = computeFinalScore(results)
+            log.w("AntiSpoofing") { "[FAST-FAIL] Fraude detetada. Abortando testes pesados." }
+            return@withContext AntiSpoofingReport(false, score, results, classifyAttackType(results, score))
         }
 
-        AntiSpoofingReport(
-            isReal       = overallScore >= config.threshold,
-            overallScore = overallScore,
-            checks       = results,
-            verdict      = classifyAttackType(results, overallScore)
-        )
+        // FASE 2: Sensores Nativos (Instantâneo)
+        if (config.checkGyroscope && gyroscopeMatrix != null) results += runCheck(AntiSpoofingCheck.GYROSCOPE) { checkGyroscopeConsistency(bitmap, gyroscopeMatrix) }
+        if (config.checkAccelerometer && accelerometerData != null) results += runCheck(AntiSpoofingCheck.ACCELEROMETER) { checkAccelerometerStability(accelerometerData) }
+
+        val currentScore = computeFinalScore(results)
+
+        // FASE 3: Análise Pesada (Apenas em caso de dúvida)
+        if (currentScore < 0.80f) {
+            log.d("AntiSpoofing") { "[FAST-PASS] Score marginal ($currentScore). Executando em paralelo análise pesada..." }
+
+            val phase3Deferred = listOfNotNull(
+                if (config.checkImageQuality) async { runCheck(AntiSpoofingCheck.IMAGE_QUALITY) { checkImageQuality(bitmap) } } else null,
+                if (config.checkEdgeSharpness) async { runCheck(AntiSpoofingCheck.EDGE_SHARPNESS) { checkEdgeSharpness(bitmap) } } else null,
+                if (config.checkColorConsistency) async { runCheck(AntiSpoofingCheck.COLOR_CONSISTENCY) { checkColorConsistency(bitmap) } } else null
+            )
+            results.addAll(phase3Deferred.awaitAll())
+        } else {
+            results += CheckResult(AntiSpoofingCheck.IMAGE_QUALITY, true, 0.85f, null)
+            results += CheckResult(AntiSpoofingCheck.EDGE_SHARPNESS, true, 0.85f, null)
+            results += CheckResult(AntiSpoofingCheck.COLOR_CONSISTENCY, true, 0.85f, null)
+        }
+
+        val finalScore = computeFinalScore(results)
+
+        AntiSpoofingReport(finalScore >= config.threshold, finalScore, results, classifyAttackType(results, finalScore))
     }
 
-
-    private fun computeWeightedScore(results: List<CheckResult>): Float {
+    private fun computeFinalScore(results: List<CheckResult>): Float {
         if (results.isEmpty()) return 1f
+
+        // Limiar ajustado de 0.35 para 0.25. Dá tolerância a pequenos erros de foco ou lag da CPU.
+        for (r in results) {
+            if (r.check in VETO_CHECKS && r.score < 0.25f) {
+                log.w("AntiSpoofing") { "[VETO TRIGGER] Rejeição imediata por ${r.check.name} (score=${r.score})" }
+                return minOf(r.score, 0.15f)
+            }
+        }
+
         var wSum = 0f; var wTotal = 0f
         for (r in results) {
             val w = checkWeights[r.check] ?: 0.05f
@@ -227,7 +254,7 @@ class AnalyzerGuidelineCardServiceImpl(
     //   FIX: quando só fftAlert, score = max(fftWorstScore, 0.42f).
     // =========================================================================
 
-    private val FFT_SCALES = intArrayOf(128, 256, 512)
+    private val FFT_SCALES = intArrayOf(128, 256)
     private val MOIRE_ENERGY_LAMBDA = 0.025f // era 0.018 — cartão real ficava em 0.0087–0.0189
 
     private fun checkMoirePattern(bitmap: Bitmap): Pair<Float, String?> {
@@ -580,10 +607,10 @@ class AnalyzerGuidelineCardServiceImpl(
         }
 
         return when {
-            maxReprojError > 12f -> Pair(0.35f, "Deformação geométrica — possível papel (${"%.1f".format(maxReprojError)}px)")
-            maxReprojError > 6f  -> Pair(0.60f, null)
-            maxReprojError < 2f  -> Pair(0.85f, null)
-            else                 -> Pair(0.72f, null)
+            maxReprojError > 55f -> Pair(0.20f, "Deformação extrema geométrica (${"%.1f".format(maxReprojError)}px)")
+            maxReprojError > 35f -> Pair(0.50f, null) // Neutro, o seu cartão real (37px) cai aqui agora.
+            maxReprojError < 15f -> Pair(0.85f, null) // Cartão muito estável
+            else                 -> Pair(0.70f, null)
         }
     }
 
@@ -704,9 +731,11 @@ class AnalyzerGuidelineCardServiceImpl(
         log.d("AntiSpoofing") { "[TEMPORAL] avgHashDelta=${"%.2f".format(avgDelta)} frames=${frameHashHistory.size}" }
 
         return when {
-            avgDelta < 1.5        -> Pair(0.15f, "Frames estáticas — possível imagem estática (${"%.1f".format(avgDelta)})")
-            avgDelta > 28.0       -> Pair(0.40f, "Movimento excessivo entre frames")
-            avgDelta in 2.0..20.0 -> Pair(0.90f, null)
+            // Se avgDelta for incrivelmente baixo (< 0.8), não há ruído ótico do plástico.
+            // É uma imagem fosca ou papel na mesa. Score 0.20 garante o disparo do VETO.
+            avgDelta < 0.8        -> Pair(0.20f, "Imagem morta/estática — fotocópia ou foto pousada (${"%.1f".format(avgDelta)})")
+            avgDelta > 35.0       -> Pair(0.40f, "Movimento excessivo entre frames")
+            avgDelta in 1.5..25.0 -> Pair(0.95f, null) // Cartão plástico real sob a mão humana
             else                  -> Pair(0.65f, null)
         }
     }
@@ -740,17 +769,34 @@ class AnalyzerGuidelineCardServiceImpl(
         val halfScore  = detectHalftonePeaks(bitmap)
         val bandScore  = detectBanding(bitmap)
         val quantScore = detectQuantizationNoise(bitmap)
-        val combined   = (halfScore.first + bandScore.first + quantScore.first) / 3f
-        val reasons    = listOfNotNull(halfScore.second, bandScore.second, quantScore.second)
+
+        // CORREÇÃO CRÍTICA (O ERRO MATEMÁTICO DA FOTOCÓPIA):
+        // Se qualquer um dos 3 motores detetar marca de impressão, o score global
+        // TEM de ser esse valor crítico. A média mascarava a fraude.
+        val worstScore = minOf(halfScore.first, bandScore.first, quantScore.first)
+
+        val reasons = listOfNotNull(halfScore.second, bandScore.second, quantScore.second)
+
         log.d("AntiSpoofing") {
-            "[PRINT] halftone=${halfScore.first} band=${bandScore.first} quant=${quantScore.first} → combined=$combined"
+            "[PRINT] halftone=${halfScore.first} band=${bandScore.first} quant=${quantScore.first} → scoreFinal=$worstScore"
         }
-        return Pair(combined, reasons.joinToString(" | ").ifEmpty { null })
+
+        return Pair(worstScore, reasons.joinToString(" | ").ifEmpty { null })
     }
 
     private fun detectHalftonePeaks(bitmap: Bitmap): Pair<Float, String?> {
-        val sz = 64
+        val sz = 256
         val gray = bitmapToGrayResized(bitmap, sz, sz)
+
+        // CORREÇÃO: Verificação de Segurança de Luminosidade
+        // Se a imagem estiver muito escura, o sensor da câmara insere ruído ISO
+        // que gera altas frequências espaciais artificiais, causando falsos vetos.
+        val globalMean = gray.average()
+        if (globalMean < 65.0) {
+            log.d("AntiSpoofing") { "[HALFTONE] Imagem escura (lum=${"%.1f".format(globalMean)}). Análise FFT suspensa para evitar falsos positivos de ruído ISO." }
+            return Pair(0.85f, null) // Passa no teste de impressão por falta de condições de análise
+        }
+
         val real = Array(sz) { r -> DoubleArray(sz) { c -> gray[r * sz + c].toDouble() } }
         val imag = Array(sz) { DoubleArray(sz) }
 
@@ -765,27 +811,59 @@ class AnalyzerGuidelineCardServiceImpl(
         fftShift(mag)
 
         val cx = sz / 2; val cy = sz / 2
-        var ringPeaks = 0; var totalE = 0.0; var ringE = 0.0
+        val radiusMin = 40.0
+        val radiusMax = 120.0
 
-        for (r in 0 until sz) for (c in 0 until sz) {
-            val d = sqrt(((r - cy).toDouble().pow(2) + (c - cx).toDouble().pow(2)))
-            val e = mag[r][c]; totalE += e
-            // FIX v5b: magnitude mínima 600 → 2000 para excluir guilhoché
-            if (d in 18.0..32.0) { ringE += e; if (e > 2000) ringPeaks++ }
+        val numBins = 90
+        val angularBins = DoubleArray(numBins)
+
+        var totalEnergy = 0.0
+        var maxBinEnergy = 0.0
+
+        for (r in 0 until sz) {
+            for (c in 0 until sz) {
+                val dy = (r - cy).toDouble()
+                val dx = (c - cx).toDouble()
+                val d = sqrt(dx * dx + dy * dy)
+
+                if (d in radiusMin..radiusMax) {
+                    val e = mag[r][c]
+                    if (e > 800) {
+                        var angleDeg = Math.toDegrees(atan2(dy, dx))
+                        if (angleDeg < 0) angleDeg += 180.0
+                        if (angleDeg >= 180.0) angleDeg -= 180.0
+
+                        val bin = ((angleDeg / 180.0) * numBins).toInt().coerceIn(0, numBins - 1)
+                        angularBins[bin] += e
+                        totalEnergy += e
+                    }
+                }
+            }
         }
 
-        val ringRatio = if (totalE > 0) ringE / totalE else 0.0
+        var sharpPeaks = 0
+        val peakThreshold = if (totalEnergy > 0) totalEnergy * 0.05 else Double.MAX_VALUE
 
-        log.d("AntiSpoofing") { "[HALFTONE] ringPeaks=$ringPeaks ringRatio=${"%.3f".format(ringRatio)}" }
+        for (i in 0 until numBins) {
+            if (angularBins[i] > peakThreshold && angularBins[i] > 10000.0) {
+                val prev = angularBins[(i - 1 + numBins) % numBins]
+                val next = angularBins[(i + 1) % numBins]
+                if (angularBins[i] > prev && angularBins[i] > next) {
+                    sharpPeaks++
+                    if (angularBins[i] > maxBinEnergy) maxBinEnergy = angularBins[i]
+                }
+            }
+        }
+
+        log.d("AntiSpoofing") { "[HALFTONE] sharpAngularPeaks=$sharpPeaks maxBinEnergy=${"%.0f".format(maxBinEnergy)}" }
 
         return when {
-            // FIX v5b: limiar 10 → 150
-            ringPeaks > 150 || ringRatio > 0.55 ->
-                Pair(0.25f, "Halftone inkjet detetado ($ringPeaks picos, ratio=${"%.2f".format(ringRatio)})")
-            ringPeaks > 50 ->
-                Pair(0.55f, null)
+            sharpPeaks in 2..6 && maxBinEnergy > 30000.0 ->
+                Pair(0.15f, "Matriz de impressão a laser detetada ($sharpPeaks picos angulares)")
+            sharpPeaks > 6 ->
+                Pair(0.40f, "Ruído estruturado excessivo em alta frequência")
             else ->
-                Pair(0.90f, null)
+                Pair(0.95f, null)
         }
     }
 

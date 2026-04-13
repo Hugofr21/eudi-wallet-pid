@@ -1,7 +1,7 @@
 package eu.europa.ec.mrzscannerLogic.controller
 
-import FaceCardImageAnalyzer
-import MrzImageAnalyzer
+import eu.europa.ec.mrzscannerLogic.config.FaceCardImageAnalyzer
+import eu.europa.ec.mrzscannerLogic.config.MrzImageAnalyzer
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.util.Log
@@ -59,6 +59,8 @@ interface MrzScanController {
     fun isScanning(): Boolean
     fun enableTapToFocus(enabled: Boolean)
     fun enableTorch(enabled: Boolean)
+
+    fun resetScanner()
 }
 
 class MrzScanControllerImpl(
@@ -77,6 +79,7 @@ class MrzScanControllerImpl(
     private var lifecycleOwnerRef: LifecycleOwner? = null
     private var previewViewRef: PreviewView? = null
     private var analyzerScope: CoroutineScope? = null
+    private var currentAnalyzer: ImageAnalysis.Analyzer? = null
 
      /*
       * Objective:
@@ -134,7 +137,9 @@ class MrzScanControllerImpl(
 
             sensorDocumentService.start(needsRotation = true, needsAccel = true)
             analyzerScope = CoroutineScope(Dispatchers.Default)
+
             val analyzer = createAnalyzer(scanType, this, analyzerScope!!)
+            currentAnalyzer = analyzer
 
             Log.d("MrzScanControllerImpl", "Analyzer: ${analyzer.javaClass.simpleName}")
 
@@ -186,7 +191,7 @@ class MrzScanControllerImpl(
             )
 
             else -> throw IllegalArgumentException("Unsupported ScanType")
-        } as ImageAnalysis.Analyzer
+        }
     }
 
     override fun stopScanning() {
@@ -195,6 +200,7 @@ class MrzScanControllerImpl(
         textRecognitionService.release()
         analyzerScope?.cancel()
         analyzerScope = null
+        currentAnalyzer = null
     }
 
     override fun isCameraAvailable(): Boolean {
@@ -214,5 +220,15 @@ class MrzScanControllerImpl(
 
     override fun enableTorch(enabled: Boolean) {
         cameraService.enableTorch(enabled)
+    }
+
+    override fun resetScanner() {
+        Log.d("MrzScanControllerImpl", "Resetting Scanner Engine...")
+        sensorDocumentService.reset()
+        analyzerGuidelineCardService.reset()
+
+        if (currentAnalyzer is MrzImageAnalyzer) {
+            (currentAnalyzer as MrzImageAnalyzer).resetAnalyzerState()
+        }
     }
 }

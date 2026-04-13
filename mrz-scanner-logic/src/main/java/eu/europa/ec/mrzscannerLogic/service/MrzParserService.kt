@@ -8,6 +8,8 @@ import eu.europa.ec.mrzscannerLogic.utils.MrzDate
 
 sealed class MrzParseResult {
     data class Success(val document: MrzDocument) : MrzParseResult()
+
+    data class Partial(val document: MrzDocument) : MrzParseResult()
     data class InvalidChecksum(val field: String, val reason: String) : MrzParseResult()
     data class InvalidFormat(val reason: String) : MrzParseResult()
     data class Error(val throwable: Throwable) : MrzParseResult()
