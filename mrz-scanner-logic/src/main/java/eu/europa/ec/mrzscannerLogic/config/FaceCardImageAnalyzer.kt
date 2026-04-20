@@ -17,9 +17,7 @@ import com.google.mlkit.vision.segmentation.Segmentation
 import com.google.mlkit.vision.segmentation.Segmenter
 import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import eu.europa.ec.mrzscannerLogic.controller.MrzScanState
-import eu.europa.ec.mrzscannerLogic.service.AnalyzerGuidelineCardService
 import eu.europa.ec.mrzscannerLogic.service.FaceService
-import eu.europa.ec.mrzscannerLogic.service.SensorDocumentService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +26,6 @@ import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
-import androidx.core.graphics.createBitmap
 
 class FaceCardImageAnalyzer(
     private val resultFlow: ProducerScope<MrzScanState>,

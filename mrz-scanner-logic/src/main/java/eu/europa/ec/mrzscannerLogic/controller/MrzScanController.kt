@@ -169,8 +169,6 @@ class MrzScanControllerImpl(
             is ScanType.Face -> FaceCardImageAnalyzer(
                 resultFlow = resultScope,
                 faceService = faceService,
-                antiSpoofingService = analyzerGuidelineCardService,
-                sensorDocumentService = sensorDocumentService,
                 scope = managedScope,
                 dispatcher = Dispatchers.Default
             )

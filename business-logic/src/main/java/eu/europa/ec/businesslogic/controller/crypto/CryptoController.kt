@@ -256,7 +256,7 @@ class CryptoControllerImpl(
         return hash.copyOfRange(0, 12)
     }
 
-    /** HMAC-SHA256(key, domain-separator) → one-way verifier. */
+    /** HMAC-SHA256(key, domain-separator) -> one-way verifier. */
     override fun computeVerifier(keyBytes: ByteArray): ByteArray {
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(keyBytes, "HmacSHA256"))

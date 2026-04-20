@@ -49,7 +49,7 @@ data class State(
     val previewBitmap: Bitmap? = null,
     val faceFeatures: FaceFeatures? = null,
     val countdownSeconds: Int? = null,
-    val currentChallengeMessage: String = "A preparar câmara…",
+    val currentChallengeMessage: String = "Preparing camera…",
     val completedChallenges: List<String> = emptyList(),
     val totalChallenges: Int = 3,
     val errorMessage: String? = null,
