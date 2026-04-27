@@ -140,11 +140,8 @@ class PersonIdentificationDataImpl(
     }
 
     override fun getUserWithPortrait(): String {
-        val docs = getPidDocumentDetails()
-        if (docs.isEmpty()) {
-            println("No PID documents found.")
-            return ""
-        }
+        val docs = walletCoreDocumentsController.getAllIssuedDocuments()
+        if (docs.isEmpty()) return ""
 
         val portraitClaim = docs
             .flatMap { it.data.claims }
@@ -152,41 +149,52 @@ class PersonIdentificationDataImpl(
 
         val base64 = portraitClaim?.value?.toString()
         println("Portrait: $base64")
-
         return base64 ?: ""
     }
 
     override fun getListClaims(): List<ClaimsUI> {
         val docs = walletCoreDocumentsController.getAllIssuedDocuments()
-        val allClaims = docs
-            .flatMap { it.data.claims }
-            .filterNot { claim ->
-            when (claim.identifier.lowercase()) {
-                "portrait", "given_name", "family_name" -> true
-                else                                   -> false
-            }
-        }
 
-        val uniqueClaims = allClaims
+        val skipKeys = setOf("portrait", "given_name", "family_name")
+
+        val uniqueClaims = docs
+            .flatMap { it.data.claims }
+            .filterNot { it.identifier.lowercase() in skipKeys }
             .distinctBy { it.identifier.lowercase() }
 
-        val claims = uniqueClaims.map { claim ->
-            val normalizedKey = claim.identifier.replace("_"," ").lowercase()
+        return uniqueClaims.map { claim ->
+            val normalizedKey = claim.identifier
+                .replace("_", " ")
+                .lowercase()
 
-            val v: Any? = claim.value
-            val cv = when (v) {
-                is Map<*,*>        -> ClaimValue.Obj(v.mapKeys { it.key.toString().replace("_"," ").lowercase() })
-                is Collection<*>   -> ClaimValue.Arr(v.toList())
-                else               -> ClaimValue.Simple(v.toString())
+            val cv: ClaimValue = when (val raw: Any? = claim.value) {
+                is Map<*, *>      -> ClaimValue.Obj(
+                    raw.entries.associate { (k, v) ->
+                        k.toString().replace("_", " ").lowercase() to v
+                    }
+                )
+                is Collection<*>  -> ClaimValue.Arr(raw.toList())
+                else              -> {
+                    val text = raw?.toString() ?: ""
+                    val mapped = when {
+                        normalizedKey == "sex" -> when (text.trim()) {
+                            "1" -> "Male"
+                            "0" -> "Female"
+                            "2" -> "Other"
+                            else -> text
+                        }
+                        text.trim().lowercase() == "true"  -> "Yes"
+                        text.trim().lowercase() == "false" -> "No"
+                        else -> text
+                    }
+                    ClaimValue.Simple(mapped)
+                }
             }
 
-            ClaimsUI(
-                key   = normalizedKey,
-                value = cv
-            )
+            ClaimsUI(key = normalizedKey, value = cv)
         }
-        return claims
     }
+
 
 
     private fun printDocuments(label: String, docs: List<IssuedDocument>) {
