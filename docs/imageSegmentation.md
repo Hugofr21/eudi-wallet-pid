@@ -9,89 +9,72 @@ editor: @hugofr21
 
 This module describes the processing pipeline responsible for the semantic segmentation and geometric normalization of faces captured for digital identity purposes. The system adopts a modular architecture, where each stage is implemented as a sequential component, allowing scalable maintenance and independent evolution of the computer vision algorithms.
 
-```mermaid
-flowchart LR
-    classDef input fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238
-    classDef stage fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1
-    classDef decision fill:#FFF8E1,stroke:#FF8F00,stroke-width:2px,color:#E65100
-    classDef success fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20
-    classDef failure fill:#FFEBEE,stroke:#C62828,stroke-width:2px,color:#B71C1C
-    classDef noteNode fill:#FAFAFA,stroke:#B0BEC5,stroke-width:1px,stroke-dasharray: 4 4,color:#546E7A
-    classDef terminal fill:#263238,stroke:#000,color:#fff
+```mermaidflowchart LR
 
-    Start(( )):::terminal
+classDef terminal fill:#263238,color:#fff,stroke:#000,stroke-width:2px
+classDef activity fill:#F9F9F9,stroke:#333,stroke-width:1.5px
+classDef decision fill:#FFF8E1,stroke:#FF8F00,stroke-width:2px
+classDef success fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
+classDef failure fill:#FFEBEE,stroke:#C62828,stroke-width:2px
+
+Start(( )):::terminal
 Stop(( )):::terminal
 
-subgraph Camera [CAMERA]
+subgraph Camera["IMAGE ACQUISITION"]
 direction TB
-StartCap["Start Capture"]:::input
-Acquire["Acquire Image Frame"]:::input
-
-N_Acquire["<div style='text-align:left; font-size:11px;'>• Image capture from device sensor.<br>• Raw input for biometric pipeline.</div>"]:::noteNode
-
-StartCap --> Acquire
-Acquire -.- N_Acquire
+Capture["Acquire Image Frame"]:::activity
+Detect["Face Detection (ML Kit)"]:::activity
+Quality["Frame Quality Assessment"]:::activity
+Capture --> Detect --> Quality
 end
 
-subgraph FRS [FACE RECOGNITION SYSTEM]
-direction LR
-
-subgraph Preprocessing [PREPROCESSING]
+subgraph Processing["IMAGE PREPROCESSING"]
 direction TB
-Detect["Face Detection"]:::stage
-Align["Face Alignment / Crop / Resize"]:::stage
-Extract["Feature Extraction (Embedding)"]:::stage
-
-N_Detect["<div style='text-align:left; font-size:11px;'>• Detection of facial region using CNN-based<br>detector (e.g., MTCNN, RetinaFace).</div>"]:::noteNode
-N_Align["<div style='text-align:left; font-size:11px;'>• Normalization of facial geometry and scale.<br>• Standard input size (112x112 or 160x160).</div>"]:::noteNode
-N_Extract["<div style='text-align:left; font-size:11px;'>• Deep neural network inference.<br>• Output: L2-normalized embedding vector.</div>"]:::noteNode
-
-Detect --> Align --> Extract
-
-Detect -.- N_Detect
-Align -.- N_Align
-Extract -.- N_Extract
+Segment["Semantic Segmentation"]:::activity
+Expand["Bounding Box Expansion"]:::activity
+Crop["Crop & Aspect Ratio Normalization"]:::activity
+Center["Canvas Recentering"]:::activity
+Segment --> Expand --> Crop --> Center
 end
 
-subgraph Bifurcacao [ ]
+subgraph Liveness["ACTIVE LIVENESS DETECTION"]
 direction TB
+Challenge["Random Challenge Selection (3 of 5)"]:::activity
+FSM["Finite State Machine"]:::activity
+Validate["Challenge Validation"]:::activity
+Live{"Liveness Successful?"}:::decision
 
-subgraph Enrollment [ENROLLMENT]
+Challenge --> FSM --> Validate --> Live
+Live -- No --> Reject
+Live -- Retry --> FSM
+end
+
+subgraph Verification["BIOMETRIC VERIFICATION"]
 direction TB
-Store["Store Biometric Template"]:::stage
+Embedding["Embedding Extraction"]:::activity
+Template["Stored Biometric Template"]:::activity
+Similarity["Similarity Computation"]:::activity
+Decision{"Similarity ≥ Threshold?"}:::decision
 
-N_Store["<div style='text-align:left; font-size:11px;'>• Secure persistence of embedding vector.<br><br>Requirements:<br>- Encrypted storage<br>- Isolated application sandbox<br>- Non-reversible template representation</div>"]:::noteNode
-
-Store -.- N_Store
+Embedding --> Similarity
+Template --> Similarity
+Similarity --> Decision
 end
 
-subgraph Verification [VERIFICATION]
-direction TB
-Score["Compute Similarity Score"]:::stage
-Check{"Score ≥ Threshold?"}:::decision
-Success["Authentication Success"]:::success
-Failure["Authentication Failure"]:::failure
+Accept["Verification Approved"]:::success
+Reject["Verification Rejected"]:::failure
 
-N_Score["<div style='text-align:left; font-size:11px;'>• Distance metrics: Euclidean (L2), Cosine.<br>• Output: similarity score ∈ [0,1].</div>"]:::noteNode
+Start --> Capture
+Quality --> Segment
+Center --> Challenge
 
-Score --> Check
-Check -- "Yes" --> Success
-Check -- "No" --> Failure
+Live -- Yes --> Embedding
 
-Score -.- N_Score
-end
-end
-style Bifurcacao fill:none,stroke:none
-end
+Decision -- Yes --> Accept
+Decision -- No --> Reject
 
-Start --> StartCap
-Acquire --> Detect
-Extract --> Store
-Extract --> Score
-
-Store --> Stop
-Success --> Stop
-Failure --> Stop
+Accept --> Stop
+Reject --> Stop
 ```
 ## 1. Semantic Segmentation Pipeline
 

@@ -46,72 +46,79 @@ Immediately after the state machine confirms the success of liveness detection, 
 
 
 ````mermaid
-flowchart TD
-    %% Título
-    %% Face Recognition System — Enrollment and Verification Pipeline
+flowchart TB
 
-    %% Definição de estilo para as notas
-    classDef note fill:#F2F2F2,stroke:#444444,color:#111111,font-size:12px,stroke-dasharray: 5 5;
-    classDef process fill:#F9F9F9,stroke:#222222,color:#111111,rx:6px,ry:6px;
+    classDef acquisition fill:#E3F2FD,stroke:#1565C0,stroke-width:2px
+    classDef liveness fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px
+    classDef biometric fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
+    classDef decision fill:#FCE4EC,stroke:#AD1457,stroke-width:2px
 
-    Start((Start)) --> SC[Start Capture]:::process
+    Start((Start))
 
-    subgraph CAMERA [CAMERA]
-        SC --> AIF[Acquire Image Frame]:::process
+    subgraph A["Image Acquisition"]
+        direction LR
+        Camera[Video Capture]
+        Face[Face Detection]
+        Landmarks[Facial Landmark Extraction]
+        Camera --> Face --> Landmarks
     end
-    
-    subgraph FRS [FACE RECOGNITION SYSTEM]
-        
-        subgraph PREPROCESSING [PREPROCESSING]
-            AIF --> FD[Face Detection]:::process
-            FD --> FA[Face Alignment / Crop / Resize]:::process
-            FA --> FE[Feature Extraction <br> Embedding]:::process
-        end
-        
-        %% Separação lógica dos fluxos (Split)
-        FE --> Mode{Operation Mode}
-        
-        subgraph ENROLLMENT [ENROLLMENT]
-            Mode -- Enrollment --> SBT[Store Biometric Template]:::process
-        end
-        
-        subgraph VERIFICATION [VERIFICATION]
-            Mode -- Verification --> CSS[Compute Similarity Score]:::process
-            CSS --> Cond{Score >= Threshold?}
-            Cond -- Yes --> AS[Authentication Success]:::process
-            Cond -- No --> AF[Authentication Failure]:::process
-        end
-    end
-    
-    SBT --> Stop((Stop))
-    AS --> Stop
-    AF --> Stop
-    
-    %% --- NOTAS (Anexadas aos processos) ---
-    
-    N_AIF>Note: Image capture from device sensor.<br>Raw input for biometric pipeline.]:::note
-    AIF -.-> N_AIF
-    
-    N_FD>Note: Detection of facial region using CNN-based detector<br>e.g., MTCNN, RetinaFace.]:::note
-    FD -.-> N_FD
-    
-    N_FA>Note: Normalization of facial geometry and scale.<br>Standard input size 112x112 or 160x160.]:::note
-    FA -.-> N_FA
-    
-    N_FE>Note: Deep neural network inference:<br>FaceNet / MobileFaceNet / ArcFace.<br><br>Output: L2-normalized embedding vector.]:::note
-    FE -.-> N_FE
-    
-    N_SBT>Note: Secure persistence of embedding vector.<br><br>Requirements:<br>- Encrypted storage<br>- Isolated application sandbox<br>- Non-reversible template representation]:::note
-    SBT -.-> N_SBT
-    
-    N_CSS>Note: Distance metrics:<br>- Euclidean L2<br>- Cosine similarity<br><br>Output: similarity score ∈ 0,1 or distance metric.]:::note
-    CSS -.-> N_CSS
-    
-    N_AS>Note: Identity confirmed based on similarity threshold.<br>Decision boundary satisfied.]:::note
-    AS -.-> N_AS
-    
-    N_AF>Note: No sufficient similarity with enrolled templates.<br>Decision rejected.]:::note
-    AF -.-> N_AF
+
+subgraph B["Active Liveness Detection"]
+direction LR
+Pool[Challenge Repository]
+Select[Random Challenge Selection<br/>(3 of 5)]
+FSM[Finite State Machine]
+Validate[Challenge Validation]
+Next{"More Challenges?"}
+
+Pool --> Select --> FSM --> Validate --> Next
+Next -- Yes --> FSM
+end
+
+subgraph C["Biometric Verification"]
+direction LR
+Capture[Capture Reference Frame]
+Align[Face Alignment]
+Embedding[Embedding Extraction]
+Similarity[Similarity Computation]
+
+Capture --> Align --> Embedding --> Similarity
+end
+
+subgraph D["Authentication"]
+direction LR
+Decision{"Similarity ≥ Threshold?"}
+Success[Authentication Successful]
+Failure[Authentication Failed]
+
+Decision -- Yes --> Success
+Decision -- No --> Failure
+end
+
+Start --> Camera
+Landmarks --> Pool
+Next -- No --> Capture
+Validate -- Failed --> Failure
+Similarity --> Decision
+
+Camera:::acquisition
+Face:::acquisition
+Landmarks:::acquisition
+
+Pool:::liveness
+Select:::liveness
+FSM:::liveness
+Validate:::liveness
+Next:::liveness
+
+Capture:::biometric
+Align:::biometric
+Embedding:::biometric
+Similarity:::biometric
+
+Decision:::decision
+Success:::decision
+Failure:::decision
 ````
 ## Anti-spoofing: Feature Learning Approach for Deep Face Recognition
 
