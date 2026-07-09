@@ -45,7 +45,7 @@ Immediately after the state machine confirms the success of liveness detection, 
 6- Capture and Cross-Verification of Authenticity
 
 
-````mermaid
+```mermaid
 flowchart TB
 
     classDef acquisition fill:#E3F2FD,stroke:#1565C0,stroke-width:2px
@@ -63,63 +63,63 @@ flowchart TB
         Camera --> Face --> Landmarks
     end
 
-subgraph B["Active Liveness Detection"]
-direction LR
-Pool[Challenge Repository]
-Select[Random Challenge Selection<br/>(3 of 5)]
-FSM[Finite State Machine]
-Validate[Challenge Validation]
-Next{"More Challenges?"}
+    subgraph B["Active Liveness Detection"]
+        direction LR
+        Pool[Challenge Repository]
+        Select["Random Challenge Selection<br>(3 of 5)"]
+        FSM[Finite State Machine]
+        Validate[Challenge Validation]
+        Next{"More Challenges?"}
 
-Pool --> Select --> FSM --> Validate --> Next
-Next -- Yes --> FSM
-end
+        Pool --> Select --> FSM --> Validate --> Next
+        Next -- Yes --> FSM
+    end
 
-subgraph C["Biometric Verification"]
-direction LR
-Capture[Capture Reference Frame]
-Align[Face Alignment]
-Embedding[Embedding Extraction]
-Similarity[Similarity Computation]
+    subgraph C["Biometric Verification"]
+        direction LR
+        Capture[Capture Reference Frame]
+        Align[Face Alignment]
+        Embedding[Embedding Extraction]
+        Similarity[Similarity Computation]
 
-Capture --> Align --> Embedding --> Similarity
-end
+        Capture --> Align --> Embedding --> Similarity
+    end
 
-subgraph D["Authentication"]
-direction LR
-Decision{"Similarity ≥ Threshold?"}
-Success[Authentication Successful]
-Failure[Authentication Failed]
+    subgraph D["Authentication"]
+        direction LR
+        Decision{"Similarity ≥ Threshold?"}
+        Success[Authentication Successful]
+        Failure[Authentication Failed]
 
-Decision -- Yes --> Success
-Decision -- No --> Failure
-end
+        Decision -- Yes --> Success
+        Decision -- No --> Failure
+    end
 
-Start --> Camera
-Landmarks --> Pool
-Next -- No --> Capture
-Validate -- Failed --> Failure
-Similarity --> Decision
+    Start --> Camera
+    Landmarks --> Pool
+    Next -- No --> Capture
+    Validate -- Failed --> Failure
+    Similarity --> Decision
 
-Camera:::acquisition
-Face:::acquisition
-Landmarks:::acquisition
+    Camera:::acquisition
+    Face:::acquisition
+    Landmarks:::acquisition
 
-Pool:::liveness
-Select:::liveness
-FSM:::liveness
-Validate:::liveness
-Next:::liveness
+    Pool:::liveness
+    Select:::liveness
+    FSM:::liveness
+    Validate:::liveness
+    Next:::liveness
 
-Capture:::biometric
-Align:::biometric
-Embedding:::biometric
-Similarity:::biometric
+    Capture:::biometric
+    Align:::biometric
+    Embedding:::biometric
+    Similarity:::biometric
 
-Decision:::decision
-Success:::decision
-Failure:::decision
-````
+    Decision:::decision
+    Success:::decision
+    Failure:::decision
+```
 ## Anti-spoofing: Feature Learning Approach for Deep Face Recognition
 
 The process of continuous authenticity verification of the digital wallet is based on a one-to-one facial biometric verification system, executed entirely in an embedded computing environment to safeguard the privacy and integrity of cryptographic data. During the initial onboarding integration phase, the system captures a photometric image that, after processing, acts as the anchor for the holder's identity. In subsequent operational interactions that require unequivocal proof of ownership, the architecture triggers a new reading cycle, performing validation against the first established primary instance. To enable this operation under rigorous memory and latency constraints on mobile devices, the infrastructure employs the coupling of ML Kit and TensorFlow Lite libraries.
