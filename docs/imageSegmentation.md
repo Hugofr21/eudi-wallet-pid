@@ -9,7 +9,8 @@ editor: @hugofr21
 
 This module describes the processing pipeline responsible for the semantic segmentation and geometric normalization of faces captured for digital identity purposes. The system adopts a modular architecture, where each stage is implemented as a sequential component, allowing scalable maintenance and independent evolution of the computer vision algorithms.
 
-```mermaidflowchart LR
+```mermaid
+flowchart LR
 
 classDef terminal fill:#263238,color:#fff,stroke:#000,stroke-width:2px
 classDef activity fill:#F9F9F9,stroke:#333,stroke-width:1.5px
