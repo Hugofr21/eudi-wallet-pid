@@ -14,6 +14,7 @@
   - [Protocols](#protocols)
   - [Architecture Modules](./wiki/ARCHITECTURE.md)
   - [Security](wiki/SECURITY_ARCHITECTURE.md)
+    - [Security Architecture - MFA and Storage](./docs/SecurityArchitectureMFAStorage.md)
   - [Engineering Architecture for Phygital Identity: Convergence Between ICAO 9303 and ISO 18013-5](./docs/mz.md)
   - [Anti-spoofing](./docs/anti-spoofing.md)
   - [Liveness](./docs/liveness.md)
