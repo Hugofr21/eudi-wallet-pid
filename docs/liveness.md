@@ -1,9 +1,9 @@
----
 title: Liveness
 version: v1.0.0-draft
 status: draft
 editor: @hugofr21
----
+
+
 # Liveness
 
 The real-time image capture process enables analysis of the wallet user's portrait and subsequently verify whether the obtained images correspond to the user and can uniquely identify them.

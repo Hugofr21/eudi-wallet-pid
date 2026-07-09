@@ -54,48 +54,63 @@ The architecture supports extensibility for biometric validation through the fol
 
 ```mermaid
 flowchart LR
-    classDef input fill:#AED6F1,stroke:#2C7DA7,stroke-width:2px,color:#000
-    classDef stage fill:#A2D9CE,stroke:#1ABC9C,stroke-width:2px,color:#000
-    classDef decision fill:#F8C471,stroke:#E67E22,stroke-width:2px,color:#000
-    classDef outputNode fill:#F9E79F,stroke:#F4D03F,stroke-width:2px,color:#000,font-weight:bold
-    classDef parallel fill:#D7BDE2,stroke:#9B59B6,stroke-width:2px,color:#000
-    classDef noteNode fill:#FEF9E7,stroke:#F4D03F,stroke-width:1px,stroke-dasharray: 5 5,color:#000,font-size:12px
+    classDef input fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
+    classDef stage fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
+    classDef decision fill:#FFF8E1,stroke:#FF8F00,stroke-width:2px,color:#000
+    classDef parallel fill:#F3E5F5,stroke:#8E24AA,stroke-width:2px,color:#000
 
-    Cam([Video Feed Capture<br>Hardened Sensor Access]):::input
+    classDef success fill:#C8E6C9,stroke:#2E7D32,stroke-width:2px,color:#000
+    classDef failure fill:#FFCDD2,stroke:#C62828,stroke-width:2px,color:#000
+    classDef warning fill:#FFE0B2,stroke:#E65100,stroke-width:2px,color:#000
 
-    subgraph FASE_QUALIDADE ["Sanitation and Quality Phase - DoS Prevention"]
-        L1[Stage 1: Image Quality Gate<br>Laplacian Filter / Brightness / Contrast]:::stage
-        L2[Stage 2: Sensor Warm-up<br>Discard first N frames]:::stage
+    classDef noteNode fill:#FAFAFA,stroke:#B0BEC5,stroke-width:1px,stroke-dasharray: 4 4,color:#455A64
+
+    Camera["Input<br>Camera Frame"]:::input
+
+
+    OCR["Parallel Process<br>OCR Pipeline"]:::parallel
+    N_OCR["<div style='text-align:left; font-size:11px;'>• OCR execution is independent<br>from anti-spoofing decision</div>"]:::noteNode
+
+
+    subgraph Pipeline [Anti-Spoofing Pipeline]
+        direction LR
+        L1["Stage 1<br>Image Quality Gate<br>(Laplacian Var / Brightness / Contrast)"]:::stage
+        L2["Stage 2<br>Sensor Warm-up Filter<br>(discard first N frames)"]:::stage
+        L3["Stage 3<br>Temporal Aggregation<br>(sliding window W frames)"]:::stage
+        L4["Stage 4<br>Active Liveness Check<br>(user feedback if marginal)"]:::stage
+
+        N_L3["<div style='text-align:left; font-size:11px;'>• Decision requires persistence<br>(e.g., >= K consecutive fails)</div>"]:::noteNode
+
+        L1 -- "pass" --> L2
+        L2 --> L3
+        L3 --> L4
+
+        L3 -.- N_L3
     end
 
-    subgraph FASE_PAD ["Presentation Attack Detection - PAD Phase"]
-        L3[Stage 3: Temporal Aggregation<br>Sliding window of W frames]:::stage
-        L4[Stage 4: Active Liveness Check<br>Movement/rigidity detection]:::stage
-        Decision{Decision Engine<br>Anti-Spoofing verdict}:::decision
-    end
+    Decision{{"Decision Engine<br>(anti-spoofing verdict)"}}:::decision
 
-    OCR[Parallel Processing<br>OCR Pipeline]:::parallel
 
-    Poor([Output: PoorImageQuality<br>Early Rejection]):::outputNode
-    Fail([Output: SecurityCheckFail<br>Attack Vector Blocked]):::outputNode
-    Guidance([Output: GuidanceNeeded<br>Soft Degradation / Retry]):::outputNode
-    Success([Output: Success<br>Liveness Proof Authenticated]):::outputNode
+    Poor["Output<br>PoorImageQuality"]:::failure
+    Success["Output<br>Success"]:::success
+    Guidance["Output<br>GuidanceNeeded"]:::warning
+    Fail["Output<br>SecurityCheckFail"]:::failure
+    
+    Camera --> OCR
+    OCR -.- N_OCR
 
-    Cam --> L1
-    Cam -->|Asynchronous| OCR
+    Camera --> L1
+    L1 -- "reject" --> Poor
 
-    L1 -->|Validation Passed| L2
-    L1 -->|Reject| Poor
-
-    L2 -->|Stable Frames| L3
-    L3 --> L4
     L4 --> Decision
 
-    Decision -->|Biometric Attack| Fail
-    Decision -->|Marginal/Suspicious| Guidance
-    Decision -->|Genuine| Success
+    Decision -- "live" --> Success
+    Decision -- "marginal" --> Guidance
+    Decision -- "spoof" --> Fail
 ```
+
 ---
+
 
 ## References
 
