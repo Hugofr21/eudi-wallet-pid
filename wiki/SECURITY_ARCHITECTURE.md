@@ -1,5 +1,32 @@
 # Security Architecture & Threat Model
-[View details STRIDE](./STRIDE.MD)
+
+## Structural Elements of the Threat Model (EUDI Wallet)
+
+1. **Trust Boundaries ( *Trust Boundaries* ):**
+  * *Secure Hardware (eSE / StrongBox):* Maximum trust level. Physical isolation where private keys and critical cryptographic operations reside. Protected against extraction even on rooted devices.
+  * *Mobile Operating System (Hostile/Untrusted):* Application runtime environment. Considered hostile due to the possibility of malware, transient memory interception, or privilege escalation.
+  * *Network / External Ecosystem:* Public boundary where flows transit via proximity channels (BLE/NFC) or remote channels (Internet) toward third parties (Verifiers and Issuers).
+2. **Actors & Assets ( *Actors & Assets* ):**
+  * *Actors:* Holder, Issuer (Issuer/QTSP), and Verifier (Relying Party).
+  * *Data Assets:* Personally Identifiable Data (PID), Electronic Attribute Assertions (QEAAs), Device Private Keys, Session Metadata, and Audit Logs.
+3. **Processes ( *Processes* ):**
+  * *Wallet Application (WDA):* Orchestrates business logic, generates user interfaces, and interacts with local storage.
+  * *Cryptographic / Proof Generation Module:* Process focused on deriving keys, signing presentation requests (mDoc/SD-JWT), and executing Zero-Knowledge Proofs (ZKP).
+  * *Local User Authentication Module (LUA):* Validates user biometrics or PIN before authorizing access to data.
+4. **Storage ( *Storage* ):**
+  * *Encrypted Local Database (SQLCipher):* Stores structured PID and QEAA attributes, protected by AEAD symmetric cipher derived from hardware-guarded keys.
+  * *Hardware Keystore:* Physical storage of non-exportable asymmetric keys.
+5. **Data Flows ( *Data Flows* ):**
+  * *Issuance (OIDC4VCI):* Flow of receiving credentials from Issuer to Wallet.
+  * *Presentation (OpenID4VP / mDoc):* Flow of sharing selective attributes from Wallet to Verifier.
+
+### Threat Modeling
+  * [View details STRIDE](./STRIDE.MD)
+
+  * [View details LINDDUN](./LINDDUN.md)
+
+  * [View details PASTA](./PASTA.md)
+
 ## 1. System Context and Trust Boundaries
 This document outlines the formal threat model for the Mobile Identity Wallet, evaluated under a strict **Zero-Trust architecture**. The application operates in potentially hostile mobile environments, requiring robust hardware-backed cryptographic guarantees.
 

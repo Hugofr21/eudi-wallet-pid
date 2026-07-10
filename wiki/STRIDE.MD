@@ -1,5 +1,3 @@
-## 3. Matriz Analítica: STRIDE-per-Element e Controlos eIDAS 2.0
-
 # Threat Modeling of the EUDI Wallet (eIDAS 2.0): STRIDE Methodology
 
 ## 1. Methodological Framework and Foundations
