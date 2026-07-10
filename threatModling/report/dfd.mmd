@@ -1,0 +1,29 @@
+flowchart LR
+
+Wallet_Holder["👤 Wallet Holder"]
+Wallet_Holder["👤 Wallet Holder"]
+PID_Provider_Issuer["🌐 PID Provider (Issuer)"]
+QEAA_Provider_Attestation_Issuer["🌐 (Q)EAA Provider (Attestation Issuer)"]
+Relying_Party["🌐 Relying Party"]
+National_EU_Trusted_List_Provider["🌐 National/EU Trusted List Provider"]
+EUDI_Wallet_Instance_Core_App(["⚙️ EUDI Wallet Instance (Core App)"])
+Wallet_Provider_Backend_Attestation___Lifecycle_Mgmt(["⚙️ Wallet Provider Backend (Attestation / Lifecycle Mgmt)"])
+Relying_Party_Access_Certificate_Authority(["⚙️ Relying Party Access Certificate Authority"])
+Credential_Status___Revocation_Service(["⚙️ Credential Status / Revocation Service"])
+WSCD___eSE_StrongBox,_Secure_Element[("🗄️ WSCD / eSE (StrongBox, Secure Element)")]
+Local_Wallet_Data_Store_Credenciais_em_cache[("🗄️ Local Wallet Data Store (Credenciais em cache)")]
+Issuer_Credential___Revocation_Registry[("🗄️ Issuer Credential / Revocation Registry")]
+Relying_Party_Session_Log_Store[("🗄️ Relying Party Session/Log Store")]
+
+PID_Provider_Issuer -->|"Issuer (OID4VCI)"| EUDI_Wallet_Instance_Core_App
+QEAA_Provider_Attestation_Issuer -->|"Issuer attestation (Q)EAA (OID4VCI)"| EUDI_Wallet_Instance_Core_App
+EUDI_Wallet_Instance_Core_App -->|"Presentation of Attributes (OID4VP)"| Relying_Party
+EUDI_Wallet_Instance_Core_App -->|"Signature/Attestation Request (Private Key)"| WSCD___eSE_StrongBox,_Secure_Element
+EUDI_Wallet_Instance_Core_App -->|"Wallet Instance Attestation (WIA)"| Wallet_Provider_Backend_Attestation___Lifecycle_Mgmt
+EUDI_Wallet_Instance_Core_App -->|"Validater Relying Party Access Certificate (TL)"| National_EU_Trusted_List_Provider
+EUDI_Wallet_Instance_Core_App -->|"Verify Credential Status / Revocation (Token Status List)"| Credential_Status___Revocation_Service
+Relying_Party -->|"Register Relying Party Access Certificate (CA)"| Relying_Party_Access_Certificate_Authority
+EUDI_Wallet_Instance_Core_App -->|"Write/Read Local Wallet Data Store (Credenciais em cache)"| Local_Wallet_Data_Store_Credenciais_em_cache
+Relying_Party -->|"Register Verification Session (RP Session Log)"| Relying_Party_Session_Log_Store
+Wallet_Holder -->|"Consent and Authentication (PIN/Biometria)"| EUDI_Wallet_Instance_Core_App
+EUDI_Wallet_Instance_Core_App -->|"Feedback (UI / Display de Credenciais)"| Wallet_Holder
