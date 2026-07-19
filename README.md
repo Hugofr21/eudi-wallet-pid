@@ -18,6 +18,8 @@
   - [Engineering Architecture for Phygital Identity: Convergence Between ICAO 9303 and ISO 18013-5](./docs/mz.md)
   - [Anti-spoofing](./docs/anti-spoofing.md)
   - [Liveness](./docs/liveness.md)
+  - [Image Segmentation](./docs/imageSegmentation.md)
+  - [DC API](./docs/DC_API.md)
   - [License](#license)
     - [License details](#license-details)
 
