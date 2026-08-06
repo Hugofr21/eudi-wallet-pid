@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2023 European Commission
+  ~
+  ~ Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the European
+  ~ Commission - subsequent versions of the EUPL (the "Licence"); You may not use this work
+  ~ except in compliance with the Licence.
+  ~
+  ~ You may obtain a copy of the Licence at:
+  ~ https://joinup.ec.europa.eu/software/page/eupl
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software distributed under
+  ~ the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF
+  ~ ANY KIND, either express or implied. See the Licence for the specific language
+  ~ governing permissions and limitations under the Licence.
+  -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="176dp"
+    android:height="150dp"
+    android:viewportWidth="176"
+    android:viewportHeight="150">
+    <group
+        android:translateX="59"
+        android:translateY="-41.62">
+        <path
+            android:fillColor="#55953B"
+            android:pathData="M29.36,150C29.19,150 29.03,149.97 28.88,149.9C28.58,149.77 21.53,146.7 14.4,139.06C10.22,134.58 6.88,129.45 4.49,123.82C1.51,116.79 0,108.95 0,100.54C0,99.87 0.54,99.33 1.21,99.33C6.56,99.33 11.31,98.51 15.34,96.9C18.52,95.63 21.26,93.86 23.48,91.64C27.22,87.9 28.18,84.19 28.19,84.16C28.32,83.62 28.8,83.24 29.36,83.24C29.91,83.24 30.39,83.62 30.53,84.16C30.86,85.47 32.3,88.74 35.34,91.74C37.56,93.93 40.3,95.68 43.47,96.94C47.48,98.52 52.2,99.33 57.51,99.33C58.17,99.33 58.71,99.87 58.71,100.54C58.71,109.87 57.2,118.27 54.22,125.5C51.83,131.32 48.48,136.4 44.28,140.6C37.11,147.77 29.99,149.87 29.69,149.95C29.58,149.99 29.47,150 29.36,150L29.36,150ZM2.42,101.73C2.56,109.37 4,116.48 6.72,122.87C8.99,128.25 12.17,133.14 16.16,137.41C22.01,143.68 27.88,146.75 29.43,147.5C31.01,146.95 36.88,144.63 42.67,138.8C46.62,134.82 49.77,130.01 52.03,124.5C54.74,117.88 56.17,110.23 56.29,101.73C51.12,101.61 46.48,100.74 42.48,99.14C38.99,97.75 35.98,95.8 33.53,93.35C31.48,91.29 30.17,89.24 29.36,87.65C28.55,89.24 27.24,91.29 25.18,93.35C22.73,95.8 19.72,97.75 16.23,99.14C12.23,100.74 7.59,101.61 2.42,101.73V101.73Z" />
+        <path
+            android:fillColor="#55953B"
+            android:pathData="M25.34,125.87C25.03,125.87 24.72,125.75 24.48,125.52L16.44,117.47C15.97,117 15.97,116.24 16.44,115.77C16.91,115.3 17.67,115.3 18.14,115.77L25.33,122.96L40.57,107.73C41.04,107.25 41.8,107.25 42.27,107.73C42.74,108.2 42.74,108.96 42.27,109.43L26.19,125.52C25.95,125.75 25.64,125.87 25.33,125.87H25.34Z" />
+    </group>
+</vector>

@@ -1,0 +1,498 @@
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the European
+ * Commission - subsequent versions of the EUPL (the "Licence"); You may not use this work
+ * except in compliance with the Licence.
+ *
+ * You may obtain a copy of the Licence at:
+ * https://joinup.ec.europa.eu/software/page/eupl
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF
+ * ANY KIND, either express or implied. See the Licence for the specific language
+ * governing permissions and limitations under the Licence.
+ */
+
+package eu.europa.ec.dashboardfeature.ui.profile
+
+
+import android.content.Context
+import android.graphics.Bitmap
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import eu.europa.ec.dashboardfeature.model.ClaimsUI
+import eu.europa.ec.dashboardfeature.ui.transactions.list.DashboardEvent
+import eu.europa.ec.dashboardfeature.ui.transactions.list.OpenSideMenuEvent
+import eu.europa.ec.resourceslogic.R
+import eu.europa.ec.uilogic.component.AppIconAndText
+import eu.europa.ec.uilogic.component.AppIconAndTextDataUi
+import eu.europa.ec.uilogic.component.AppIcons
+import eu.europa.ec.uilogic.component.ListItemDataUi
+import eu.europa.ec.uilogic.component.ListItemMainContentDataUi
+import eu.europa.ec.uilogic.component.content.ContentScreen
+import eu.europa.ec.uilogic.component.content.ScreenNavigateAction
+import eu.europa.ec.uilogic.component.preview.PreviewTheme
+import eu.europa.ec.uilogic.component.preview.ThemeModePreviews
+import eu.europa.ec.uilogic.component.utils.SPACING_MEDIUM
+import eu.europa.ec.uilogic.component.utils.SPACING_SMALL
+import eu.europa.ec.uilogic.component.utils.VSpacer
+import eu.europa.ec.uilogic.component.wrap.ButtonConfig
+import eu.europa.ec.uilogic.component.wrap.ButtonType
+import eu.europa.ec.uilogic.component.wrap.TextConfig
+import eu.europa.ec.uilogic.component.wrap.WrapIconButton
+import eu.europa.ec.uilogic.component.wrap.WrapImage
+import eu.europa.ec.uilogic.component.wrap.WrapListItem
+import eu.europa.ec.uilogic.component.wrap.WrapText
+import eu.europa.ec.uilogic.extension.finish
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.asImageBitmap
+import eu.europa.ec.uilogic.component.IconDataUi
+
+typealias DashboardEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event
+typealias OpenSideMenuEvent = eu.europa.ec.dashboardfeature.ui.dashboard.Event.SideMenu.Open
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileScreen(
+    navHostController: NavController,
+    viewModel: ProfileViewModel,
+) {
+    val context = LocalContext.current
+    val state: State by viewModel.viewState.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    val bottomSheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = false
+    )
+
+    ContentScreen(
+        isLoading = state.isLoading,
+        navigatableAction = ScreenNavigateAction.NONE,
+        onBack = { viewModel.setEvent(Event.GoBack)},
+
+    ) { paddingValues ->
+        Content(
+            state = state,
+            effectFlow = viewModel.effect,
+            onNavigationRequested = { navigationEffect ->
+                handleNavigationEffect(navigationEffect, navHostController, context)
+            },
+            paddingValues = paddingValues
+        )
+    }
+
+}
+
+
+@Composable
+private fun TopBar(
+    onEventSent: (DashboardEvent) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = SPACING_SMALL.dp,
+                vertical = SPACING_MEDIUM.dp
+            )
+    ) {
+        // home menu icon
+        WrapIconButton(
+            modifier = Modifier.align(Alignment.CenterStart),
+            iconData = AppIcons.Menu,
+            customTint = MaterialTheme.colorScheme.onSurface,
+        ) {
+            onEventSent(OpenSideMenuEvent)
+        }
+
+        // wallet logo
+        AppIconAndText(
+            modifier = Modifier.align(Alignment.Center),
+            appIconAndTextData = AppIconAndTextDataUi()
+        )
+    }
+}
+
+private fun handleNavigationEffect(
+    navigationEffect: Effect.Navigation,
+    navController: NavController,
+    context: Context,
+) {
+    when (navigationEffect) {
+        is Effect.Navigation.Pop -> context.finish()
+        is Effect.Navigation.SwitchScreen -> {
+            navController.navigate(navigationEffect.screenRoute) {
+                popUpTo(navigationEffect.popUpToScreenRoute) {
+                    inclusive = navigationEffect.inclusive
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun Content(
+    state: State,
+    effectFlow: Flow<Effect>,
+    onNavigationRequested: (navigationEffect: Effect.Navigation) -> Unit,
+    paddingValues: PaddingValues
+) {
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(
+                paddingValues = PaddingValues(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = 0.dp,
+                    start = paddingValues.calculateStartPadding(LayoutDirection.Ltr),
+                    end = paddingValues.calculateEndPadding(LayoutDirection.Ltr)
+                )
+            )
+            .verticalScroll(scrollState)
+            .padding(vertical = SPACING_MEDIUM.dp),
+        verticalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
+    ) {
+        VSpacer.ExtraLarge()
+        CardItem(state)
+        ListItemFirstNameAndLastName(state)
+        ListItemOther(state)
+
+    }
+
+
+    LaunchedEffect(Unit) {
+        effectFlow.onEach { effect ->
+            when (effect) {
+                is Effect.Navigation -> onNavigationRequested(effect)
+                else -> {}
+            }
+
+        }.collect()
+    }
+}
+
+
+@Composable
+private fun CardItem(
+    state: State,
+) {
+    val imageBase64 = state.imageBase64
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+            .background(
+                color = MaterialTheme.colorScheme.primary,
+                shape = MaterialTheme.shapes.medium
+            )
+            .clip(MaterialTheme.shapes.medium)
+    ) {
+
+        ProfileImage(imageBase64)
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.3f))
+        )
+
+        Text(
+            text = "Profile",
+            style = MaterialTheme.typography.titleLarge.copy(
+                color = Color.White,
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold
+            ),
+
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(16.dp),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun ProfileImage(
+    imageBase64: String?,
+){
+    LaunchedEffect(imageBase64) {
+        println("ProfileImage – imageBase64: $imageBase64")
+    }
+
+    if (imageBase64 != null) {
+        val decodedBitmap: Bitmap? = remember(imageBase64) {
+            imageBase64
+                ?.substringAfter("base64,")
+                ?.let { Base64.decode(it, Base64.DEFAULT) }
+                ?.let { bytes ->
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                }
+        }
+
+        LaunchedEffect(decodedBitmap) {
+            println("ProfileImage – decodedBitmap: $decodedBitmap")
+        }
+
+        if (decodedBitmap != null) {
+            Image(
+                bitmap = decodedBitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            WrapImage(
+                iconData = AppIcons.User as IconDataUi,
+                modifier = Modifier.fillMaxSize(),
+                colorFilter = null,
+                contentScale = ContentScale.Crop
+            )
+        }
+    } else {
+        WrapImage(
+            iconData = AppIcons.User,
+            modifier = Modifier.fillMaxSize(),
+            colorFilter = null,
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+@Composable
+private fun ListItemFirstNameAndLastName(
+    state: State,
+){
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = SPACING_MEDIUM.dp),
+        horizontalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
+        ) {
+            Text(
+                text = "First Name",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+            WrapText(
+                text = state.firstName,
+                modifier = Modifier.fillMaxWidth(),
+                textConfig = TextConfig(
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
+        ) {
+            Text(
+                text = "Last Name",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+            WrapText(
+                text = state.lastName,
+                modifier = Modifier.fillMaxWidth(),
+                textConfig = TextConfig(
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            )
+        }
+
+    }
+}
+
+
+
+@Composable
+fun ListItemOther(
+    state: State,
+) {
+
+    val rows = state.claimsUi.chunked(2)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = SPACING_MEDIUM.dp),
+        verticalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
+    ) {
+        rows.forEach { pair ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(SPACING_MEDIUM.dp)
+            ) {
+
+                pair.forEach { claim ->
+                    Column(
+                        modifier = Modifier
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(SPACING_SMALL.dp)
+                    ) {
+                        Text(
+                            text = claim.key,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                        WrapText(
+                            text = claim.value,
+                            modifier = Modifier.fillMaxWidth(),
+                            textConfig = TextConfig(
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        )
+                    }
+                }
+
+                if (pair.size == 1) {
+                   VSpacer.Small()
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun NoResults(
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        WrapListItem(
+            item = ListItemDataUi(
+                itemId = stringResource(R.string.profile_screen_search_no_results_id),
+                mainContentData = ListItemMainContentDataUi.Text(
+                    text = stringResource(R.string.profile_screen_search_no_results)
+                ),
+            ),
+            onItemClick = null,
+            modifier = Modifier.fillMaxWidth(),
+            mainContentVerticalPadding = SPACING_MEDIUM.dp,
+        )
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@ThemeModePreviews
+@Composable
+private fun HomeScreenContentPreview() {
+    PreviewTheme {
+
+
+
+        ContentScreen(
+            isLoading = false,
+            navigatableAction = ScreenNavigateAction.NONE,
+            onBack = {
+
+            },
+//            topBar = {
+//                TopBar(
+//                    onEventSent = {}
+//                )
+//            },
+            stickyBottom = {
+
+            }
+        ) { paddingValues ->
+            Content(
+                state = State(
+                    documentsUi = emptyList(),
+                    firstName = "John",
+                    lastName = "Doe",
+                    isLoading = false,
+                    imageBase64 = null,
+                    claimsUi = listOf(
+                        ClaimsUI("Claim 1", "Value 1"),
+                        ClaimsUI("Claim 2", "Value 2"),
+                        ClaimsUI("Claim 3", "Value 3"),
+                        ClaimsUI("Claim 4", "Value 4"),
+                        ClaimsUI("Claim 5", "Value 5"),
+                        ClaimsUI("Claim 6", "Value 6"),
+                        ClaimsUI("Claim 7", "Value 7"),
+                        ClaimsUI("Claim 8", "Value 8"),
+                        ClaimsUI("Claim 9", "Value 9"),
+                        ClaimsUI("Claim 10", "Value 10"),
+                    )
+                ),
+                effectFlow = Channel<Effect>().receiveAsFlow(),
+                onNavigationRequested = {},
+                paddingValues = PaddingValues(0.dp)
+            )
+        }
+    }
+}
+
